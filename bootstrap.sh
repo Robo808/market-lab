@@ -12,6 +12,10 @@ QUIET="${1:-}"
 
 log() { [ "$QUIET" = "--quiet" ] || echo "[mlab] $*"; }
 
+# The shared project folder is owned by another uid; let git work in it.
+command -v git >/dev/null 2>&1 && git config --global --get-all safe.directory | grep -qx "$(cd "$HERE" && pwd -P)" \
+  || git config --global --add safe.directory "$(cd "$HERE" && pwd -P)" 2>/dev/null || true
+
 if command -v uv >/dev/null 2>&1; then
   log "creating venv with uv at $MLAB_VENV"
   [ -x "$MLAB_VENV/bin/python" ] || uv venv -q "$MLAB_VENV"
