@@ -9,3 +9,9 @@ reports/*
 .pytest_cache/
 *.tmp
 data/iv_history/
+
+# Desk state lives in the data dir (shared folder by default), never in the repo.
+journal/*
+!journal/.gitkeep
+notebooks/
+.claude/settings.local.json

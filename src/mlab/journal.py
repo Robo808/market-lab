@@ -12,9 +12,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from .config import ROOT
+from .config import DATA_DIR
 
-JOURNAL_DIR = Path(os.environ.get("MLAB_JOURNAL_DIR", ROOT / "journal"))
+JOURNAL_DIR = Path(os.environ.get("MLAB_JOURNAL_DIR", DATA_DIR / "journal"))
 FILE = JOURNAL_DIR / "trades.jsonl"
 STATUSES = ("idea", "open", "closed", "passed")
 

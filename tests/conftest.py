@@ -1,4 +1,11 @@
 """Shared synthetic market data for offline tests (no network)."""
+import os
+import tempfile
+
+# Point all desk state at a throwaway dir before mlab is imported, so tests never touch the
+# real journal, reports or caches in the shared folder.
+os.environ["MLAB_DATA_DIR"] = tempfile.mkdtemp(prefix="mlab-test-")
+
 import numpy as np
 import pandas as pd
 

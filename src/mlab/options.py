@@ -18,13 +18,13 @@ import pandas as pd
 from scipy.optimize import brentq
 from scipy.stats import norm
 
-from .config import ROOT, env
+from .config import DATA_DIR, env
 
 HOSTS = {  # all already in net.SOURCES; listed so `mlab doctor` users see what this desk needs
     "query1.finance.yahoo.com": "Yahoo spot/history (options desk RV)",
     "query2.finance.yahoo.com": "Yahoo option chains (yfinance)",
 }
-IV_DIR = Path(env("MLAB_IV_DIR") or ROOT / "data" / "iv_history")  # outside the LRU price cache: never pruned
+IV_DIR = Path(env("MLAB_IV_DIR") or DATA_DIR / "data" / "iv_history")  # outside the LRU price cache: never pruned
 YEAR = 365.0
 GEX_CONVENTIONS = {  # (call sign, put sign) of dealer gamma per contract of open interest
     "long_calls_short_puts": (1, -1),  # customers sell calls (overwriting) and buy puts (hedging): SqueezeMetrics-style

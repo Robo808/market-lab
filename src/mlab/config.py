@@ -6,8 +6,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ROOT = Path(os.environ.get("MLAB_HOME", Path(__file__).resolve().parents[2]))
-CACHE_DIR = Path(os.environ.get("MLAB_CACHE_DIR", ROOT / "data" / "cache"))
-REPORTS_DIR = Path(os.environ.get("MLAB_REPORTS_DIR", ROOT / "reports"))
+
+# Where persistent desk state lives (journal, reports, caches, IV history, transcripts).
+# The code can run from an ephemeral repo clone; this state must outlive the container, so it
+# defaults to the project's shared folder when one exists, else to the checkout itself.
+SHARED_DATA_DIR = Path("/mnt/project-files/market-lab")
+
+
+def _default_data_dir() -> Path:
+    return SHARED_DATA_DIR if SHARED_DATA_DIR.is_dir() else ROOT
+
+
+DATA_DIR = Path(os.environ.get("MLAB_DATA_DIR") or _default_data_dir())
+CACHE_DIR = Path(os.environ.get("MLAB_CACHE_DIR", DATA_DIR / "data" / "cache"))
+REPORTS_DIR = Path(os.environ.get("MLAB_REPORTS_DIR", DATA_DIR / "reports"))
 # Soft cap for the on-disk price cache; oldest-read files are pruned beyond it.
 CACHE_MAX_MB = int(os.environ.get("MLAB_CACHE_MAX_MB", "750"))
 

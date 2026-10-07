@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .config import ROOT, env
+from .config import DATA_DIR, env
 from .options import jsonable
 
 HOSTS = {  # all already in net.SOURCES
@@ -28,7 +28,7 @@ HOSTS = {  # all already in net.SOURCES
     "www.alphavantage.co": "Alpha Vantage EARNINGS_CALL_TRANSCRIPT (ALPHAVANTAGE_API_KEY)",
     "financialmodelingprep.com": "FMP earning call transcripts (FMP_API_KEY)",
 }
-TRANSCRIPTS_DIR = Path(env("MLAB_TRANSCRIPTS_DIR") or ROOT / "data" / "transcripts")
+TRANSCRIPTS_DIR = Path(env("MLAB_TRANSCRIPTS_DIR") or DATA_DIR / "data" / "transcripts")
 ET = "America/New_York"
 
 

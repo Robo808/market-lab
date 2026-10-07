@@ -212,3 +212,20 @@ def test_backtest_no_lookahead(ohlcv):
     # a signal that is only on at the last bar must earn nothing (no future bar to trade)
     last_only = pd.Series(0, index=ohlcv.index); last_only.iloc[-1] = 1
     assert backtest.run(ohlcv, last_only)["strategy"]["total_return"] == 0
+
+
+def test_data_dir_override(tmp_path, monkeypatch):
+    import mlab.config, mlab.journal
+    monkeypatch.setenv("MLAB_DATA_DIR", str(tmp_path))
+    monkeypatch.delenv("MLAB_JOURNAL_DIR", raising=False)
+    monkeypatch.delenv("MLAB_CACHE_DIR", raising=False)
+    try:
+        importlib.reload(mlab.config)
+        importlib.reload(mlab.journal)
+        assert mlab.config.DATA_DIR == tmp_path
+        assert mlab.config.CACHE_DIR == tmp_path / "data" / "cache"
+        assert mlab.journal.JOURNAL_DIR == tmp_path / "journal"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(mlab.config)
+        importlib.reload(mlab.journal)

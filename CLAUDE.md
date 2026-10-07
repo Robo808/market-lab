@@ -32,12 +32,19 @@ Build it with `./mlab card ...` (computes R:R and stake per point) and journal i
 
 ```bash
 bash bootstrap.sh          # venv at ~/.venvs/market-lab, installs mlab, runs `mlab doctor`
-./mlab doctor              # which data hosts are reachable, which credentials are present
+bash mlab doctor           # data hosts reachable, credentials present, where code and data live
 ```
 
-`./mlab` self-bootstraps on first use, so `./mlab <cmd>` always works.
-In cloud threads the shared folder is mounted without exec rights, so `./mlab` fails with "bad interpreter:
-Permission denied" there: use `bash mlab <cmd>` instead.
+`mlab` self-bootstraps on first use, so `bash mlab <cmd>` always works (`./mlab` too, except on
+mounts without exec rights such as the cloud shared folder).
+
+**Code vs data.** The code lives in the GitHub repo (`Robo808/market-lab`), which cloud threads clone
+fresh. Desk state (journal, reports, price cache, IV history, transcripts) lives in the data dir,
+`MLAB_DATA_DIR`, which defaults to the project shared folder `/mnt/project-files/market-lab` when it
+exists and to this checkout otherwise. So every thread writes to the same journal, and logging a
+trade card never needs a commit. Per-item overrides: `MLAB_JOURNAL_DIR`, `MLAB_REPORTS_DIR`,
+`MLAB_CACHE_DIR`, `MLAB_IV_DIR`, `MLAB_TRANSCRIPTS_DIR`. Journal, reports, cache and notebooks are
+gitignored and must never be committed.
 
 ## The desk agents (`.claude/agents/`)
 
@@ -116,8 +123,9 @@ market-researcher agents need their own data connectors (LSEG, CapIQ, FactSet, D
 
 ## Files
 
-- `src/mlab/` code · `tests/` pytest (`~/.venvs/market-lab/bin/pytest -q`)
-- `data/cache/` parquet price cache (LRU-pruned at `MLAB_CACHE_MAX_MB`, default 750) ·
-  `data/transcripts/` earnings call texts
-- `reports/` charts and notes · `journal/trades.jsonl` + `journal/JOURNAL.md` trade journal
+- In the repo: `src/mlab/` code · `tests/` pytest (`~/.venvs/market-lab/bin/pytest -q`) · `.claude/` agents and skills
+- In the data dir (`$MLAB_DATA_DIR`, shared folder by default):
+  `data/cache/` parquet price cache (LRU-pruned at `MLAB_CACHE_MAX_MB`, default 750) ·
+  `data/transcripts/` earnings call texts · `data/iv_history/` ·
+  `reports/` charts and notes · `journal/trades.jsonl` + `journal/JOURNAL.md` trade journal
 - `docs/` network, skills map, proposed project instructions
