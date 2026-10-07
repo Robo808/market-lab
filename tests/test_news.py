@@ -333,3 +333,14 @@ def test_brief_with_fixtures(monkeypatch, tmp_cache):
     assert "earnings" in r["events"].index
     # history was stored, so a second run sees it
     assert len(news.history("NVDA")) >= r["items"] - 1
+
+
+def test_rss_parser_rejects_entity_expansion():
+    """Feeds are untrusted: a billion-laughs payload must be refused, not expanded."""
+    import pytest
+    from defusedxml import EntitiesForbidden
+    from mlab.news import parse_rss
+    bomb = ('<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;">]>'
+            '<rss><channel><item><title>&b;</title></item></channel></rss>')
+    with pytest.raises(EntitiesForbidden):
+        parse_rss(bomb, "google")

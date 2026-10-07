@@ -10,7 +10,9 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import subprocess
+import shutil
+# Only used to run git with fixed arguments and a slugified branch name.
+import subprocess  # nosec B404
 from datetime import date
 from pathlib import Path
 
@@ -95,7 +97,10 @@ def new(slug: str, claim: str, spec: dict | None = None, branch: bool = False, d
     text = _spec_text(spec)
     br = f"hypo/{today:%Y%m%d}-{_slugify(slug)}"
     if branch:
-        subprocess.run(["git", "-C", str(ROOT), "checkout", "-b", br], check=True)
+        git = shutil.which("git")
+        if not git:
+            raise RuntimeError("git not found; create the branch yourself or drop --branch")
+        subprocess.run([git, "-C", str(ROOT), "checkout", "-b", br], check=True)
     d.mkdir(parents=True, exist_ok=True)
     rel = path.relative_to(ROOT) if path.is_relative_to(ROOT) else path
     path.write_text(TEMPLATE.format(hid=hid, claim=claim, branch=br, today=today, sha=_sha(text), spec=text, rel=rel))

@@ -1,0 +1,19 @@
+# Weekly dependency and GitHub Actions updates. Security updates arrive as soon as an advisory lands
+# (needs "Dependabot security updates" on under Settings > Code security).
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      python-deps:
+        patterns: ["*"]
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
