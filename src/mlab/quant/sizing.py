@@ -37,4 +37,4 @@ def expectancy(r_multiples: list[float]) -> dict:
     payoff = wins.mean() / abs(losses.mean()) if len(wins) and len(losses) and losses.mean() else np.nan
     return {"n": len(r), "win_rate": win_rate, "avg_win_R": wins.mean() if len(wins) else 0.0,
             "avg_loss_R": losses.mean() if len(losses) else 0.0, "expectancy_R": r.mean(), "payoff": payoff,
-            "quarter_kelly": kelly_fraction(win_rate, payoff) if payoff == payoff else 0.0}
+            "quarter_kelly": kelly_fraction(win_rate, payoff) if np.isfinite(payoff) else 0.0}

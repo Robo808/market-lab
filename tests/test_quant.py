@@ -155,3 +155,10 @@ def test_grade_fails_on_any_missed_bar():
     v, rows = hypothesis.grade({"oos_sharpe": 0.8, "trades": 10, "max_dd": -0.4},
                                {"oos_sharpe_min": 0.5, "min_trades": 30, "max_dd_max": 0.3})
     assert v == "FAIL" and [r["pass"] for r in rows] == [True, False, False]
+
+
+def test_expectancy_and_kelly():
+    from mlab.quant.sizing import expectancy
+    e = expectancy([2.0, -1.0, 2.0, -1.0])
+    assert e["win_rate"] == 0.5 and e["payoff"] == 2.0 and e["quarter_kelly"] > 0
+    assert expectancy([1.0, 2.0])["quarter_kelly"] == 0.0   # no losses: payoff undefined, no Kelly bet
