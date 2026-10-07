@@ -3,7 +3,7 @@
 # After that, every push to main that touches docs/wiki/** overwrites the wiki with this folder.
 # Edit the pages here, not in the Wiki tab: edits made there are lost on the next sync.
 #
-# Action input: v5 of Andrew-Chen-Wang/github-wiki-action takes the source folder as `path`.
+# Third-party actions are pinned to a commit SHA (Dependabot bumps them); v5 takes the source folder as `path`.
 name: Wiki sync
 
 on:
@@ -25,6 +25,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: Andrew-Chen-Wang/github-wiki-action@v5
+      - uses: Andrew-Chen-Wang/github-wiki-action@1bbb4280446f9630e8e21a18012cbacf3b0f992e  # v5.0.6
         with:
           path: docs/wiki
