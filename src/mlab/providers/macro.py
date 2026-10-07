@@ -4,6 +4,7 @@ from __future__ import annotations
 import io
 
 import pandas as pd
+import requests
 
 from ..config import env
 from ..net import session
@@ -22,7 +23,8 @@ DASHBOARD = {
 
 def fred(series: str, start=None) -> pd.Series:
     key = env("FRED_API_KEY")
-    s = session()
+    # fred.stlouisfed.org silently stalls browser-like and custom User-Agents; the plain requests UA is served.
+    s = session(requests.utils.default_user_agent())
     if key:
         r = s.get("https://api.stlouisfed.org/fred/series/observations", timeout=20, params={
             "series_id": series, "api_key": key, "file_type": "json",

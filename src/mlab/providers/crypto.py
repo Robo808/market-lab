@@ -10,6 +10,12 @@ BINANCE_INTERVALS = {"1m", "3m", "5m", "15m", "30m", "1h", "2h", "4h", "6h", "8h
 KRAKEN_INTERVALS = {"1m": 1, "5m": 5, "15m": 15, "30m": 30, "1h": 60, "4h": 240, "1d": 1440, "1w": 10080}
 
 
+def _utc(t) -> pd.Timestamp:
+    """Timestamp in UTC whether the input is naive or already tz-aware."""
+    t = pd.Timestamp(t)
+    return t.tz_localize("UTC") if t.tzinfo is None else t.tz_convert("UTC")
+
+
 def to_pair(symbol: str) -> str:
     """BTC, BTC-USD, btcusdt -> BTCUSDT."""
     s = symbol.upper().replace("-", "").replace("/", "")
@@ -26,9 +32,9 @@ def binance(symbol: str, interval: str = "1d", start=None, end=None, limit: int 
         raise ValueError(f"binance interval must be one of {sorted(BINANCE_INTERVALS)}")
     params = {"symbol": to_pair(symbol), "interval": interval, "limit": limit}
     if start is not None:
-        params["startTime"] = int(pd.Timestamp(start, tz="UTC").timestamp() * 1000)
+        params["startTime"] = int(_utc(start).timestamp() * 1000)
     if end is not None:
-        params["endTime"] = int(pd.Timestamp(end, tz="UTC").timestamp() * 1000)
+        params["endTime"] = int(_utc(end).timestamp() * 1000)
     s, last_err, rows = session(), None, []
     for host in BINANCE_HOSTS:
         try:
@@ -57,7 +63,7 @@ def kraken(symbol: str, interval: str = "1d", start=None, **_) -> pd.DataFrame:
         pair += "USD"
     params = {"pair": pair, "interval": KRAKEN_INTERVALS[{"1wk": "1w"}.get(interval, interval)]}
     if start is not None:
-        params["since"] = int(pd.Timestamp(start, tz="UTC").timestamp())
+        params["since"] = int(_utc(start).timestamp())
     r = session().get("https://api.kraken.com/0/public/OHLC", params=params, timeout=20)
     r.raise_for_status()
     j = r.json()

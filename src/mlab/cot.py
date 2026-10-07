@@ -229,8 +229,9 @@ def divergence(df: pd.DataFrame, close: pd.Series, report: str, lookback: int = 
     cls = cls or SPEC[report]
     c = close.copy()
     c.index = pd.DatetimeIndex(c.index).tz_localize(None) if getattr(c.index, "tz", None) is not None else pd.DatetimeIndex(c.index)
+    c.index = c.index.as_unit("ns")  # merge_asof needs both keys at the same resolution (pandas 3 keeps us/ms)
     c = c.sort_index()
-    weekly = pd.merge_asof(pd.DataFrame(index=df.index.sort_values()).reset_index().rename(columns={"index": "date"}),
+    weekly = pd.merge_asof(pd.DataFrame(index=pd.DatetimeIndex(df.index).as_unit("ns").sort_values()).reset_index().rename(columns={"index": "date"}),
                            c.rename("close").reset_index().rename(columns={c.index.name or "index": "date"}),
                            on="date", direction="backward").set_index("date")["close"]
     pct = df[f"{cls}_net"] / df["open_interest"] * 100

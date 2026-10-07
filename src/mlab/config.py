@@ -12,7 +12,8 @@ REPORTS_DIR = Path(os.environ.get("MLAB_REPORTS_DIR", ROOT / "reports"))
 CACHE_MAX_MB = int(os.environ.get("MLAB_CACHE_MAX_MB", "750"))
 
 # SEC asks every client to identify itself with a contact address.
-SEC_USER_AGENT = os.environ.get("SEC_USER_AGENT", "market-lab research (set SEC_USER_AGENT)")
+# SEC 403s a User-Agent without an email address; set SEC_USER_AGENT to your own "Name email".
+SEC_USER_AGENT = os.environ.get("SEC_USER_AGENT", "market-lab research ops@market-lab.invalid")
 
 
 def env(name: str, default: str | None = None) -> str | None:
