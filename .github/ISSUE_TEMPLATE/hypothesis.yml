@@ -1,0 +1,85 @@
+name: Hypothesis
+description: Pre-register a falsifiable trading hypothesis before any results are seen.
+title: "[H] "
+labels: ["hypothesis", "status:pre-registered"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Fill this in BEFORE running anything. The pass bars below are fixed once the issue is opened.
+        A changed test is a new hypothesis. See the wiki page Hypothesis-Testing.
+  - type: input
+    id: claim
+    attributes:
+      label: Claim
+      description: One sentence, falsifiable. What happens, on what, over what horizon.
+      placeholder: "Long FTSE 100 when RSI(2) < 10 above the 200 SMA beats cash after IG costs, 2005-2025."
+    validations:
+      required: true
+  - type: textarea
+    id: mechanism
+    attributes:
+      label: Rationale / mechanism
+      description: Why the edge should exist. Behavioural (overreaction, anchoring, herding), structural (flows, rebalancing, index events, funding), or risk premium (you are paid to hold a risk). If you cannot name one, say so.
+    validations:
+      required: true
+  - type: textarea
+    id: universe
+    attributes:
+      label: Universe and data
+      description: Symbols, bar interval, period, data source.
+      placeholder: |
+        Symbols: ^FTSE, ^GSPC
+        Interval: 1d
+        Period: 2000-01-01 to 2025-12-31
+        Source: Yahoo (Stooq fallback)
+    validations:
+      required: true
+  - type: textarea
+    id: test
+    attributes:
+      label: Test
+      description: Strategy name from `bash mlab algo list` plus params, overlays, or a description if it is new.
+      placeholder: |
+        Strategy: rsi2
+        Params: {"entry": 10, "trend": 200, "exit_sma": 5}
+        Overlays: none
+    validations:
+      required: true
+  - type: textarea
+    id: bars
+    attributes:
+      label: Metrics and pass bars (set before running)
+      description: Every bar must be met for PASS. Do not edit after results exist.
+      value: |
+        - OOS Sharpe > 0.5 net of costs
+        - Deflated Sharpe probability > 0.95
+        - Permutation test p < 0.05
+        - Max drawdown < 25%
+        - Trades >= 30
+    validations:
+      required: true
+  - type: textarea
+    id: costs
+    attributes:
+      label: Costs assumed
+      description: IG spread in points per round trip, overnight funding rate, any slippage.
+      placeholder: "Spread 1.0 pt (FTSE DFB), funding 6% annual on notional, no extra slippage."
+    validations:
+      required: true
+  - type: textarea
+    id: kill
+    attributes:
+      label: Kill criteria
+      description: What result or event ends this hypothesis, including in paper mode.
+      placeholder: "Any bar missed. In paper: drawdown > 1.5x backtest max DD, or 20 trades with expectancy < 0."
+    validations:
+      required: true
+  - type: input
+    id: variants
+    attributes:
+      label: Number of variants you plan to try
+      description: Parameter sets, symbols and overlays you will test in total. Feeds the deflated Sharpe trial count.
+      placeholder: "12"
+    validations:
+      required: true

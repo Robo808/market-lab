@@ -1,0 +1,37 @@
+name: Data source
+description: Add or fix a data source.
+title: "[Data] "
+labels: ["data-source"]
+body:
+  - type: input
+    id: source
+    attributes:
+      label: Source
+      description: Name and API or page URL.
+    validations:
+      required: true
+  - type: textarea
+    id: powers
+    attributes:
+      label: What it powers
+      description: Which desk, command or strategy needs it, and what gap it fills.
+    validations:
+      required: true
+  - type: textarea
+    id: access
+    attributes:
+      label: Access and keys
+      description: Keyless, free key, paid. Env var name for the key. Rate limits.
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: Host to allowlist
+      description: Hostname(s) to add to the cloud environment and docs/NETWORK.md.
+      placeholder: "api.example.com"
+  - type: textarea
+    id: reliability
+    attributes:
+      label: Reliability notes
+      description: Uptime, throttling, history depth, revisions, known quirks (timezones, units, pence vs pounds).

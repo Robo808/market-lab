@@ -1,0 +1,26 @@
+# Creates or updates the issue labels listed in .github/labels.md (name | colour | description table).
+name: Labels
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/labels.md"
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync labels
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          grep -E '^\| `' .github/labels.md | while IFS='|' read -r _ name colour desc _; do
+            name=$(echo "$name" | tr -d '` ' ); colour=$(echo "$colour" | tr -d '`# '); desc=$(echo "$desc" | sed 's/^ *//;s/ *$//')
+            gh label create "$name" --color "$colour" --description "$desc" --force --repo "$GITHUB_REPOSITORY"
+          done

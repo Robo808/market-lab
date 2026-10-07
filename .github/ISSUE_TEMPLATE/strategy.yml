@@ -1,0 +1,61 @@
+name: Strategy
+description: Propose a new algorithmic strategy or pattern for the library (src/mlab/quant/strategies.py).
+title: "[S] "
+labels: ["strategy"]
+body:
+  - type: dropdown
+    id: family
+    attributes:
+      label: Family
+      options:
+        - trend
+        - mean-reversion
+        - breakout
+        - seasonality
+        - cross-sectional
+        - pairs/stat-arb
+        - allocation
+        - overlay
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: Registry name
+      description: snake_case name it will have in REGISTRY.
+      placeholder: "keltner_breakout"
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Rules
+      description: Entry, exit and sizing. Precise enough to code without asking. State what is known at the close of bar t.
+      placeholder: |
+        Entry: close > upper Keltner (20 EMA + 2 ATR)
+        Exit: close < 20 EMA
+        Sizing: position 1 (scale with vol_target overlay)
+    validations:
+      required: true
+  - type: textarea
+    id: params
+    attributes:
+      label: Parameters and defaults
+      placeholder: |
+        n: 20
+        mult: 2.0
+        short: false
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Papers, books, links.
+  - type: textarea
+    id: regime
+    attributes:
+      label: Expected regime
+      description: Where it should make money and where it should bleed (trending, ranging, high vol, low vol, crisis).
+    validations:
+      required: true
