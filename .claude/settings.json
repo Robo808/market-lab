@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./mlab:*)",
+      "Bash(bash bootstrap.sh:*)",
+      "Bash(~/.venvs/market-lab/bin/python:*)",
+      "Bash(~/.venvs/market-lab/bin/pytest:*)",
+      "WebSearch",
+      "WebFetch"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/bootstrap.sh\" --quiet" }
+        ]
+      }
+    ]
+  }
+}

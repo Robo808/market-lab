@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Wrapper so `./mlab ...` works from any shell; bootstraps on first use.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MLAB_VENV="${MLAB_VENV:-$HOME/.venvs/market-lab}"
+if [ ! -x "$MLAB_VENV/bin/mlab" ]; then
+  bash "$HERE/bootstrap.sh" --quiet >&2
+fi
+exec "$MLAB_VENV/bin/mlab" "$@"
