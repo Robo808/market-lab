@@ -36,6 +36,8 @@ bash bootstrap.sh          # venv at ~/.venvs/market-lab, installs mlab, runs `m
 ```
 
 `./mlab` self-bootstraps on first use, so `./mlab <cmd>` always works.
+In cloud threads the shared folder is mounted without exec rights, so `./mlab` fails with "bad interpreter:
+Permission denied" there: use `bash mlab <cmd>` instead.
 
 ## The desk agents (`.claude/agents/`)
 
