@@ -850,7 +850,7 @@ def _resolve(c, det, up, lo, bias, wait):
 
 
 def _gap_rows(df):
-    h, l, c, o = df["high"], df["low"], df["close"], df["open"]
+    h, l, c = df["high"], df["low"], df["close"]
     a = atr(df).shift()
     up, dn = l > h.shift(), h < l.shift()
     s20, s50 = sma(c, 20).shift(), sma(c, 50).shift()
