@@ -105,13 +105,17 @@ switch and logout; it refuses every other method and path, and no order or deal 
 reads accounts, positions, working orders, watchlists, market search, client sentiment, historical prices (cache-first,
 to protect IG's weekly data allowance) and streaming quotes.
 
-| Variable | Notes |
+Credentials reach the client through proxy-injected network secrets or environment variables, and are never stored
+in the repo:
+
+| Credential | How it is supplied |
 |---|---|
-| `IG_API_KEY` | or injected as the `X-IG-API-KEY` header by a network proxy secret |
-| `IG_USERNAME`, `IG_PASSWORD` | environment variables only |
-| `IG_ACC_TYPE` | `DEMO` or `LIVE` |
+| API key | a network secret that adds the `X-IG-API-KEY` header on the IG host, or `IG_API_KEY` / `IG_DEMO_API_KEY` / `IG_LIVE_API_KEY` |
+| Username and password | a body-parameter network secret on the IG session endpoint that fills the login body, or `IG_USERNAME` / `IG_PASSWORD` (and `IG_DEMO_*` / `IG_LIVE_*` overrides) |
+| `IG_ACC_TYPE` | always set: `DEMO` or `LIVE` |
 | `IG_ACC_NUMBER` | optional, account to switch to after login |
-| `IG_DEMO_*`, `IG_LIVE_*` | optional per-environment overrides |
+
+See `docs/NETWORK.md` for the secret setup.
 
 **Kraken.** Public market data (prices, OHLC) is used today with no key. Account access, when added, follows the same
 rule: a query-only API key from environment variables, read-only client, no trading endpoints.

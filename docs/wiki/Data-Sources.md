@@ -18,9 +18,9 @@ for allowlisting: `docs/NETWORK.md`.
 | Google News RSS, GDELT | News, tone | none | |
 | StockTwits, Reddit, HN (Algolia) | Social sentiment, attention | none | |
 | Alpha Vantage, FMP, Finnhub | Fundamentals, transcripts, news, calendars | `ALPHAVANTAGE_API_KEY`, `FMP_API_KEY`, `FINNHUB_API_KEY` | Optional |
-| IG (read-only) | Exact traded instrument prices, positions, sentiment, market search | `IG_API_KEY`, `IG_USERNAME`, `IG_PASSWORD`, `IG_ACC_TYPE` | 10k historical points per week: always cache-first via `mlab price ig:...` |
+| IG (read-only) | Exact traded instrument prices, positions, sentiment, market search | proxy-injected network secrets or env vars; `IG_ACC_TYPE` (see [[Getting Started]]) | 10k historical points per week: always cache-first via `mlab price ig:...` |
 
-Credentials come from env vars only. Never print, log or commit them.
+Credentials come from proxy-injected secrets or env vars, never from the repo. Never print, log or commit them.
 
 ## Known gaps
 

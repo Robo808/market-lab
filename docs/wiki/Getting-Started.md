@@ -66,13 +66,16 @@ Journal, reports, caches and paper books are gitignored and never committed.
 
 ### IG (read-only)
 
-| Variable | Notes |
+Credentials come through proxy-injected network secrets or environment variables, and are never stored in the repo.
+
+| Credential | How it is supplied |
 |---|---|
-| `IG_API_KEY` | or a network proxy secret that injects the `X-IG-API-KEY` header on `demo-api.ig.com` / `api.ig.com` |
-| `IG_USERNAME`, `IG_PASSWORD` | environment variables |
-| `IG_ACC_TYPE` | `DEMO` or `LIVE` |
+| API key | network secret adding the `X-IG-API-KEY` header on `demo-api.ig.com` / `api.ig.com`, or `IG_API_KEY` (`IG_DEMO_API_KEY` / `IG_LIVE_API_KEY` per environment) |
+| Username and password | **Body parameter** network secret on the same host, path `/gateway/deal/session`, keys `identifier` and `password`; or `IG_USERNAME` / `IG_PASSWORD` (`IG_DEMO_*` / `IG_LIVE_*`) |
+| `IG_ACC_TYPE` | always set: `DEMO` or `LIVE`. With it set and no username or password in the environment, the client sends the login body for the proxy to fill |
 | `IG_ACC_NUMBER` | optional: account to switch to after login |
-| `IG_DEMO_*`, `IG_LIVE_*` | optional per-environment overrides |
+
+Full setup, including what to do if the secrets list marks one as **Not sent**, is in `docs/NETWORK.md`.
 
 The client allows GET requests plus session login, account switch and logout, and refuses everything else. There are
 no order or deal endpoints in the code. Historical prices count against IG's weekly allowance (10,000 points), so
