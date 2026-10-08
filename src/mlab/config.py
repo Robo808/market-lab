@@ -51,11 +51,13 @@ class IGConfig:
 
     @property
     def configured(self) -> bool:
-        return bool(self.api_key and self.username and self.password)
+        # IG_API_KEY is optional: a cloud-environment network secret can attach the X-IG-API-KEY header
+        # at the proxy instead, so the key never enters the container. Username and password travel in
+        # the login body, which a header secret cannot fill, so those must be in the environment.
+        return bool(self.username and self.password)
 
     def missing(self) -> list[str]:
-        return [n for n, v in (("IG_API_KEY", self.api_key), ("IG_USERNAME", self.username),
-                               ("IG_PASSWORD", self.password)) if not v]
+        return [n for n, v in (("IG_USERNAME", self.username), ("IG_PASSWORD", self.password)) if not v]
 
 
 def ig_config(acc_type: str | None = None) -> IGConfig:

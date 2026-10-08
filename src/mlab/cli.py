@@ -76,9 +76,10 @@ def cmd_doctor(a):
         c = ig_config(t)
         print(f"\nIG {t}: {'credentials present' if c.configured else 'missing ' + ', '.join(c.missing())}")
     if not any(ig_config(t).configured for t in ("DEMO", "LIVE")):
-        print("  IG login needs IG_API_KEY, IG_USERNAME, IG_PASSWORD and IG_ACC_TYPE (DEMO|LIVE) as environment variables in\n"
-              "  the cloud environment (or IG_DEMO_* / IG_LIVE_*). A network secret alone cannot log in: IG wants the\n"
-              "  username and password in the request body. Then `mlab ig login` tests it.")
+        print("  IG login needs IG_USERNAME, IG_PASSWORD and IG_ACC_TYPE (DEMO|LIVE) as environment variables (or\n"
+              "  IG_DEMO_* / IG_LIVE_*): IG wants them in the login body, which a network secret cannot fill. The API\n"
+              "  key is best kept as a network secret on demo-api.ig.com / api.ig.com (header X-IG-API-KEY, no prefix);\n"
+              "  IG_API_KEY also works. Then `mlab ig login` tests it.")
     print("\nOptional keys: " + ", ".join(f"{k}={'set' if env(k) else 'unset'}" for k in OPTIONAL_KEYS))
     show(cache.stats(), title="Cache")
 
