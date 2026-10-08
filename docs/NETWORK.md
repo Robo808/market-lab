@@ -41,8 +41,11 @@ financialmodelingprep.com
 finnhub.io
 ```
 
-Secrets go in the same environment as environment variables: `IG_API_KEY`, `IG_USERNAME`, `IG_PASSWORD`,
-`IG_ACC_TYPE` (DEMO or LIVE), optional `IG_ACC_NUMBER`, and optional `FRED_API_KEY`, `ALPHAVANTAGE_API_KEY`,
+IG: keep the API key as a network secret on `demo-api.ig.com` (DEMO) or `api.ig.com` (LIVE), custom header
+`X-IG-API-KEY` with no prefix, so the key never enters the container (`IG_API_KEY` as a variable also works).
+IG wants the username and password inside the login body, which a header secret cannot fill, so those go in as
+environment variables: `IG_USERNAME`, `IG_PASSWORD` (or `IG_DEMO_*` / `IG_LIVE_*`), `IG_ACC_TYPE` (DEMO or LIVE),
+optional `IG_ACC_NUMBER`. Other environment variables: optional `FRED_API_KEY`, `ALPHAVANTAGE_API_KEY`,
 `FMP_API_KEY`, `FINNHUB_API_KEY`, `SEC_USER_AGENT` ("Name email@example.com").
 
 Routes that work regardless of the container policy:

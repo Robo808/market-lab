@@ -3,8 +3,9 @@
 Only GET requests and session management (login, account switch, logout) can leave this module;
 any other method/path raises before a request is sent. Cezar executes trades himself on IG.
 
-Credentials: env vars only (IG_API_KEY, IG_USERNAME, IG_PASSWORD, IG_ACC_TYPE=DEMO|LIVE,
-optional IG_ACC_NUMBER, or per-environment IG_DEMO_* / IG_LIVE_* overrides). Session tokens
+Credentials: env vars only (IG_USERNAME, IG_PASSWORD, IG_ACC_TYPE=DEMO|LIVE, optional IG_ACC_NUMBER,
+or per-environment IG_DEMO_* / IG_LIVE_* overrides). The API key comes from IG_API_KEY or, better, from a
+cloud network secret that adds the X-IG-API-KEY header at the proxy so the key never enters the container. Session tokens
 are kept in memory for the life of the process and never written to disk.
 
 Historical prices count against IG's weekly allowance (10,000 points/week on the standard
@@ -41,14 +42,36 @@ class IGError(RuntimeError):
     pass
 
 
+# IG error codes that mean "change a setting", mapped to the one thing to change.
+FIX_HINTS = {
+    "error.security.api-key-missing": "no API key reached IG: add a network secret for demo-api.ig.com (DEMO) or api.ig.com (LIVE) with header X-IG-API-KEY and no prefix, or set IG_API_KEY",
+    "error.security.api-key-invalid": "API key not recognised for this environment: a DEMO key only works with IG_ACC_TYPE=DEMO, a LIVE key with LIVE",
+    "error.security.api-key-disabled": "API key is disabled: re-enable it on ig.com under My IG > Settings > API keys",
+    "error.security.api-key-revoked": "API key was revoked: generate a new one on ig.com under My IG > Settings > API keys",
+    "error.security.invalid-details": "username or password rejected: check IG_USERNAME / IG_PASSWORD, and that IG_ACC_TYPE matches the account (DEMO logins differ from LIVE)",
+    "error.security.account-suspended": "IG account is suspended: contact IG",
+    "error.security.client-suspended": "IG client profile is suspended: contact IG",
+    "error.security.too-many-failed-attempts": "IG locked logins after failed attempts: wait about a minute, fix the password, then retry",
+    "error.public-api.exceeded-api-key-allowance": "API key request allowance used up: wait for it to reset",
+    "error.public-api.exceeded-account-historical-data-allowance": "weekly historical price allowance used up: use cached bars or Yahoo for long history",
+    "error.security.oauth-token-invalid": "session expired: log in again",
+}
+
+
+def fix_hint(code: str) -> str | None:
+    return next((h for c, h in FIX_HINTS.items() if c in str(code)), None)
+
+
 class IG:
     def __init__(self, cfg: IGConfig | None = None):
         self.cfg = cfg or ig_config()
         if not self.cfg.configured:
             raise IGError("IG credentials missing from environment: " + ", ".join(self.cfg.missing()))
         self.s = session()
-        self.s.headers.update({"X-IG-API-KEY": self.cfg.api_key, "Accept": "application/json; charset=UTF-8",
+        self.s.headers.update({"Accept": "application/json; charset=UTF-8",
                                "Content-Type": "application/json; charset=UTF-8"})
+        if self.cfg.api_key:  # otherwise a network secret adds X-IG-API-KEY at the proxy
+            self.s.headers["X-IG-API-KEY"] = self.cfg.api_key
         self.account_id: str | None = None
         self.ls_endpoint: str | None = None
         self.last_allowance: dict | None = None
@@ -73,7 +96,8 @@ class IG:
             if auth and _retry and r.status_code == 401 and "token" in str(code).lower():
                 self._logged_in = False  # expired session: log in once more and retry
                 return self._request(headers.get("_method", method), path, version, params, json, auth, _retry=False)
-            raise IGError(f"IG {method} {path} -> {r.status_code}: {code}")
+            hint = fix_hint(code)
+            raise IGError(f"IG {method} {path} -> {r.status_code}: {code}" + (f" (fix: {hint})" if hint else ""))
         return r
 
     def _get(self, path, version=1, **params):
