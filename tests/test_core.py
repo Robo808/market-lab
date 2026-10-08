@@ -250,7 +250,12 @@ def test_data_dir_override(tmp_path, monkeypatch):
 
 
 def test_ig_stream_uses_price_items(monkeypatch):
-    import lightstreamer.client as lsc
+    import sys
+    import types
+    lsc = types.ModuleType("lightstreamer.client")  # fake: CI installs without the stream extra
+    lsc.SubscriptionListener = object
+    monkeypatch.setitem(sys.modules, "lightstreamer", types.ModuleType("lightstreamer"))
+    monkeypatch.setitem(sys.modules, "lightstreamer.client", lsc)
     ig, _ = _ig(monkeypatch, _login_ok)
     seen = {}
 
@@ -273,8 +278,8 @@ def test_ig_stream_uses_price_items(monkeypatch):
         def addListener(self, l):
             self.listener = l
 
-    monkeypatch.setattr(lsc, "LightstreamerClient", FakeClient)
-    monkeypatch.setattr(lsc, "Subscription", FakeSub)
+    lsc.LightstreamerClient = FakeClient
+    lsc.Subscription = FakeSub
     monkeypatch.setattr("time.sleep", lambda s: None)
     ticks = ig.stream(["IX.D.FTSE.DAILY.IP"], seconds=0)
     assert seen["items"] == ["PRICE:ABC:IX.D.FTSE.DAILY.IP"]
