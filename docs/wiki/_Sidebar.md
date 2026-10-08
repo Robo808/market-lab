@@ -1,6 +1,8 @@
 **Market Lab**
 
 - [[Home]]
+- [[Getting Started]]
+- [[CLI Reference]]
 - [[Architecture]]
 - [[Desk Workflow]]
 

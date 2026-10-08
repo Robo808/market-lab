@@ -1,11 +1,11 @@
 # Market Lab
 
-Market Lab is Cezar's trading research desk: a Python toolkit (CLI `mlab`) plus Claude Code desk agents and
+Market Lab is a trading research desk: a Python toolkit (CLI `mlab`) plus Claude Code desk agents and
 playbooks. It pulls market data with caching, runs the full TA catalogue with signal hit rates, options,
 earnings, sentiment, macro and fundamentals desks, writes trade cards with IG stake sizing, keeps a trade
 journal, and runs a library of algorithmic strategies through backtest, validation and paper trading.
 
-Cezar trades on IG (spread bets and CFDs, GBP) and executes every trade himself. The IG client is read-only.
+It is built around IG (spread bets and CFDs, GBP); the trader executes every trade by hand. The IG client is read-only.
 Strategies run in backtest, signal and paper modes only. Live execution is off by design.
 
 ## Quickstart
@@ -40,6 +40,8 @@ Per-item overrides: `MLAB_JOURNAL_DIR`, `MLAB_REPORTS_DIR`, `MLAB_CACHE_DIR`, `M
 
 ## Pages
 
+- [[Getting Started]]: install, configuration, credentials, first commands
+- [[CLI Reference]]: every `mlab` command with an example
 - [[Architecture]]: modules, the quant package, agents, skills, data flow
 - [[Desk Workflow]]: PM, six desks, lenses, trade cards, journal
 - [[Strategy Library]]: every registered strategy and overlay, and how to add one
