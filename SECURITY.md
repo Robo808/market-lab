@@ -5,8 +5,8 @@ Open a private report under the repo's **Security > Report a vulnerability** (pr
 not a public issue.
 
 ## What this repo never holds
-- Credentials: IG and data-provider keys come from environment variables only (`.env` is gitignored,
-  `.env.example` has empty values). The IG client is read-only and has no order or deal endpoints.
+- Credentials: IG and data-provider keys come from proxy-injected network secrets or environment variables, never
+  from the repo (`.env` is gitignored, `.env.example` has empty values). The IG client is read-only and has no order or deal endpoints.
 - Desk state: the trade journal, reports, paper books and price caches live in `$MLAB_DATA_DIR`, outside git.
 
 ## Automated checks
