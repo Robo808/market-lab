@@ -81,7 +81,7 @@ Code lives in git. Desk state lives in a data directory that is **never** commit
 | Variable | Default | Holds |
 |---|---|---|
 | `MLAB_DATA_DIR` | a shared project folder if present, else the checkout | everything below |
-| `MLAB_JOURNAL_DIR` | `$MLAB_DATA_DIR/journal` | `trades.jsonl`, `JOURNAL.md` |
+| `MLAB_JOURNAL_DIR` | `$MLAB_DATA_DIR/journal` | `events/`, legacy `trades.jsonl`, `JOURNAL.md` |
 | `MLAB_REPORTS_DIR` | `$MLAB_DATA_DIR/reports` | charts and notes |
 | `MLAB_CACHE_DIR` | `$MLAB_DATA_DIR/data/cache` | parquet price cache |
 | `MLAB_IV_DIR` | `$MLAB_DATA_DIR/data/iv_history` | implied-vol history |

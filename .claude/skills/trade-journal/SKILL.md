@@ -1,6 +1,6 @@
 ---
 name: trade-journal
-description: Log, update and review trades in the workspace journal (journal/trades.jsonl -> JOURNAL.md) and score which lens, desk and conviction level actually make money. Use when Cezar takes, skips, adjusts or closes a trade, or asks how his trading is going.
+description: Log, update and review trades in the workspace journal (journal/events/ + legacy trades.jsonl -> JOURNAL.md) and score which lens, desk and conviction level actually make money. Use when Cezar takes, skips, adjusts or closes a trade, or asks how his trading is going.
 ---
 # Trade journal
 

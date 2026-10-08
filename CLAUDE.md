@@ -138,11 +138,17 @@ equity-research initiating/earnings/thesis/catalysts, private-equity DD checklis
 dataviz, xlsx) work here when fed `mlab` data. LSEG and S&P skills and the earnings-reviewer /
 market-researcher agents need their own data connectors (LSEG, CapIQ, FactSet, Daloopa).
 
+## Code standards
+
+Read `docs/wiki/Design-Standards.md` before changing code: functional core with I/O at the edges, UTC everywhere, no look-ahead,
+atomic writes and write-once events for shared-folder state (threads in different containers never coordinate), logging not
+print, no `except: pass`, `ruff check src tests` and `pytest -q` green, a regression test with every fix.
+
 ## Files
 
 - In the repo: `src/mlab/` code · `tests/` pytest (`~/.venvs/market-lab/bin/pytest -q`) · `.claude/` agents and skills
 - In the data dir (`$MLAB_DATA_DIR`, shared folder by default):
   `data/cache/` parquet price cache (LRU-pruned at `MLAB_CACHE_MAX_MB`, default 750) ·
   `data/transcripts/` earnings call texts · `data/iv_history/` ·
-  `reports/` charts and notes · `journal/trades.jsonl` + `journal/JOURNAL.md` trade journal
+  `reports/` charts and notes · `journal/events/` (one file per change) over legacy `journal/trades.jsonl`, rendered to `journal/JOURNAL.md`
 - `docs/` network, skills map, proposed project instructions

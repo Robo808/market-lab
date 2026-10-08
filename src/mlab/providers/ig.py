@@ -16,6 +16,7 @@ from __future__ import annotations
 import threading
 import time
 from datetime import datetime, timezone
+from urllib.parse import parse_qsl, urlsplit
 
 import pandas as pd
 
@@ -56,6 +57,12 @@ FIX_HINTS = {
     "error.public-api.exceeded-account-historical-data-allowance": "weekly historical price allowance used up: use cached bars or Yahoo for long history",
     "error.security.oauth-token-invalid": "session expired: log in again",
 }
+
+
+def _utc(x) -> pd.Timestamp:
+    """Any date-like (str, naive or aware) as a UTC Timestamp."""
+    t = pd.Timestamp(x)
+    return t.tz_localize("UTC") if t.tz is None else t.tz_convert("UTC")
 
 
 def fix_hint(code: str) -> str | None:
@@ -168,12 +175,21 @@ class IG:
                          "good_till": d.get("goodTillDateISO"), "created": d.get("createdDateUTC")})
         return pd.DataFrame(rows)
 
-    def activity(self, days: int = 30) -> pd.DataFrame:
-        frm = (pd.Timestamp.utcnow() - pd.Timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
-        return pd.DataFrame(self._get("/history/activity", 3, **{"from": frm, "detailed": "true", "pageSize": 500})["activities"])
+    def activity(self, days: int = 30, max_pages: int = 20) -> pd.DataFrame:
+        """Account activity (v3), following IG's paging.next link so busy accounts are not cut at 500 rows."""
+        frm = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
+        params, rows = {"from": frm, "detailed": "true", "pageSize": 500}, []
+        for _ in range(max_pages):
+            j = self._get("/history/activity", 3, **params)
+            rows += j.get("activities", [])
+            nxt = ((j.get("metadata") or {}).get("paging") or {}).get("next")
+            if not nxt:
+                break
+            params = {k: v for k, v in parse_qsl(urlsplit(nxt).query) if k != "version"}
+        return pd.DataFrame(rows)
 
     def transactions(self, days: int = 90, kind: str = "ALL") -> pd.DataFrame:
-        frm = (pd.Timestamp.utcnow() - pd.Timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
+        frm = (pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=days)).strftime("%Y-%m-%dT%H:%M:%S")
         return pd.DataFrame(self._get("/history/transactions", 2, type=kind, **{"from": frm, "pageSize": 0})["transactions"])
 
     # ---- markets (read) --------------------------------------------------
@@ -205,6 +221,46 @@ class IG:
             mid = self.market(mid)["instrument"]["marketId"]
         return self._get(f"/clientsentiment/{mid}")
 
+    def related_sentiment(self, epic_or_market_id: str) -> pd.DataFrame:
+        """Client sentiment on markets IG lists as related: the crowd read across a cluster."""
+        mid = epic_or_market_id
+        if "." in mid:
+            mid = self.market(mid)["instrument"]["marketId"]
+        return pd.DataFrame(self._get(f"/clientsentiment/related/{mid}").get("clientSentiments", []))
+
+    def rules(self, epic: str) -> dict:
+        """What sizing needs from IG: point value, contract size, margin, min deal size, min stop distances,
+        quote scaling and market status, flattened from /markets/{epic}."""
+        m = self.market(epic)
+        ins, dr, sn = m.get("instrument") or {}, m.get("dealingRules") or {}, m.get("snapshot") or {}
+
+        def val(k):
+            v = dr.get(k) or {}
+            return f"{v.get('value')} {v.get('unit', '')}".strip() if v else None
+        ccy = next((c.get("code") for c in ins.get("currencies") or [] if c.get("isDefault")), None)
+        hours = (ins.get("openingHours") or {}).get("marketTimes") or []
+        return {"epic": ins.get("epic", epic), "name": ins.get("name"), "type": ins.get("type"),
+                "market_id": ins.get("marketId"), "expiry": ins.get("expiry"), "currency": ccy,
+                "value_of_one_pip": ins.get("valueOfOnePip"), "one_pip_means": ins.get("onePipMeans"),
+                "contract_size": ins.get("contractSize"), "lot_size": ins.get("lotSize"),
+                "margin_factor": f"{ins.get('marginFactor')} {ins.get('marginFactorUnit', '')}".strip(),
+                "min_deal_size": val("minDealSize"), "min_stop_or_limit_distance": val("minNormalStopOrLimitDistance"),
+                "min_guaranteed_stop_distance": val("minControlledRiskStopDistance"),
+                "max_stop_or_limit_distance": val("maxStopOrLimitDistance"), "min_step_distance": val("minStepDistance"),
+                "guaranteed_stop_premium": (ins.get("limitedRiskPremium") or {}).get("value"),
+                "scaling_factor": sn.get("scalingFactor"), "status": sn.get("marketStatus"),
+                "bid": sn.get("bid"), "offer": sn.get("offer"), "delay_min": sn.get("delayTime"),
+                "hours_utc": ", ".join(f"{h.get('openTime')}-{h.get('closeTime')}" for h in hours) or None}
+
+    def navigation(self, node_id: str | None = None) -> dict:
+        """Browse IG's market tree: top level, or the child nodes and markets under node_id."""
+        return self._get(f"/marketnavigation/{node_id}" if node_id else "/marketnavigation")
+
+    def allowance(self) -> pd.DataFrame:
+        """API key status and request allowances (/operations/application)."""
+        j = self._get("/operations/application")
+        return pd.DataFrame(j if isinstance(j, list) else [j])
+
     # ---- prices (read, cached) -------------------------------------------
     def _fetch_prices(self, epic: str, resolution: str, start: datetime, end: datetime) -> pd.DataFrame:
         rows, page = [], 1
@@ -223,16 +279,26 @@ class IG:
     def prices(self, epic: str, interval: str = "1d", start=None, end=None, use_cache: bool = True) -> pd.DataFrame:
         if interval not in RESOLUTIONS:
             raise ValueError(f"interval must be one of {list(RESOLUTIONS)}")
-        end_ts = pd.Timestamp(end, tz="UTC") if end is not None else pd.Timestamp.now(tz="UTC")
-        start_ts = pd.Timestamp(start, tz="UTC") if start is not None else end_ts - pd.Timedelta(days=365)
+        end_ts = _utc(end) if end is not None else pd.Timestamp.now(tz="UTC")
+        start_ts = _utc(start) if start is not None else end_ts - pd.Timedelta(days=365)
         prov = f"ig-{self.cfg.acc_type.lower()}"
         cached = cache.load(prov, epic, interval) if use_cache else None
-        fetch_from = start_ts
-        if cached is not None and not cached.empty and cached.index[0] <= start_ts + pd.Timedelta(days=4):
-            fetch_from = max(start_ts, cached.index[-1])  # only the missing tail
-        if fetch_from < end_ts - pd.Timedelta(BAR.get(interval, "1D")):
-            fresh = self._fetch_prices(epic, RESOLUTIONS[interval], fetch_from.to_pydatetime(), end_ts.to_pydatetime())
-            cached = cache.save(prov, epic, interval, fresh) if use_cache else fresh
+        bar = pd.Timedelta(BAR.get(interval, "1D"))
+        if cached is None or cached.empty:
+            gaps = [(start_ts, end_ts)]
+        else:  # only what the cache lacks: the head before it and the tail after it, never the overlap
+            gaps = []
+            if cached.index[0] > start_ts + pd.Timedelta(days=4):
+                gaps.append((start_ts, min(cached.index[0], end_ts)))
+            tail_from = max(start_ts, cached.index[-1])
+            if tail_from < end_ts - bar:
+                gaps.append((tail_from, end_ts))
+        for frm, to in gaps:
+            fresh = self._fetch_prices(epic, RESOLUTIONS[interval], frm.to_pydatetime(), to.to_pydatetime())
+            if use_cache:
+                cached = cache.save(prov, epic, interval, fresh) if not fresh.empty else cached
+            else:
+                cached = fresh if cached is None or cached.empty else pd.concat([cached, fresh]).sort_index()
         if cached is None or cached.empty:
             raise LookupError(f"IG returned no prices for {epic}")
         return cached.loc[(cached.index >= start_ts) & (cached.index <= end_ts)]

@@ -5,8 +5,8 @@ Every signal on bar t uses data up to and including bar t only. Returns are meas
 (or the next open) to the close of t+h, multiplied by the signal direction (+1 long, -1 short)."""
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import numpy as np
 import pandas as pd

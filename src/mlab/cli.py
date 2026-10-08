@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import os
 import sys
 
 import numpy as np
@@ -227,7 +229,9 @@ def cmd_backtest(a):
     from .data import get_prices
     df = get_prices(a.symbol, a.interval, a.start, None, a.period)
     params = json.loads(a.params) if a.params else {}
-    res = backtest.run(df, backtest.STRATEGIES[a.strategy](df, **params), spread=a.spread, funding_annual=a.funding)
+    from .stats import ANN
+    res = backtest.run(df, backtest.STRATEGIES[a.strategy](df, **params), spread=a.spread, funding_annual=a.funding,
+                       periods=ANN.get(a.interval, 252))
     show(pd.DataFrame({"strategy": res["strategy"], "buy_hold": res["buy_hold"]}), a.json, title=f"{a.strategy} on {a.symbol}")
     print(f"\ntrades {res['trades']} · exposure {res['exposure']:.0%} · cost drag {res['cost_drag_total']:.2%}")
     src_line(df)
@@ -300,6 +304,14 @@ def cmd_ig(a):
             print(f"\nallowance: {ig.last_allowance or 'served from cache'}")
         elif act == "stream":
             ig.stream(a.arg, a.seconds, on_update=lambda t: print(json.dumps(t), flush=True))
+        elif act == "rules":
+            show(ig.rules(a.arg[0]), a.json, title=f"IG dealing rules {a.arg[0]}")
+        elif act == "related":
+            show(ig.related_sentiment(a.arg[0]), a.json, title="IG client sentiment, related markets")
+        elif act == "browse":
+            show(ig.navigation(a.arg[0] if a.arg else None), True)
+        elif act == "allowance":
+            show(ig.allowance(), a.json, title="IG API key allowance")
         elif act == "activity":
             show(ig.activity(a.days), a.json)
         elif act == "transactions":
@@ -401,9 +413,10 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--status", choices=["idea", "open", "closed", "passed"]); q.add_argument("--fill", type=float)
     q.add_argument("--exit", type=float); q.add_argument("--size", type=float); q.add_argument("--note")
 
-    q = add("ig", cmd_ig, "IG read-only: login accounts positions orders watchlists watchlist search market snapshot sentiment prices stream activity transactions")
+    q = add("ig", cmd_ig, "IG read-only: login accounts positions orders watchlists watchlist search market rules snapshot sentiment related browse prices stream activity transactions allowance")
     q.add_argument("action", choices=["login", "accounts", "positions", "orders", "watchlists", "watchlist", "search", "market",
-                                      "snapshot", "sentiment", "prices", "stream", "activity", "transactions"])
+                                      "rules", "snapshot", "sentiment", "related", "browse", "prices", "stream", "activity",
+                                      "transactions", "allowance"])
     q.add_argument("arg", nargs="*"); q.add_argument("--env", choices=["DEMO", "LIVE"]); q.add_argument("--interval", "-i", default="1d")
     q.add_argument("--start"); q.add_argument("--tail", type=int, default=15); q.add_argument("--refresh", action="store_true")
     q.add_argument("--seconds", type=int, default=20); q.add_argument("--days", type=int, default=30)
@@ -428,14 +441,22 @@ EXTENSIONS = ["mlab.ta_catalog", "mlab.signal_lab", "mlab.options", "mlab.earnin
               "mlab.quant.cli"]
 
 
+def setup_logging() -> None:
+    """Library modules only call logging.getLogger(__name__); the CLI decides what is shown.
+    Default WARNING to stderr (stdout stays clean for tables/JSON); MLAB_LOG_LEVEL=INFO|DEBUG or MLAB_DEBUG=1."""
+    level = "DEBUG" if os.environ.get("MLAB_DEBUG") else os.environ.get("MLAB_LOG_LEVEL", "WARNING").upper()
+    logging.basicConfig(level=logging.WARNING, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("mlab").setLevel(level)
+
+
 def main(argv=None):
+    setup_logging()
     a = build_parser().parse_args(argv)
     try:
         a.fn(a)
     except KeyboardInterrupt:
         pass
     except Exception as e:  # concise errors; full trace with MLAB_DEBUG=1
-        import os
         if os.environ.get("MLAB_DEBUG"):
             raise
         sys.exit(f"error: {type(e).__name__}: {e}")

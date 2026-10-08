@@ -22,7 +22,7 @@ def summary(close: pd.Series, bench: pd.Series | None = None, periods: int = 252
     years = len(r) / periods
     cagr = (close.iloc[-1] / close.iloc[0]) ** (1 / years) - 1 if years > 0 else np.nan
     vol = r.std() * np.sqrt(periods)
-    down = r[r < 0].std() * np.sqrt(periods)
+    down = np.sqrt((np.minimum(r, 0) ** 2).mean()) * np.sqrt(periods)  # downside deviation (target 0)
     dd = drawdown(close)
     out = {
         "start": str(close.index[0].date()), "end": str(close.index[-1].date()), "total_return": close.iloc[-1] / close.iloc[0] - 1,

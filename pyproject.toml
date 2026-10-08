@@ -20,7 +20,7 @@ dependencies = [
 
 [project.optional-dependencies]
 stream = ["lightstreamer-client-lib>=2.2.3"]
-dev = ["pytest>=9.1.1"]
+dev = ["pytest>=9.1.1", "ruff>=0.16.10"]
 
 [project.scripts]
 mlab = "mlab.cli:main"
@@ -35,3 +35,22 @@ where = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+
+[tool.ruff.lint]
+# The floor CI enforces (docs/wiki/Design-Standards.md). Raise it as the codebase is cleaned up, never lower it.
+select = ["F", "E4", "E7", "E9", "B", "UP", "I", "S110", "S112"]
+ignore = [
+  "E702",  # one-line statements in argparse blocks
+  "E731",  # named lambdas in small local helpers
+  "E741",  # l for low, as in OHLC
+  "B023",  # loop-variable closures here are all called inside the loop
+  "B905",  # zip(strict=) to be added module by module
+]
+
+[tool.ruff.lint.per-file-ignores]
+"src/mlab/providers/ig.py" = ["I001", "UP017"]  # streaming imports change in the open streaming PR; sort after it lands
+"tests/*" = ["E721"]  # (df.dtypes == bool) is the pandas idiom, not a type comparison

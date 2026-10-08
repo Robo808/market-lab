@@ -19,5 +19,7 @@ jobs:
           cache: pip
       - name: Install
         run: pip install -e ".[dev]"
+      - name: Lint (rule floor in pyproject.toml; see docs/wiki/Design-Standards.md)
+        run: ruff check src tests
       - name: Test (offline; tests/conftest.py points MLAB_DATA_DIR at a temp dir)
         run: pytest -q
