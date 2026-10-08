@@ -138,6 +138,15 @@ equity-research initiating/earnings/thesis/catalysts, private-equity DD checklis
 dataviz, xlsx) work here when fed `mlab` data. LSEG and S&P skills and the earnings-reviewer /
 market-researcher agents need their own data connectors (LSEG, CapIQ, FactSet, Daloopa).
 
+## Tracking work (GitHub issues)
+
+The to-do list is the issue tree under the Roadmap epic (#16): five epics, one per milestone, tasks as sub-issues
+(`docs/wiki/Tracking.md`).
+
+- Before starting code work, find its issue; if none exists, open one (Task template) and add it as a sub-issue of the right epic.
+- PR body starts with `Closes #N` or `Part of #N`. Follow-ups found during a PR become new issues, not TODO comments.
+- The repo is public: issues carry code work only, never trade ideas, positions, journal entries or personal details.
+
 ## Files
 
 - In the repo: `src/mlab/` code · `tests/` pytest (`~/.venvs/market-lab/bin/pytest -q`) · `.claude/` agents and skills

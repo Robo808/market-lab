@@ -1,3 +1,7 @@
+Closes #
+
+<!-- Name the issue this PR finishes (Closes #N) or advances (Part of #N), so the board moves it. -->
+
 ## Before
 
 What was true or broken before this PR.
