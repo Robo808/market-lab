@@ -40,8 +40,8 @@ def load(provider: str, symbol: str, interval: str) -> pd.DataFrame | None:
         return None
     try:
         os.utime(p)  # mark as recently used for pruning
-    except OSError:
-        pass
+    except OSError as e:  # read-only mount: the data is still good, only LRU order is stale
+        log.debug("could not touch %s: %s", p, e)
     return df
 
 
