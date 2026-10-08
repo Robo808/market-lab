@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
+import os
 import sys
 
 import numpy as np
@@ -439,14 +441,22 @@ EXTENSIONS = ["mlab.ta_catalog", "mlab.signal_lab", "mlab.options", "mlab.earnin
               "mlab.quant.cli"]
 
 
+def setup_logging() -> None:
+    """Library modules only call logging.getLogger(__name__); the CLI decides what is shown.
+    Default WARNING to stderr (stdout stays clean for tables/JSON); MLAB_LOG_LEVEL=INFO|DEBUG or MLAB_DEBUG=1."""
+    level = "DEBUG" if os.environ.get("MLAB_DEBUG") else os.environ.get("MLAB_LOG_LEVEL", "WARNING").upper()
+    logging.basicConfig(level=logging.WARNING, stream=sys.stderr, format="%(levelname)s %(name)s: %(message)s")
+    logging.getLogger("mlab").setLevel(level)
+
+
 def main(argv=None):
+    setup_logging()
     a = build_parser().parse_args(argv)
     try:
         a.fn(a)
     except KeyboardInterrupt:
         pass
     except Exception as e:  # concise errors; full trace with MLAB_DEBUG=1
-        import os
         if os.environ.get("MLAB_DEBUG"):
             raise
         sys.exit(f"error: {type(e).__name__}: {e}")

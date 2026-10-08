@@ -23,7 +23,9 @@ def ohlcv():
 def tmp_env(tmp_path, monkeypatch):
     monkeypatch.setenv("MLAB_CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setenv("MLAB_JOURNAL_DIR", str(tmp_path / "journal"))
-    import mlab.cache, mlab.config, mlab.journal
+    import mlab.cache
+    import mlab.config
+    import mlab.journal
     importlib.reload(mlab.config)
     importlib.reload(mlab.cache)
     importlib.reload(mlab.journal)
@@ -233,7 +235,8 @@ def test_backtest_no_lookahead(ohlcv):
 
 
 def test_data_dir_override(tmp_path, monkeypatch):
-    import mlab.config, mlab.journal
+    import mlab.config
+    import mlab.journal
     monkeypatch.setenv("MLAB_DATA_DIR", str(tmp_path))
     monkeypatch.delenv("MLAB_JOURNAL_DIR", raising=False)
     monkeypatch.delenv("MLAB_CACHE_DIR", raising=False)

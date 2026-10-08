@@ -283,6 +283,7 @@ def test_make_query():
 @pytest.fixture
 def tmp_cache(monkeypatch, tmp_path):
     monkeypatch.setattr(cache, "CACHE_DIR", tmp_path)
+    monkeypatch.setenv("MLAB_NEWS_DIR", str(tmp_path / "news_history"))
     monkeypatch.setattr(news, "GDELT_PAUSE", 0)
     return tmp_path
 
@@ -331,14 +332,18 @@ def test_brief_with_fixtures(monkeypatch, tmp_cache):
     assert r["sentiment_7d"] > 0 and r["attention_spike"] is True
     assert 0 < r["social_bull_ratio"] < 1
     assert "earnings" in r["events"].index
-    # history was stored, so a second run sees it
-    assert len(news.history("NVDA")) >= r["items"] - 1
+    # history was stored (one row per unique (time, uid)), so a second run sees it
+    h = news.history("NVDA")
+    assert len(h) >= r["unique_headlines"] and not h.duplicated(["time", "uid"]).any()
+    news.brief("NVDA", 7)  # a second fetch adds a file, never duplicates rows
+    assert len(news.history("NVDA")) == len(h)
 
 
 def test_rss_parser_rejects_entity_expansion():
     """Feeds are untrusted: a billion-laughs payload must be refused, not expanded."""
     import pytest
     from defusedxml import EntitiesForbidden
+
     from mlab.news import parse_rss
     bomb = ('<?xml version="1.0"?><!DOCTYPE r [<!ENTITY a "aaaaaaaaaa"><!ENTITY b "&a;&a;&a;&a;&a;&a;&a;&a;">]>'
             '<rss><channel><item><title>&b;</title></item></channel></rss>')

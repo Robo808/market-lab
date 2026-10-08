@@ -11,6 +11,7 @@ import hashlib
 import json
 import re
 import shutil
+
 # Only used to run git with fixed arguments and a slugified branch name.
 import subprocess  # nosec B404
 from datetime import date

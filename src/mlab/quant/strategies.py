@@ -9,8 +9,8 @@ return of bar t+1, so nothing here may look ahead (tests check this by truncatio
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 import numpy as np
 import pandas as pd

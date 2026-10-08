@@ -1,4 +1,8 @@
-"""Trade journal: append-only JSONL (journal/trades.jsonl) + a rendered JOURNAL.md.
+"""Trade journal, event-sourced so threads in different containers never lose each other's entries.
+
+Every change (a new card, a status change, a fill, an exit) is one new write-once file in
+journal/events/. The journal is the fold of journal/trades.jsonl (entries written before events existed,
+read-only now) plus those events in time order. JOURNAL.md is a rendered view, regenerated on every write.
 
 Lifecycle: idea -> open -> closed (or idea -> passed). Every entry keeps the trade card,
 the lens, and the sources, so reviews can score which lens actually makes money.
@@ -13,9 +17,11 @@ from pathlib import Path
 import pandas as pd
 
 from .config import DATA_DIR
+from .storage import append_event, atomic_write_text, read_events
 
 JOURNAL_DIR = Path(os.environ.get("MLAB_JOURNAL_DIR", DATA_DIR / "journal"))
-FILE = JOURNAL_DIR / "trades.jsonl"
+FILE = JOURNAL_DIR / "trades.jsonl"  # legacy base, read-only
+EVENTS = JOURNAL_DIR / "events"
 STATUSES = ("idea", "open", "closed", "passed")
 
 
@@ -23,18 +29,37 @@ def _now() -> str:
     return pd.Timestamp.now(tz="UTC").isoformat(timespec="seconds")
 
 
-def _read() -> list[dict]:
+def _base() -> list[dict]:
     if not FILE.exists():
         return []
-    return [json.loads(l) for l in FILE.read_text().splitlines() if l.strip()]
+    return [json.loads(line) for line in FILE.read_text().splitlines() if line.strip()]
 
 
-def _write(rows: list[dict]):
-    JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
-    tmp = FILE.with_suffix(".tmp")
-    tmp.write_text("".join(json.dumps(r, default=str) + "\n" for r in rows))
-    tmp.replace(FILE)
-    render()
+def _apply(rows: dict[str, dict], ev: dict) -> None:
+    if ev["op"] == "add":
+        rows.setdefault(ev["row"]["id"], ev["row"])
+        return
+    r = rows.get(ev["id"])
+    if r is None:  # update for an entry this reader cannot see (yet): skip, the fold is re-run on every read
+        return
+    if ev.get("status"):
+        r["status"] = ev["status"]
+    for k in ("fill", "size"):
+        if ev.get(k) is not None:
+            r[k] = ev[k]
+    if ev.get("exit") is not None:
+        r["exit"], r["closed"] = ev["exit"], ev["t"]
+        r["r_multiple"] = r_multiple(r)
+    r["events"].append({"t": ev["t"], "status": r["status"], "note": ev.get("note", ""),
+                        **({"fill": ev["fill"]} if ev.get("fill") is not None else {}),
+                        **({"exit": ev["exit"]} if ev.get("exit") is not None else {})})
+
+
+def _read() -> list[dict]:
+    rows = {r["id"]: r for r in _base()}
+    for ev in read_events(EVENTS):
+        _apply(rows, ev)
+    return list(rows.values())
 
 
 def add(card: dict, status: str = "idea", note: str = "") -> dict:
@@ -42,35 +67,24 @@ def add(card: dict, status: str = "idea", note: str = "") -> dict:
         raise ValueError(f"status must be one of {STATUSES}")
     row = {"id": uuid.uuid4().hex[:8], "created": _now(), "status": status, "card": card,
            "events": [{"t": _now(), "status": status, "note": note}]}
-    rows = _read()
-    rows.append(row)
-    _write(rows)
+    append_event(EVENTS, {"op": "add", "t": row["created"], "row": row})
+    render()
     return row
 
 
 def update(trade_id: str, status: str | None = None, fill: float | None = None, exit_price: float | None = None,
            size: float | None = None, note: str = "") -> dict:
-    rows = _read()
-    for r in rows:
-        if r["id"] == trade_id:
-            if status:
-                if status not in STATUSES:
-                    raise ValueError(f"status must be one of {STATUSES}")
-                r["status"] = status
-            if fill is not None:
-                r["fill"] = fill
-            if size is not None:
-                r["size"] = size
-            if exit_price is not None:
-                r["exit"] = exit_price
-                r["closed"] = _now()
-                r["r_multiple"] = r_multiple(r)
-            r["events"].append({"t": _now(), "status": r["status"], "note": note,
-                                **({"fill": fill} if fill is not None else {}),
-                                **({"exit": exit_price} if exit_price is not None else {})})
-            _write(rows)
-            return r
-    raise KeyError(trade_id)
+    if status and status not in STATUSES:
+        raise ValueError(f"status must be one of {STATUSES}")
+    rows = {r["id"]: r for r in _read()}
+    if trade_id not in rows:
+        raise KeyError(trade_id)
+    ev = {"op": "update", "t": _now(), "id": trade_id, "status": status, "fill": fill, "size": size,
+          "exit": exit_price, "note": note}
+    append_event(EVENTS, ev)
+    _apply(rows, ev)
+    render()
+    return rows[trade_id]
 
 
 def r_multiple(r: dict) -> float | None:
@@ -110,7 +124,7 @@ def review() -> dict:
 
 def render() -> Path:
     out = JOURNAL_DIR / "JOURNAL.md"
-    parts = ["# Trade journal\n", "_Generated from trades.jsonl by `mlab journal`. Edit via the CLI, not by hand._\n"]
+    parts = ["# Trade journal\n", "_Generated from trades.jsonl + events/ by `mlab journal`. Edit via the CLI, not by hand._\n"]
     for st in ("open", "idea", "closed", "passed"):
         df = table(st)
         if not df.empty:
@@ -118,6 +132,4 @@ def render() -> Path:
     rv = review()
     if rv.get("closed_trades"):
         parts.append("\n## Review\n\n```\n" + json.dumps(rv, indent=2, default=str) + "\n```\n")
-    JOURNAL_DIR.mkdir(parents=True, exist_ok=True)
-    out.write_text("".join(parts))
-    return out
+    return atomic_write_text(out, "".join(parts))

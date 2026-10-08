@@ -3,8 +3,8 @@ statistics, paper books and pre-registered hypotheses."""
 import numpy as np
 import pandas as pd
 import pytest
-
 from conftest import synth_ohlcv
+
 from mlab.quant import engine, hypothesis, paper, strategies, validation
 
 

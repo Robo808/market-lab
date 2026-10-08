@@ -33,14 +33,19 @@ Branch from main, PR back to main. Delete the branch after merge.
 
 The template asks for **Before / After / How** and a checklist:
 
-- `pytest -q` passes.
+- `ruff check src tests` and `pytest -q` pass.
 - Hypothesis PRs: the pre-registration commit is linked and predates the results, the verdict is recorded, the trial count is updated.
 - No credentials, no journal data.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push to main and every PR: Python 3.12, `pip install -e ".[dev]"`, `pytest -q`,
-with `MLAB_DATA_DIR` pointed at a temp folder.
+`.github/workflows/ci.yml` runs on every push to main and every PR: Python 3.12, `pip install -e ".[dev]"`, `ruff check src tests`,
+`pytest -q`, with `MLAB_DATA_DIR` pointed at a temp folder.
+
+## Design standards
+
+Read [[Design Standards]] before writing code: layering, functional core, data contracts, caching tiers, storage, concurrency
+rules for the shared folder, streaming, logging, and the review checklist.
 
 `.github/workflows/wiki-sync.yml` mirrors `docs/wiki/` to the GitHub wiki on push to main. Edit wiki pages in the repo.
 
