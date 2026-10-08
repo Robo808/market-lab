@@ -199,11 +199,13 @@ def xs_momentum(panel, lookback=252, skip=21, top=3, short_bottom=0):
 def dual_momentum(panel, safe=None, lookback=252):
     """Antonacci: hold the best risky asset if its 12m return beats the safe asset (or 0), else safe."""
     safe = safe or panel.columns[-1]
+    if safe not in panel:
+        raise ValueError(f"safe asset {safe!r} is not in the panel: {list(panel.columns)}")
     mom = panel / panel.shift(lookback) - 1
     risky = [c for c in panel.columns if c != safe]
     best = mom[risky].fillna(-np.inf).idxmax(axis=1)
     best_r = mom[risky].max(axis=1)
-    hurdle = mom[safe].fillna(0).clip(lower=0) if safe in panel else 0
+    hurdle = mom[safe].fillna(0).clip(lower=0)
     w = pd.DataFrame(0.0, index=panel.index, columns=panel.columns)
     for d in panel.index:
         if pd.isna(best_r.loc[d]):

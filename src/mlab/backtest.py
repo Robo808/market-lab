@@ -80,7 +80,7 @@ def walk_forward(df, strat, grid: list[dict], train=504, test=126, **run_kw) -> 
     rows = []
     for start in range(0, len(df) - train - test + 1, test):
         tr, te = df.iloc[start:start + train], df.iloc[start + train - 250:start + train + test]
-        best = max(grid, key=lambda p: run(tr, strat(tr, **p), **run_kw)["strategy"].get("sharpe", -9) or -9)
+        best = max(grid, key=lambda p: np.nan_to_num(run(tr, strat(tr, **p), **run_kw)["strategy"].get("sharpe", np.nan), nan=-9))
         oos = run(te, strat(te, **best), **run_kw)
         eq = oos["equity"]["strategy"].loc[df.index[start + train]:]
         rows.append({"test_start": df.index[start + train].date(), "params": best,

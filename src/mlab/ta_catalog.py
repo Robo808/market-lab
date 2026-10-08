@@ -13,7 +13,7 @@ import pandas as pd
 from numpy.lib.stride_tricks import sliding_window_view as _swv
 
 from . import ta
-from .ta import atr, ema, sma, true_range, wilder
+from .ta import atr, ema, sma, true_range
 
 
 # ---- helpers ----------------------------------------------------------------------
