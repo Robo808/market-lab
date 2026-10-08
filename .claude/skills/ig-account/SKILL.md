@@ -16,7 +16,7 @@ Rules:
 - Price history is allowance-limited (10k points/week): use `./mlab price ig:EPIC` (cache-first, missing tail only).
   `ig prices` prints the remaining allowance.
 - Login fails: follow IG's FAQ (labs.ig.com/faq.html). First check the same login on the IG web platform, then in
-  IG's API companion (labs.ig.com/sample-apps/api-companion/index.html), which takes our code out of the picture.
+  IG's API companion (labs.ig.com/sample-apps/api-rest-companion-release/index.html), which takes our code out of the picture.
   Make ONE attempt from here, never a retry loop: repeated failures and concurrent connections get logins suspended.
   `error.security.client-suspended` is lifted only by IG: email webapisupport@ig.com (or github.com/IG-Group).
 - Position review: for each position, `./mlab firing <underlying>` + distance to stop/target in ATR, then hold / trail / cut.

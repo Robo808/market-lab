@@ -50,7 +50,7 @@ FIX_HINTS = {
     "error.security.api-key-revoked": "API key was revoked: generate a new one on the IG web platform under My Account > Settings > API Keys",
     "error.security.invalid-details": "username or password rejected: check IG_USERNAME / IG_PASSWORD, and that IG_ACC_TYPE matches the account (DEMO logins differ from LIVE)",
     "error.security.account-suspended": "IG account is suspended: email webapisupport@ig.com",
-    "error.security.client-suspended": "IG has suspended this client login (not the API key, and not a timed lock): test the same login in IG's API companion (labs.ig.com/sample-apps/api-companion), then email webapisupport@ig.com to lift it; a new password or API key does not clear it",
+    "error.security.client-suspended": "IG has suspended this client login (not the API key, and not a timed lock): test the same login in IG's API companion (labs.ig.com/sample-apps/api-rest-companion-release/index.html), then email webapisupport@ig.com to lift it; a new password or API key does not clear it",
     "error.security.too-many-failed-attempts": "IG locked logins after failed attempts: wait about a minute, fix the password, then retry",
     "error.public-api.exceeded-api-key-allowance": "API key request allowance used up: wait for it to reset",
     "error.public-api.exceeded-account-historical-data-allowance": "weekly historical price allowance used up: use cached bars or Yahoo for long history",
