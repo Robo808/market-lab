@@ -129,6 +129,13 @@ def test_ig_read_only_guard(monkeypatch):
     assert ig.cfg.base_url.startswith("https://demo-api.ig.com")
 
 
+def test_ig_login_error_names_the_fix(monkeypatch):
+    from mlab.providers.ig import IGError
+    ig, _ = _ig(monkeypatch, lambda m, u, k: FakeResp(401, {"errorCode": "error.security.invalid-details"}))
+    with pytest.raises(IGError, match="IG_ACC_TYPE matches the account"):
+        ig.login()
+
+
 def test_ig_prices_parse_and_tail_cache(tmp_env, monkeypatch):
     def bar(t, px):
         p = {"bid": px - 0.5, "ask": px + 0.5, "lastTraded": None}
