@@ -300,6 +300,14 @@ def cmd_ig(a):
             print(f"\nallowance: {ig.last_allowance or 'served from cache'}")
         elif act == "stream":
             ig.stream(a.arg, a.seconds, on_update=lambda t: print(json.dumps(t), flush=True))
+        elif act == "rules":
+            show(ig.rules(a.arg[0]), a.json, title=f"IG dealing rules {a.arg[0]}")
+        elif act == "related":
+            show(ig.related_sentiment(a.arg[0]), a.json, title="IG client sentiment, related markets")
+        elif act == "browse":
+            show(ig.navigation(a.arg[0] if a.arg else None), True)
+        elif act == "allowance":
+            show(ig.allowance(), a.json, title="IG API key allowance")
         elif act == "activity":
             show(ig.activity(a.days), a.json)
         elif act == "transactions":
@@ -401,9 +409,10 @@ def build_parser() -> argparse.ArgumentParser:
     q.add_argument("--status", choices=["idea", "open", "closed", "passed"]); q.add_argument("--fill", type=float)
     q.add_argument("--exit", type=float); q.add_argument("--size", type=float); q.add_argument("--note")
 
-    q = add("ig", cmd_ig, "IG read-only: login accounts positions orders watchlists watchlist search market snapshot sentiment prices stream activity transactions")
+    q = add("ig", cmd_ig, "IG read-only: login accounts positions orders watchlists watchlist search market rules snapshot sentiment related browse prices stream activity transactions allowance")
     q.add_argument("action", choices=["login", "accounts", "positions", "orders", "watchlists", "watchlist", "search", "market",
-                                      "snapshot", "sentiment", "prices", "stream", "activity", "transactions"])
+                                      "rules", "snapshot", "sentiment", "related", "browse", "prices", "stream", "activity",
+                                      "transactions", "allowance"])
     q.add_argument("arg", nargs="*"); q.add_argument("--env", choices=["DEMO", "LIVE"]); q.add_argument("--interval", "-i", default="1d")
     q.add_argument("--start"); q.add_argument("--tail", type=int, default=15); q.add_argument("--refresh", action="store_true")
     q.add_argument("--seconds", type=int, default=20); q.add_argument("--days", type=int, default=30)
