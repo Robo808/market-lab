@@ -149,13 +149,13 @@ def empty() -> pd.DataFrame:
 
 def _uid(df: pd.DataFrame) -> pd.Series:
     key = df["source"].astype(str) + "|" + df["url"].where(df["url"].str.len() > 0, df["title"]).astype(str)
-    return key.map(lambda s: hashlib.sha1(s.encode()).hexdigest()[:16])
+    return key.map(lambda s: hashlib.sha1(s.encode(), usedforsecurity=False).hexdigest()[:16])  # dedupe key only
 
 
 # =============================================================================== parsers (pure)
 def parse_rss(xml_text: str, source: str, symbol: str = "") -> pd.DataFrame:
     """RSS 2.0 (Google News, Yahoo Finance). Google titles end in ' - Publisher', split into author."""
-    import xml.etree.ElementTree as ET
+    from defusedxml import ElementTree as ET  # feeds are untrusted: block entity-expansion and XXE tricks
     root = ET.fromstring(xml_text.encode() if isinstance(xml_text, str) else xml_text)
     rows = []
     for it in root.iter("item"):

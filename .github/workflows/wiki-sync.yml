@@ -1,0 +1,30 @@
+# Mirrors docs/wiki/ to the GitHub wiki.
+# The GitHub wiki must be initialised once by creating any page in the repo's Wiki tab.
+# After that, every push to main that touches docs/wiki/** overwrites the wiki with this folder.
+# Edit the pages here, not in the Wiki tab: edits made there are lost on the next sync.
+#
+# Third-party actions are pinned to a commit SHA (Dependabot bumps them); v5 takes the source folder as `path`.
+name: Wiki sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/wiki/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wiki-sync
+  cancel-in-progress: true
+
+jobs:
+  wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: Andrew-Chen-Wang/github-wiki-action@1bbb4280446f9630e8e21a18012cbacf3b0f992e  # v5.0.6
+        with:
+          path: docs/wiki

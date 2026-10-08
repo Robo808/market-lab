@@ -61,7 +61,8 @@ Fan out to these in parallel for anything non-trivial; each crunches and returns
 
 The main session is the **PM**: it briefs the desks, weighs their output through the lenses, and
 writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`trade-idea`,
-`morning-brief`, `lens-soros`, `lens-buffett`, `lens-burry`, `ig-account`, `trade-journal`, `market-data`).
+`morning-brief`, `lens-soros`, `lens-buffett`, `lens-burry`, `ig-account`, `trade-journal`, `market-data`,
+`quant-research`).
 
 ## CLI cheat sheet (`./mlab --help` for all)
 
@@ -84,7 +85,22 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab card "FTSE 100" --bias long --entry 7400 7420 --stop 7330 --targets 7600 7750 --epic IX.D.FTSE.DAILY.IP --journal
 ./mlab ig positions ; ./mlab ig search "gold" ; ./mlab ig sentiment IX.D.FTSE.DAILY.IP
 ./mlab journal list ; ./mlab journal review
+./mlab algo list                        # 21 algorithmic strategies + overlays
+./mlab algo backtest xs_momentum SPY EFA EEM GLD TLT -p 10y --params '{"top":2}'
+./mlab algo validate tsmom ^GSPC --grid '{"lookback":[126,252]}'   # OOS, PSR/DSR, bootstrap, permutation
+./mlab algo signal dual_momentum SPY EFA BIL ; ./mlab algo paper rsi2 SPY QQQ --book rsi2-us
+./mlab hypo new <slug> --claim "..." ; ./mlab hypo test research/hypotheses/H-....md ; ./mlab hypo list
 ```
+
+## Quant research (`src/mlab/quant/`, wiki in `docs/wiki/`)
+
+- Strategy library (`strategies.py`): trend, breakout, mean reversion, seasonality, cross-sectional momentum,
+  dual momentum, inverse vol, risk parity, pairs; overlays `vol_target` and `regime_filter`. Decisions at the close
+  of bar t earn bar t+1; tests enforce no look-ahead by truncation.
+- Modes: backtest, signal (today's target), paper (books in `$MLAB_DATA_DIR/paper/`). No live execution.
+- Hypotheses are pre-registered on `hypo/<yyyymmdd>-<slug>` branches in `research/hypotheses/`, graded once
+  against bars set in advance, and merged to main whether PASS or FAIL. Follow the `quant-research` skill.
+- Issues use the templates in `.github/ISSUE_TEMPLATE/` (hypothesis, strategy, bug, data source); CI runs pytest.
 
 Python API for ad-hoc work: `from mlab.data import get_prices`, `from mlab import ta, ta_catalog,
 signal_lab, stats, lenses, options, earnings, news, cot, risk, journal`.

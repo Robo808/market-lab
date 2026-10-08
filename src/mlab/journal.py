@@ -38,7 +38,8 @@ def _write(rows: list[dict]):
 
 
 def add(card: dict, status: str = "idea", note: str = "") -> dict:
-    assert status in STATUSES
+    if status not in STATUSES:
+        raise ValueError(f"status must be one of {STATUSES}")
     row = {"id": uuid.uuid4().hex[:8], "created": _now(), "status": status, "card": card,
            "events": [{"t": _now(), "status": status, "note": note}]}
     rows = _read()
@@ -53,7 +54,8 @@ def update(trade_id: str, status: str | None = None, fill: float | None = None, 
     for r in rows:
         if r["id"] == trade_id:
             if status:
-                assert status in STATUSES
+                if status not in STATUSES:
+                    raise ValueError(f"status must be one of {STATUSES}")
                 r["status"] = status
             if fill is not None:
                 r["fill"] = fill
