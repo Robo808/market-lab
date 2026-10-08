@@ -40,11 +40,11 @@ Books live in the data dir, shared by every thread, never in git.
 
 After 3 months and 20 trades, compare paper with the backtest: hit rate, average R, Sharpe, drawdown, cost drag. If
 paper is inside the backtest's range, the strategy's signals can be cited on trade cards as supporting evidence.
-Cezar still sizes and places every trade himself.
+The trader still sizes and places every trade by hand.
 
 ## Live execution is off
 
 - The IG client in `src/mlab/providers/ig.py` is read-only: it allows GETs and session login, switch and logout only.
   No order or deal endpoints exist in the code.
 - No strategy, book or agent places orders.
-- Turning execution on requires Cezar to ask for it explicitly. Until then, systematic output is a signal or a paper fill.
+- Turning execution on would be an explicit, separate decision by the repo owner. Until then, systematic output is a signal or a paper fill.

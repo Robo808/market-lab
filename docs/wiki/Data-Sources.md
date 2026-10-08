@@ -27,7 +27,7 @@ Credentials come from env vars only. Never print, log or commit them.
 - **Cloud container**: the default environment allows package indexes and GitHub only; market data hosts are refused
   until a cloud environment with them allowlisted is added (`docs/NETWORK.md`).
 - **Stooq**: intermittent timeouts; treat as a fallback, not a primary.
-- **Reddit**: blocked from cloud IPs. Use StockTwits and HN, or run on Cezar's machine.
+- **Reddit**: blocked from cloud IPs. Use StockTwits and HN, or run on a local machine.
 - **GDELT**: throttles bursts; space requests out and rely on the cache.
 - **LSE prices**: Yahoo quotes most `.L` shares in pence (GBp) and some series flip to pounds; check the units before
   computing returns or stakes. A 100x jump in a series is a units error, not a move.
@@ -42,7 +42,7 @@ Credentials come from env vars only. Never print, log or commit them.
 2. Connected claude.ai connectors (Alpha Vantage, FMP, Financial Datasets, Bigdata.com, TEXT TO QUANT, Meltwater,
    CoinMarketCap): they route outside the container's network policy.
 3. WebSearch / WebFetch for news, transcripts and quotes, citing URL and time.
-4. Run the same `bash mlab` command on Cezar's machine (Remote Control), where the network is open.
+4. Run the same `bash mlab` command on a local machine (for example via Claude Code Remote Control), where the network is open.
 
 Always say which source a number came from and when.
 
