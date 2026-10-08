@@ -238,7 +238,12 @@ class IG:
         return cached.loc[(cached.index >= start_ts) & (cached.index <= end_ts)]
 
     # ---- streaming (read) ------------------------------------------------
-    def stream(self, epics: list[str], seconds: int = 30, fields=("BID", "OFFER", "UPDATE_TIME", "MARKET_STATE", "CHANGE_PCT"),
+    def price_items(self, epics: list[str]) -> list[str]:
+        """Lightstreamer PRICE items. IG retired the old MARKET:{epic} items on 8 May 2026."""
+        return [f"PRICE:{self.account_id}:{e}" for e in epics]
+
+    def stream(self, epics: list[str], seconds: int = 30,
+               fields=("BIDPRICE1", "ASKPRICE1", "HIGH", "LOW", "NET_CHG_PCT", "DLG_FLAG", "DELAY", "TIMESTAMP"),
                on_update=None) -> list[dict]:
         """Subscribe to live Lightstreamer quotes for `seconds`; returns collected ticks."""
         from lightstreamer.client import LightstreamerClient, Subscription, SubscriptionListener
@@ -249,7 +254,7 @@ class IG:
 
         class L(SubscriptionListener):
             def onItemUpdate(self, u):
-                t = {"epic": u.getItemName().split(":", 1)[1], **{f: u.getValue(f) for f in fields},
+                t = {"epic": u.getItemName().split(":", 2)[2], **{f: u.getValue(f) for f in fields},
                      "recv": datetime.now(timezone.utc).isoformat()}
                 with lock:
                     ticks.append(t)
@@ -260,7 +265,7 @@ class IG:
         client.connectionDetails.setUser(self.account_id)
         client.connectionDetails.setPassword(f"CST-{self.s.headers['CST']}|XST-{self.s.headers['X-SECURITY-TOKEN']}")
         client.connect()
-        sub = Subscription(mode="MERGE", items=[f"MARKET:{e}" for e in epics], fields=list(fields))
+        sub = Subscription(mode="MERGE", items=self.price_items(epics), fields=list(fields))
         sub.addListener(L())
         client.subscribe(sub)
         try:

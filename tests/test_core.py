@@ -247,3 +247,36 @@ def test_data_dir_override(tmp_path, monkeypatch):
         monkeypatch.undo()
         importlib.reload(mlab.config)
         importlib.reload(mlab.journal)
+
+
+def test_ig_stream_uses_price_items(monkeypatch):
+    import lightstreamer.client as lsc
+    ig, _ = _ig(monkeypatch, _login_ok)
+    seen = {}
+
+    class FakeClient:
+        def __init__(self, url, adapter):
+            seen["url"] = url
+            self.connectionDetails = type("CD", (), {"setUser": lambda s, u: seen.update(user=u),
+                                                     "setPassword": lambda s, p: seen.update(pw=p)})()
+        def connect(self): pass
+        def subscribe(self, sub):
+            seen["items"] = sub.items
+            upd = type("U", (), {"getItemName": lambda s: sub.items[0], "getValue": lambda s, f: "1"})()
+            sub.listener.onItemUpdate(upd)
+        def unsubscribe(self, sub): pass
+        def disconnect(self): pass
+
+    class FakeSub:
+        def __init__(self, mode, items, fields):
+            self.items, self.fields = items, fields
+        def addListener(self, l):
+            self.listener = l
+
+    monkeypatch.setattr(lsc, "LightstreamerClient", FakeClient)
+    monkeypatch.setattr(lsc, "Subscription", FakeSub)
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    ticks = ig.stream(["IX.D.FTSE.DAILY.IP"], seconds=0)
+    assert seen["items"] == ["PRICE:ABC:IX.D.FTSE.DAILY.IP"]
+    assert seen["user"] == "ABC" and seen["pw"] == "CST-c|XST-x"
+    assert ticks[0]["epic"] == "IX.D.FTSE.DAILY.IP" and ticks[0]["BIDPRICE1"] == "1"
