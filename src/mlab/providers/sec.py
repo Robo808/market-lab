@@ -83,8 +83,7 @@ def annual_financials(ticker: str, years: int = 10) -> pd.DataFrame:
                 df = df[(dur > 330) & (dur < 400)]
             df = df.sort_values("filed").drop_duplicates("end", keep="last")
             ser = df.set_index("end")["val"].astype(float)
-            out[item] = ser if item not in out else out[item].combine_first(ser)
-            break
+            out[item] = ser if item not in out else out[item].combine_first(ser)  # earlier tags win, later ones fill gaps
     if not out:
         raise LookupError(f"no XBRL annual facts for {ticker}")
     fin = pd.DataFrame(out).sort_index()

@@ -54,7 +54,7 @@ def atr(df: pd.DataFrame, n: int = 14) -> pd.Series:
 
 
 def bollinger(close: pd.Series, n=20, k=2.0) -> pd.DataFrame:
-    m, sd = sma(close, n), close.rolling(n).std()
+    m, sd = sma(close, n), close.rolling(n).std(ddof=0)  # population std, as Bollinger and TA-Lib define it
     up, lo = m + k * sd, m - k * sd
     return pd.DataFrame({"mid": m, "upper": up, "lower": lo, "pct_b": (close - lo) / (up - lo), "width": (up - lo) / m})
 

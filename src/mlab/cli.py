@@ -227,7 +227,9 @@ def cmd_backtest(a):
     from .data import get_prices
     df = get_prices(a.symbol, a.interval, a.start, None, a.period)
     params = json.loads(a.params) if a.params else {}
-    res = backtest.run(df, backtest.STRATEGIES[a.strategy](df, **params), spread=a.spread, funding_annual=a.funding)
+    from .stats import ANN
+    res = backtest.run(df, backtest.STRATEGIES[a.strategy](df, **params), spread=a.spread, funding_annual=a.funding,
+                       periods=ANN.get(a.interval, 252))
     show(pd.DataFrame({"strategy": res["strategy"], "buy_hold": res["buy_hold"]}), a.json, title=f"{a.strategy} on {a.symbol}")
     print(f"\ntrades {res['trades']} · exposure {res['exposure']:.0%} · cost drag {res['cost_drag_total']:.2%}")
     src_line(df)

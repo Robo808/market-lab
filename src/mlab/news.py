@@ -957,7 +957,7 @@ def brief(q: str, days: int = 7, sources=None, top: int = 12, store: bool = True
         "items": int(len(items)), "unique_headlines": int(len(news)),
         "sentiment_7d": _window_mean(daily, "sentiment", 7, now), "sentiment_30d": _window_mean(daily, "sentiment", 30, now),
         "gdelt_tone_7d": _window_mean(daily, "gdelt_tone", 7, now), "gdelt_tone_30d": _window_mean(daily, "gdelt_tone", 30, now),
-        "attention_z": last_z, "attention_spike": bool(last_z >= 2) if last_z == last_z else False,
+        "attention_z": last_z, "attention_spike": bool(last_z >= 2) if np.isfinite(last_z) else False,
         "social_posts": int(len(soc)), "social_bull_ratio": bulls / (bulls + bears) if bulls + bears else float("nan"),
         "headlines": heads[["time", "source", "compound", "events", "n_sources", "title", "url"]].assign(
             time=heads["time"].dt.strftime("%m-%d %H:%M")).set_index("time") if len(heads) else pd.DataFrame(),
