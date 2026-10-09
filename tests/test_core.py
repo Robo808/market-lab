@@ -285,3 +285,8 @@ def test_ig_stream_uses_price_items(monkeypatch):
     assert seen["items"] == ["PRICE:ABC:IX.D.FTSE.DAILY.IP"]
     assert seen["user"] == "ABC" and seen["pw"] == "CST-c|XST-x"
     assert ticks[0]["epic"] == "IX.D.FTSE.DAILY.IP" and ticks[0]["BIDPRICE1"] == "1"
+
+
+def test_ig_stockbroking_hint():
+    from mlab.providers.ig import fix_hint
+    assert "default account" in fix_hint("error.public-api.failure.stockbroking-not-supported")

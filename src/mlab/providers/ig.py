@@ -51,6 +51,7 @@ FIX_HINTS = {
     "error.security.invalid-details": "username or password rejected: check IG_USERNAME / IG_PASSWORD, and that IG_ACC_TYPE matches the account (DEMO logins differ from LIVE)",
     "error.security.account-suspended": "IG account is suspended: email webapisupport@ig.com",
     "error.security.client-suspended": "IG has suspended this client login (not the API key, and not a timed lock): test the same login in IG's API companion (labs.ig.com/sample-apps/api-rest-companion-release/index.html), then email webapisupport@ig.com to lift it; a new password or API key does not clear it",
+    "error.public-api.failure.stockbroking-not-supported": "the login's default account is share dealing/ISA/SIPP, which the API does not serve: make the spread bet or CFD account the default on the IG web platform (login fails before any account switch)",
     "error.security.too-many-failed-attempts": "IG hit its maximum of failed login attempts: stop retrying, check the login on the IG web platform and in the API companion, then email webapisupport@ig.com if it stays blocked",
     "error.public-api.exceeded-api-key-allowance": "API key request allowance used up: wait for it to reset",
     "error.public-api.exceeded-account-historical-data-allowance": "weekly historical price allowance used up: use cached bars or Yahoo for long history",
