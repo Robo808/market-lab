@@ -13,6 +13,7 @@ plan), so price history is cached and only the missing tail is requested.
 """
 from __future__ import annotations
 
+import os
 import threading
 import time
 from datetime import datetime, timezone
@@ -31,7 +32,7 @@ RESOLUTIONS = {
 BAR = {"1m": "1min", "2m": "2min", "3m": "3min", "5m": "5min", "10m": "10min", "15m": "15min",
        "30m": "30min", "1h": "1h", "2h": "2h", "3h": "3h", "4h": "4h", "1d": "1D", "1wk": "7D", "1mo": "31D"}
 
-_ALLOWED_WRITES = {("POST", "/session"), ("PUT", "/session"), ("DELETE", "/session")}
+_ALLOWED_WRITES = {("POST", "/session"), ("PUT", "/session"), ("DELETE", "/session"), ("POST", "/session/refresh-token")}
 
 
 class ReadOnlyViolation(RuntimeError):
@@ -77,6 +78,11 @@ class IG:
         self.ls_endpoint: str | None = None
         self.last_allowance: dict | None = None
         self._logged_in = False
+        # v3 (OAuth) is the default: v1/v2 logins fail with stockbroking-not-supported when the client's
+        # default account is share dealing/ISA (trading-ig FAQ), v3 does not. IG_SESSION_VERSION=2 for CST tokens.
+        self.session_version = int(os.environ.get("IG_SESSION_VERSION") or 3)
+        self._refresh_token: str | None = None
+        self._token_expiry = 0.0
 
     # ---- transport -------------------------------------------------------
     def _request(self, method: str, path: str, version: int = 1, params=None, json=None, auth=True, _retry=True):
@@ -85,6 +91,8 @@ class IG:
             raise ReadOnlyViolation(f"{method} {path} blocked: market-lab's IG client is read-only")
         if auth and not self._logged_in:
             self.login()
+        elif auth and self._refresh_token and time.time() > self._token_expiry:
+            self._refresh()
         headers = {"Version": str(version)}
         if method == "DELETE":  # IG wants DELETE tunnelled through POST with _method header
             method, headers["_method"] = "POST", "DELETE"
@@ -106,20 +114,53 @@ class IG:
 
     # ---- session ---------------------------------------------------------
     def login(self) -> dict:
-        r = self._request("POST", "/session", 2, auth=False, json={
+        r = self._request("POST", "/session", self.session_version, auth=False, json={
             "identifier": self.cfg.username, "password": self.cfg.password, "encryptedPassword": False})
+        body = r.json()
+        want = self.cfg.acc_number
+        if self.session_version >= 3:
+            # v3 returns OAuth tokens; requests carry Authorization plus IG-ACCOUNT-ID (labs.ig.com REST guide)
+            self._set_oauth(body["oauthToken"])
+            self.account_id = want or body.get("accountId")
+            self.s.headers["IG-ACCOUNT-ID"] = self.account_id
+            self.ls_endpoint = body.get("lightstreamerEndpoint")
+            self._logged_in = True
+            return {"account_id": self.account_id, "env": self.cfg.acc_type, "client_id": body.get("clientId"),
+                    "session": "v3"}
         self.s.headers["CST"] = r.headers["CST"]
         self.s.headers["X-SECURITY-TOKEN"] = r.headers["X-SECURITY-TOKEN"]
-        body = r.json()
         self.account_id = body.get("currentAccountId")
         self.ls_endpoint = body.get("lightstreamerEndpoint")
         self._logged_in = True
-        want = self.cfg.acc_number
         if want and want != self.account_id:
             self._request("PUT", "/session", 1, json={"accountId": want, "defaultAccount": False})
             self.account_id = want
         return {"account_id": self.account_id, "env": self.cfg.acc_type, "currency": body.get("currencyIsoCode"),
                 "accounts": [a.get("accountId") for a in body.get("accounts", [])]}
+
+    def _set_oauth(self, tok: dict):
+        self.s.headers["Authorization"] = f"Bearer {tok['access_token']}"
+        self._refresh_token = tok.get("refresh_token")
+        self._token_expiry = time.time() + int(tok.get("expires_in", 60)) - 15
+
+    def _refresh(self):
+        """Swap the refresh token for a new access token; log in again if IG refuses it."""
+        try:
+            r = self._request("POST", "/session/refresh-token", 1, auth=False,
+                              json={"refresh_token": self._refresh_token})
+            self._set_oauth(r.json())
+        except IGError:
+            self._logged_in = False
+            self.login()
+
+    def streaming_tokens(self) -> tuple[str, str]:
+        """CST and X-SECURITY-TOKEN for Lightstreamer, which does not take OAuth tokens (streaming guide)."""
+        if not self._logged_in:
+            self.login()
+        if self.session_version < 3:
+            return self.s.headers["CST"], self.s.headers["X-SECURITY-TOKEN"]
+        r = self._request("GET", "/session", 1, params={"fetchSessionTokens": "true"})
+        return r.headers["CST"], r.headers["X-SECURITY-TOKEN"]
 
     def logout(self):
         if self._logged_in:
@@ -262,9 +303,10 @@ class IG:
                 if on_update:
                     on_update(t)
 
+        cst, xst = self.streaming_tokens()
         client = LightstreamerClient(self.ls_endpoint, None)
         client.connectionDetails.setUser(self.account_id)
-        client.connectionDetails.setPassword(f"CST-{self.s.headers['CST']}|XST-{self.s.headers['X-SECURITY-TOKEN']}")
+        client.connectionDetails.setPassword(f"CST-{cst}|XST-{xst}")
         client.connect()
         sub = Subscription(mode="MERGE", items=self.price_items(epics), fields=list(fields))
         sub.addListener(L())

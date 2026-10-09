@@ -73,7 +73,8 @@ Credentials come through proxy-injected network secrets or environment variables
 | API key | network secret adding the `X-IG-API-KEY` header on `demo-api.ig.com` / `api.ig.com`, or `IG_API_KEY` (`IG_DEMO_API_KEY` / `IG_LIVE_API_KEY` per environment) |
 | Username and password | **Body parameter** network secret on the same host, path `/gateway/deal/session`, keys `identifier` and `password`; or `IG_USERNAME` / `IG_PASSWORD` (`IG_DEMO_*` / `IG_LIVE_*`) |
 | `IG_ACC_TYPE` | always set: `DEMO` or `LIVE`. With it set and no username or password in the environment, the client sends the login body for the proxy to fill |
-| `IG_ACC_NUMBER` | optional: account to switch to after login |
+| `IG_ACC_NUMBER` | optional: account to use after login (sent as `IG-ACCOUNT-ID` on v3) |
+| `IG_SESSION_VERSION` | optional: `3` (default, OAuth; works when the default account is share dealing or ISA) or `2` (CST tokens) |
 
 Full setup, including what to do if the secrets list marks one as **Not sent**, is in `docs/NETWORK.md`.
 
