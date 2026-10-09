@@ -13,6 +13,7 @@ plan), so price history is cached and only the missing tail is requested.
 """
 from __future__ import annotations
 
+import os
 import threading
 import time
 from datetime import datetime, timezone
@@ -31,7 +32,7 @@ RESOLUTIONS = {
 BAR = {"1m": "1min", "2m": "2min", "3m": "3min", "5m": "5min", "10m": "10min", "15m": "15min",
        "30m": "30min", "1h": "1h", "2h": "2h", "3h": "3h", "4h": "4h", "1d": "1D", "1wk": "7D", "1mo": "31D"}
 
-_ALLOWED_WRITES = {("POST", "/session"), ("PUT", "/session"), ("DELETE", "/session")}
+_ALLOWED_WRITES = {("POST", "/session"), ("PUT", "/session"), ("DELETE", "/session"), ("POST", "/session/refresh-token")}
 
 
 class ReadOnlyViolation(RuntimeError):
@@ -46,12 +47,13 @@ class IGError(RuntimeError):
 FIX_HINTS = {
     "error.security.api-key-missing": "no API key reached IG: add a network secret for demo-api.ig.com (DEMO) or api.ig.com (LIVE) with header X-IG-API-KEY and no prefix, or set IG_API_KEY",
     "error.security.api-key-invalid": "API key not recognised for this environment: a DEMO key only works with IG_ACC_TYPE=DEMO, a LIVE key with LIVE",
-    "error.security.api-key-disabled": "API key is disabled: re-enable it on ig.com under My IG > Settings > API keys",
-    "error.security.api-key-revoked": "API key was revoked: generate a new one on ig.com under My IG > Settings > API keys",
+    "error.security.api-key-disabled": "API key is disabled: re-enable it on the IG web platform under My Account > Settings > API Keys",
+    "error.security.api-key-revoked": "API key was revoked: generate a new one on the IG web platform under My Account > Settings > API Keys",
     "error.security.invalid-details": "username or password rejected: check IG_USERNAME / IG_PASSWORD, and that IG_ACC_TYPE matches the account (DEMO logins differ from LIVE)",
-    "error.security.account-suspended": "IG account is suspended: contact IG",
-    "error.security.client-suspended": "IG locked this login, usually after repeated rejected passwords: sign in once on the IG web platform (reset the password there if needed), update the env var, then retry; contact IG only if that fails",
-    "error.security.too-many-failed-attempts": "IG locked logins after failed attempts: wait about a minute, fix the password, then retry",
+    "error.security.account-suspended": "IG account is suspended: email webapisupport@ig.com",
+    "error.security.client-suspended": "IG has suspended this client login (not the API key, and not a timed lock): test the same login in IG's API companion (labs.ig.com/sample-apps/api-rest-companion-release/index.html), then email webapisupport@ig.com to lift it; a new password or API key does not clear it",
+    "error.public-api.failure.stockbroking-not-supported": "the login's default account is share dealing/ISA/SIPP, which the API does not serve: make the spread bet or CFD account the default on the IG web platform (login fails before any account switch)",
+    "error.security.too-many-failed-attempts": "IG hit its maximum of failed login attempts: stop retrying, check the login on the IG web platform and in the API companion, then email webapisupport@ig.com if it stays blocked",
     "error.public-api.exceeded-api-key-allowance": "API key request allowance used up: wait for it to reset",
     "error.public-api.exceeded-account-historical-data-allowance": "weekly historical price allowance used up: use cached bars or Yahoo for long history",
     "error.security.oauth-token-invalid": "session expired: log in again",
@@ -69,13 +71,18 @@ class IG:
             raise IGError("IG credentials missing from environment: " + ", ".join(self.cfg.missing()))
         self.s = session()
         self.s.headers.update({"Accept": "application/json; charset=UTF-8",
-                               "Content-Type": "application/json; charset=UTF-8"})
+                               "Content-Type": "application/json"})  # as the labs.ig.com REST guide lists it
         if self.cfg.api_key:  # otherwise a network secret adds X-IG-API-KEY at the proxy
             self.s.headers["X-IG-API-KEY"] = self.cfg.api_key
         self.account_id: str | None = None
         self.ls_endpoint: str | None = None
         self.last_allowance: dict | None = None
         self._logged_in = False
+        # v3 (OAuth) is the default: v1/v2 logins fail with stockbroking-not-supported when the client's
+        # default account is share dealing/ISA (trading-ig FAQ), v3 does not. IG_SESSION_VERSION=2 for CST tokens.
+        self.session_version = int(os.environ.get("IG_SESSION_VERSION") or 3)
+        self._refresh_token: str | None = None
+        self._token_expiry = 0.0
 
     # ---- transport -------------------------------------------------------
     def _request(self, method: str, path: str, version: int = 1, params=None, json=None, auth=True, _retry=True):
@@ -84,6 +91,8 @@ class IG:
             raise ReadOnlyViolation(f"{method} {path} blocked: market-lab's IG client is read-only")
         if auth and not self._logged_in:
             self.login()
+        elif auth and self._refresh_token and time.time() > self._token_expiry:
+            self._refresh()
         headers = {"Version": str(version)}
         if method == "DELETE":  # IG wants DELETE tunnelled through POST with _method header
             method, headers["_method"] = "POST", "DELETE"
@@ -105,20 +114,53 @@ class IG:
 
     # ---- session ---------------------------------------------------------
     def login(self) -> dict:
-        r = self._request("POST", "/session", 2, auth=False, json={
+        r = self._request("POST", "/session", self.session_version, auth=False, json={
             "identifier": self.cfg.username, "password": self.cfg.password, "encryptedPassword": False})
+        body = r.json()
+        want = self.cfg.acc_number
+        if self.session_version >= 3:
+            # v3 returns OAuth tokens; requests carry Authorization plus IG-ACCOUNT-ID (labs.ig.com REST guide)
+            self._set_oauth(body["oauthToken"])
+            self.account_id = want or body.get("accountId")
+            self.s.headers["IG-ACCOUNT-ID"] = self.account_id
+            self.ls_endpoint = body.get("lightstreamerEndpoint")
+            self._logged_in = True
+            return {"account_id": self.account_id, "env": self.cfg.acc_type, "client_id": body.get("clientId"),
+                    "session": "v3"}
         self.s.headers["CST"] = r.headers["CST"]
         self.s.headers["X-SECURITY-TOKEN"] = r.headers["X-SECURITY-TOKEN"]
-        body = r.json()
         self.account_id = body.get("currentAccountId")
         self.ls_endpoint = body.get("lightstreamerEndpoint")
         self._logged_in = True
-        want = self.cfg.acc_number
         if want and want != self.account_id:
             self._request("PUT", "/session", 1, json={"accountId": want, "defaultAccount": False})
             self.account_id = want
         return {"account_id": self.account_id, "env": self.cfg.acc_type, "currency": body.get("currencyIsoCode"),
                 "accounts": [a.get("accountId") for a in body.get("accounts", [])]}
+
+    def _set_oauth(self, tok: dict):
+        self.s.headers["Authorization"] = f"Bearer {tok['access_token']}"
+        self._refresh_token = tok.get("refresh_token")
+        self._token_expiry = time.time() + int(tok.get("expires_in", 60)) - 15
+
+    def _refresh(self):
+        """Swap the refresh token for a new access token; log in again if IG refuses it."""
+        try:
+            r = self._request("POST", "/session/refresh-token", 1, auth=False,
+                              json={"refresh_token": self._refresh_token})
+            self._set_oauth(r.json())
+        except IGError:
+            self._logged_in = False
+            self.login()
+
+    def streaming_tokens(self) -> tuple[str, str]:
+        """CST and X-SECURITY-TOKEN for Lightstreamer, which does not take OAuth tokens (streaming guide)."""
+        if not self._logged_in:
+            self.login()
+        if self.session_version < 3:
+            return self.s.headers["CST"], self.s.headers["X-SECURITY-TOKEN"]
+        r = self._request("GET", "/session", 1, params={"fetchSessionTokens": "true"})
+        return r.headers["CST"], r.headers["X-SECURITY-TOKEN"]
 
     def logout(self):
         if self._logged_in:
@@ -238,7 +280,12 @@ class IG:
         return cached.loc[(cached.index >= start_ts) & (cached.index <= end_ts)]
 
     # ---- streaming (read) ------------------------------------------------
-    def stream(self, epics: list[str], seconds: int = 30, fields=("BID", "OFFER", "UPDATE_TIME", "MARKET_STATE", "CHANGE_PCT"),
+    def price_items(self, epics: list[str]) -> list[str]:
+        """Lightstreamer PRICE items. IG retired the old MARKET:{epic} items on 8 May 2026."""
+        return [f"PRICE:{self.account_id}:{e}" for e in epics]
+
+    def stream(self, epics: list[str], seconds: int = 30,
+               fields=("BIDPRICE1", "ASKPRICE1", "HIGH", "LOW", "NET_CHG_PCT", "DLG_FLAG", "DELAY", "TIMESTAMP"),
                on_update=None) -> list[dict]:
         """Subscribe to live Lightstreamer quotes for `seconds`; returns collected ticks."""
         from lightstreamer.client import LightstreamerClient, Subscription, SubscriptionListener
@@ -249,18 +296,19 @@ class IG:
 
         class L(SubscriptionListener):
             def onItemUpdate(self, u):
-                t = {"epic": u.getItemName().split(":", 1)[1], **{f: u.getValue(f) for f in fields},
+                t = {"epic": u.getItemName().split(":", 2)[2], **{f: u.getValue(f) for f in fields},
                      "recv": datetime.now(timezone.utc).isoformat()}
                 with lock:
                     ticks.append(t)
                 if on_update:
                     on_update(t)
 
+        cst, xst = self.streaming_tokens()
         client = LightstreamerClient(self.ls_endpoint, None)
         client.connectionDetails.setUser(self.account_id)
-        client.connectionDetails.setPassword(f"CST-{self.s.headers['CST']}|XST-{self.s.headers['X-SECURITY-TOKEN']}")
+        client.connectionDetails.setPassword(f"CST-{cst}|XST-{xst}")
         client.connect()
-        sub = Subscription(mode="MERGE", items=[f"MARKET:{e}" for e in epics], fields=list(fields))
+        sub = Subscription(mode="MERGE", items=self.price_items(epics), fields=list(fields))
         sub.addListener(L())
         client.subscribe(sub)
         try:

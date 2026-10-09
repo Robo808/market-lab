@@ -19,7 +19,8 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-stream = ["lightstreamer-client-lib>=2.2.3"]
+# IG runs Lightstreamer Server 7.3.3 (lightstreamer.com/share/ig); client 2.x needs server 7.4+.
+stream = ["lightstreamer-client-lib>=1.0.3,<2"]
 dev = ["pytest>=9.1.1"]
 
 [project.scripts]

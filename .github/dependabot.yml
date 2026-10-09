@@ -10,6 +10,10 @@ updates:
       python-deps:
         patterns: ["*"]
     open-pull-requests-limit: 5
+    ignore:
+      # IG's Lightstreamer Server is 7.3.3; client 2.x needs 7.4+. Lift when IG upgrades.
+      - dependency-name: lightstreamer-client-lib
+        versions: [">=2"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

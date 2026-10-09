@@ -112,10 +112,46 @@ def _ig(monkeypatch, handler):
 
 
 def _login_ok(method, url, kw):
+    """Fake IG login: v3 OAuth body for Version 3, v2 CST headers otherwise; GET fetchSessionTokens returns CST/XST."""
     if url.endswith("/session") and method == "POST" and "_method" not in kw["headers"]:
+        if kw["headers"]["Version"] == "3":
+            return FakeResp(200, {"clientId": "C1", "accountId": "ABC", "lightstreamerEndpoint": "https://ls",
+                                  "oauthToken": {"access_token": "at", "refresh_token": "rt", "expires_in": "1800"}})
         return FakeResp(200, {"currentAccountId": "ABC", "lightstreamerEndpoint": "https://ls", "accounts": [{"accountId": "ABC"}]},
                         {"CST": "c", "X-SECURITY-TOKEN": "x"})
+    if url.endswith("/session") and method == "GET" and (kw.get("params") or {}).get("fetchSessionTokens") == "true":
+        return FakeResp(200, {}, {"CST": "c", "X-SECURITY-TOKEN": "x"})
     return None
+
+
+def test_ig_v3_login_is_default(monkeypatch):
+    ig, _ = _ig(monkeypatch, lambda m, u, k: _login_ok(m, u, k) or FakeResp(200, {}))
+    out = ig.login()
+    assert out["session"] == "v3" and ig.account_id == "ABC" and ig.ls_endpoint == "https://ls"
+    assert ig.s.headers["Authorization"] == "Bearer at" and ig.s.headers["IG-ACCOUNT-ID"] == "ABC"
+    assert "CST" not in ig.s.headers
+    assert ig.streaming_tokens() == ("c", "x")  # streaming takes CST/XST, fetched with fetchSessionTokens
+
+
+def test_ig_v3_refreshes_expired_token(monkeypatch):
+    def handler(m, u, k):
+        if u.endswith("/session/refresh-token"):
+            assert k["json"] == {"refresh_token": "rt"}
+            return FakeResp(200, {"access_token": "at2", "refresh_token": "rt2", "expires_in": "1800"})
+        return _login_ok(m, u, k) or FakeResp(200, {})
+    ig, calls = _ig(monkeypatch, handler)
+    ig.login()
+    ig._token_expiry = 0  # pretend the 30-minute access token ran out
+    ig._get("/accounts")
+    assert ig.s.headers["Authorization"] == "Bearer at2" and ig._refresh_token == "rt2"
+    assert [u for _, u, _ in calls].count(ig.cfg.base_url + "/session") == 1  # refreshed, no second login
+
+
+def test_ig_v2_still_available(monkeypatch):
+    monkeypatch.setenv("IG_SESSION_VERSION", "2")
+    ig, _ = _ig(monkeypatch, lambda m, u, k: _login_ok(m, u, k) or FakeResp(200, {}))
+    ig.login()
+    assert ig.s.headers["CST"] == "c" and "Authorization" not in ig.s.headers
 
 
 def test_ig_read_only_guard(monkeypatch):
@@ -247,3 +283,46 @@ def test_data_dir_override(tmp_path, monkeypatch):
         monkeypatch.undo()
         importlib.reload(mlab.config)
         importlib.reload(mlab.journal)
+
+
+def test_ig_stream_uses_price_items(monkeypatch):
+    import sys
+    import types
+    lsc = types.ModuleType("lightstreamer.client")  # fake: CI installs without the stream extra
+    lsc.SubscriptionListener = object
+    monkeypatch.setitem(sys.modules, "lightstreamer", types.ModuleType("lightstreamer"))
+    monkeypatch.setitem(sys.modules, "lightstreamer.client", lsc)
+    ig, _ = _ig(monkeypatch, _login_ok)
+    seen = {}
+
+    class FakeClient:
+        def __init__(self, url, adapter):
+            seen["url"] = url
+            self.connectionDetails = type("CD", (), {"setUser": lambda s, u: seen.update(user=u),
+                                                     "setPassword": lambda s, p: seen.update(pw=p)})()
+        def connect(self): pass
+        def subscribe(self, sub):
+            seen["items"] = sub.items
+            upd = type("U", (), {"getItemName": lambda s: sub.items[0], "getValue": lambda s, f: "1"})()
+            sub.listener.onItemUpdate(upd)
+        def unsubscribe(self, sub): pass
+        def disconnect(self): pass
+
+    class FakeSub:
+        def __init__(self, mode, items, fields):
+            self.items, self.fields = items, fields
+        def addListener(self, l):
+            self.listener = l
+
+    lsc.LightstreamerClient = FakeClient
+    lsc.Subscription = FakeSub
+    monkeypatch.setattr("time.sleep", lambda s: None)
+    ticks = ig.stream(["IX.D.FTSE.DAILY.IP"], seconds=0)
+    assert seen["items"] == ["PRICE:ABC:IX.D.FTSE.DAILY.IP"]
+    assert seen["user"] == "ABC" and seen["pw"] == "CST-c|XST-x"
+    assert ticks[0]["epic"] == "IX.D.FTSE.DAILY.IP" and ticks[0]["BIDPRICE1"] == "1"
+
+
+def test_ig_stockbroking_hint():
+    from mlab.providers.ig import fix_hint
+    assert "default account" in fix_hint("error.public-api.failure.stockbroking-not-supported")
