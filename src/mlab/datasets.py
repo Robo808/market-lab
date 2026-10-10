@@ -4,6 +4,7 @@ train / validation / test splits, so strategies are tested the way ML models are
     mlab datasets catalog                       # what can be built, source and licence of each
     mlab datasets build xasset-daily            # snapshot -> data/datasets/xasset-daily/v20261010/
     mlab datasets list | show NAME[@VER] | verify NAME[@VER]
+    mlab datasets crosscheck us-stocks-1m      # last 5 sessions vs Massive live (nothing stored)
     mlab algo backtest tsmom ^FTSE --dataset xasset-daily --split train
 
 Layout (Hive-style, long format, one schema per kind, ready to register as an Iceberg table later):
@@ -72,9 +73,6 @@ SOURCE_INFO = {
                   "licence": "Dukascopy free historical feed: no published licence, treated as personal use only",
                   "adjustments": "mid = (bid+ask)/2 OHLC, spread = ask_close - bid_close; complete months only; CFD cash-index "
                                  "and spot quotes, the closest free proxy for IG's own prices"},
-    "massive": {"url": "https://api.massive.com/v2/aggs/ticker/<T>/range/1/minute/<from>/<to>",
-                "licence": "Massive (formerly Polygon.io) terms; free Basic plan, personal use",
-                "adjustments": "split-adjusted (adjusted=true), consolidated exchange volume, extended hours included"},
     "yahoo_earnings": {"url": "https://finance.yahoo.com (yfinance get_earnings_dates)",
                        "licence": "Yahoo terms of service: personal, non-commercial use; no redistribution",
                        "adjustments": "event time = announcement timestamp (UTC); hour_et = hour in New York "
@@ -153,10 +151,6 @@ CATALOG: dict[str, Spec] = {s.name: s for s in [
         {"train": "2021-12-31", "validation": "2023-12-31"}, start="2017-02-01",
         description=f"US mega cap and ETF CFDs, {iv} bars from 2017 (Dukascopy; 1h is mid with spread, "
                     "1m is bid only to halve the download; volume is CFD tick volume)") for iv in ("1h", "1m")],
-    Spec("massive-1m", "massive", "bars", "1m", _m(*MEGACAPS, "SPY", "QQQ", "IWM", "DIA"),
-         {"train": "2025-09-30", "validation": "2026-03-31"}, start="-729d", accumulate=True,
-         description="US mega caps and index ETFs, 1-minute exchange bars incl. extended hours, split-adjusted "
-                     "(Massive free tier keeps 2 years; accumulates)"),
     Spec("ust-daily", "fed_h15", "series", "1d", _m(*[(f"UST_{k}", c, f"UST {k} constant maturity") for k, c in (
         ("3M", "RIFLGFCM03_N.B"), ("1Y", "RIFLGFCY01_N.B"), ("2Y", "RIFLGFCY02_N.B"), ("5Y", "RIFLGFCY05_N.B"),
         ("10Y", "RIFLGFCY10_N.B"), ("20Y", "RIFLGFCY20_N.B"), ("30Y", "RIFLGFCY30_N.B"))]),
@@ -462,43 +456,6 @@ def _duka_minutes(s, m: Member, spec: Spec, now: pd.Timestamp, log=print) -> pd.
     return df[~df.index.duplicated()].sort_index()
 
 
-def fetch_massive(m: Member, spec: Spec, log=print) -> pd.DataFrame:
-    """Massive (formerly Polygon.io) aggregates. Key from MASSIVE_API_KEY, or a network secret that injects
-    'Authorization: Bearer' for api.massive.com. The free plan allows 5 calls a minute."""
-    from .config import env
-    from .net import session
-    s = session("market-lab/0.1")
-    s.mount("https://", __import__("requests").adapters.HTTPAdapter())
-    if env("MASSIVE_API_KEY"):
-        s.headers["Authorization"] = f"Bearer {env('MASSIVE_API_KEY')}"
-    gap = float(os.environ.get("MLAB_MASSIVE_GAP", "12.5"))
-    now = pd.Timestamp.now(tz="UTC")
-    span = {"1m": "minute", "1h": "hour", "1d": "day"}[spec.interval]
-    url = f"https://api.massive.com/v2/aggs/ticker/{m.ref}/range/1/{span}/{start_ts(spec).date()}/{now.date()}"
-    params, rows = {"adjusted": "true", "sort": "asc", "limit": 50000}, []
-    while url:
-        for attempt in range(6):
-            r = s.get(url, params=params, timeout=60)
-            time.sleep(gap)
-            if r.status_code != 429:
-                break
-            log(f"  massive 429, backing off {gap * 2 ** attempt:.0f}s")
-            time.sleep(gap * 2 ** attempt)
-        if r.status_code in (401, 403):
-            raise PermissionError(f"massive {r.status_code}: set MASSIVE_API_KEY or an api.massive.com network secret")
-        r.raise_for_status()
-        j = r.json()
-        rows += j.get("results") or []
-        url, params = j.get("next_url"), None  # next_url carries the cursor and the original query
-    if not rows:
-        raise LookupError(f"massive: no {spec.interval} bars for {m.ref}")
-    df = pd.DataFrame(rows)
-    df.index = pd.to_datetime(df["t"], unit="ms", utc=True)
-    df = df.rename(columns={"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
-    df.index.name = "time"
-    return df[["open", "high", "low", "close", "volume"]].astype(float)
-
-
 def _french_csv(name: str, s) -> pd.DataFrame:
     r = s.get(f"https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/{name}_CSV.zip", timeout=60)
     r.raise_for_status()
@@ -528,7 +485,7 @@ def fetch_french(m: Member, spec: Spec, log=print) -> pd.DataFrame:
 FETCHERS = {"yahoo": fetch_yahoo, "yahoo_earnings": fetch_yahoo_earnings, "fed_h15": fetch_fed_h15,
             "ecb": fetch_ecb, "eia": fetch_eia,
             "boe": fetch_boe, "binance": fetch_binance,
-            "dukascopy": fetch_dukascopy, "french": fetch_french, "massive": fetch_massive}
+            "dukascopy": fetch_dukascopy, "french": fetch_french}
 
 
 # ---- quality checks -------------------------------------------------------------------------
@@ -746,6 +703,69 @@ def verify(ref: str) -> dict:
     return {"dataset": f"{name}@{ver}", "files": len(man["members"]), "ok": not bad, "bad": bad}
 
 
+def crosscheck(ref: str, symbols: list[str] | None = None, days: int = 5, log=print) -> pd.DataFrame:
+    """Compare a built bars dataset with Massive's live aggregates over its last `days` sessions.
+
+    Massive data is display-only under its terms, so it is fetched, compared and dropped: nothing is stored.
+    Close differences are in basis points; vol_ratio is ours / Massive (CFD tick volume will not match)."""
+    from .data import US_TICKER
+    from .providers import massive
+    name, ver, _ = resolve(ref)
+    man = manifest(ref)
+    if man["kind"] != "bars":
+        raise ValueError(f"{name} is a {man['kind']} dataset; crosscheck compares bars")
+    if man["interval"] not in massive.SPANS:
+        raise ValueError(f"massive has no {man['interval']} bars")
+    syms = [x for x in (symbols or list(man["members"])) if US_TICKER.match(x)][: None if symbols else 5]
+    if not syms:
+        raise ValueError(f"{name} has no US stock or ETF members to check against Massive")
+    frames = load(f"{name}@{ver}", syms, allow_test=True, _record=False)
+    daily = man["interval"] in ("1d", "1wk", "1mo")
+    floor = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=massive.HISTORY_DAYS - 2)
+    rows = []
+    for i, sym in enumerate(syms):
+        ours = frames[sym]
+        ours = ours[ours.index >= floor]
+        dates = sorted(set(ours.index.normalize()))[-days:]
+        if not dates:
+            rows.append({"symbol": sym, "note": "no bars inside Massive's 2-year window"})
+            continue
+        if i:
+            time.sleep(float(os.environ.get("MLAB_MASSIVE_GAP", "12.5")))
+        try:
+            theirs = massive.history(sym, dates[0], dates[-1], man["interval"], log=log)
+        except Exception as e:  # report the failure per symbol and carry on
+            rows.append({"symbol": sym, "note": f"{type(e).__name__}: {str(e)[:100]}"})
+            continue
+        ours = ours[ours.index >= dates[0]]
+        if not daily:  # compare inside the sessions we hold: Massive adds pre- and post-market bars
+            span = ours.index.to_series().groupby(ours.index.normalize()).agg(["min", "max"])
+            day = theirs.index.normalize()
+            keep = day.isin(span.index)
+            lo, hi = span["min"].reindex(day).to_numpy(), span["max"].reindex(day).to_numpy()
+            keep &= (theirs.index.to_numpy() >= lo) & (theirs.index.to_numpy() <= hi)
+            theirs = theirs[keep]
+        if daily:
+            ours = ours.set_axis(ours.index.normalize())
+            theirs = theirs.set_axis(theirs.index.tz_convert("America/New_York").normalize().tz_localize(None)
+                                     .tz_localize("UTC"))
+        j = ours[["close", "volume"]].join(theirs[["close", "volume"]], how="inner", rsuffix="_m")
+        bp = (j["close"] / j["close_m"] - 1).abs() * 1e4
+        vr = (j["volume"] / j["volume_m"]).replace([np.inf, -np.inf], np.nan)
+        rows.append({"symbol": sym, "from": str(dates[0].date()), "to": str(dates[-1].date()),
+                     "ours": len(ours), "massive": len(theirs), "matched": len(j),
+                     "only_ours": len(ours.index.difference(theirs.index)),
+                     "only_massive": len(theirs.index.difference(ours.index)),
+                     "close_bp_median": round(float(bp.median()), 2) if len(j) else None,
+                     "close_bp_p95": round(float(bp.quantile(0.95)), 2) if len(j) else None,
+                     "close_bp_max": round(float(bp.max()), 2) if len(j) else None,
+                     "vol_ratio_median": round(float(vr.median()), 3) if vr.notna().any() else None})
+    out = pd.DataFrame(rows)
+    out.attrs["source"] = f"dataset {name}@{ver} vs Massive live aggregates, " \
+                          f"{pd.Timestamp.now(tz='UTC').isoformat(timespec='seconds')}"
+    return out
+
+
 def listing() -> pd.DataFrame:
     rows = []
     for name in sorted(p.name for p in DATASETS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")) \
@@ -801,6 +821,10 @@ def cmd_datasets(a):
             print(f"failed: {m['failed']}")
         show(pd.DataFrame(rows), a.json, title="Members and quality checks")
         return
+    if act == "crosscheck":
+        df = crosscheck(a.name, a.members, a.days)
+        show(df, a.json, title=f"{df.attrs['source']} (nothing from Massive is stored)")
+        return
     if act == "verify":
         r = verify(a.name)
         print(json.dumps(r, indent=2))
@@ -810,8 +834,10 @@ def cmd_datasets(a):
 
 def register(add):
     q = add("datasets", cmd_datasets,
-            "frozen offline datasets: catalog | build NAME|all | list | show NAME[@VER] | verify NAME[@VER]")
-    q.add_argument("action", choices=["catalog", "build", "list", "show", "verify"])
+            "frozen offline datasets: catalog | build NAME|all | list | show NAME[@VER] | verify NAME[@VER] | "
+            "crosscheck NAME[@VER] (vs Massive live)")
+    q.add_argument("action", choices=["catalog", "build", "list", "show", "verify", "crosscheck"])
     q.add_argument("name", nargs="?")
-    q.add_argument("--members", nargs="*", help="build only these members (symbol or provider code)")
+    q.add_argument("--members", nargs="*", help="build (or crosscheck) only these members")
     q.add_argument("--start", help="override the dataset's start date")
+    q.add_argument("--days", type=int, default=5, help="crosscheck: last N sessions to compare (default 5)")
