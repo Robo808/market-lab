@@ -74,12 +74,14 @@ def cmd_doctor(a):
             print("\nBlocked hosts need adding to this environment's allowed domains (see docs/NETWORK.md):\n  " + ", ".join(blocked))
     for t in ("DEMO", "LIVE"):
         c = ig_config(t)
-        print(f"\nIG {t}: {'credentials present' if c.configured else 'missing ' + ', '.join(c.missing())}")
+        state = ("login from a Body parameter network secret (not visible here; `mlab ig login` tests it)"
+                 if c.login_via_secret else "credentials present" if c.configured else "missing " + ", ".join(c.missing()))
+        print(f"\nIG {t}: {state}")
     if not any(ig_config(t).configured for t in ("DEMO", "LIVE")):
-        print("  IG login needs IG_USERNAME, IG_PASSWORD and IG_ACC_TYPE (DEMO|LIVE) as environment variables (or\n"
-              "  IG_DEMO_* / IG_LIVE_*): IG wants them in the login body, which a network secret cannot fill. The API\n"
-              "  key is best kept as a network secret on demo-api.ig.com / api.ig.com (header X-IG-API-KEY, no prefix);\n"
-              "  IG_API_KEY also works. Then `mlab ig login` tests it.")
+        print("  IG login needs IG_ACC_TYPE (DEMO|LIVE) plus a username and password: best as a network secret of type\n"
+              "  Body parameter on demo-api.ig.com / api.ig.com (path prefix /gateway/deal/session, parameters identifier\n"
+              "  and password), or as IG_USERNAME / IG_PASSWORD (or IG_DEMO_* / IG_LIVE_*). The API key goes in a separate\n"
+              "  network secret (header X-IG-API-KEY, no prefix) or IG_API_KEY. Then `mlab ig login` tests it.")
     print("\nOptional keys: " + ", ".join(f"{k}={'set' if env(k) else 'unset'}" for k in OPTIONAL_KEYS))
     show(cache.stats(), title="Cache")
 

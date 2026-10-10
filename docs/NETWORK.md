@@ -43,9 +43,13 @@ finnhub.io
 
 IG: keep the API key as a network secret on `demo-api.ig.com` (DEMO) or `api.ig.com` (LIVE), custom header
 `X-IG-API-KEY` with no prefix, so the key never enters the container (`IG_API_KEY` as a variable also works).
-IG wants the username and password inside the login body, which a header secret cannot fill, so those go in as
-environment variables: `IG_USERNAME`, `IG_PASSWORD` (or `IG_DEMO_*` / `IG_LIVE_*`), `IG_ACC_TYPE` (DEMO or LIVE),
-optional `IG_ACC_NUMBER`. Other environment variables: optional `FRED_API_KEY`, `ALPHAVANTAGE_API_KEY`,
+IG wants the username and password inside the login body: add them as a second network secret of type
+**Body parameter** on the same host, path prefix `/gateway/deal/session`, body parameters `identifier` (username)
+and `password`. With `IG_USERNAME` / `IG_PASSWORD` absent and `IG_ACC_TYPE` set, the client sends the login body
+without them and the proxy fills them in. If the secrets list marks either IG secret **Not sent**, the proxy sends
+only one secret per host: keep the API key secret and put the username and password back as environment variables
+`IG_USERNAME`, `IG_PASSWORD` (or `IG_DEMO_*` / `IG_LIVE_*`). Always set `IG_ACC_TYPE` (DEMO or LIVE), optional
+`IG_ACC_NUMBER`. Other environment variables: optional `FRED_API_KEY`, `ALPHAVANTAGE_API_KEY`,
 `FMP_API_KEY`, `FINNHUB_API_KEY`, `SEC_USER_AGENT` ("Name email@example.com").
 
 Routes that work regardless of the container policy:

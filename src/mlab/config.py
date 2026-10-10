@@ -40,6 +40,10 @@ class IGConfig:
     password: str | None
     acc_type: str  # DEMO or LIVE
     acc_number: str | None
+    # True when username and password are absent for the active environment (IG_ACC_TYPE set): a
+    # "Body parameter" network secret on the IG host fills `identifier` and `password` into the login
+    # body at the proxy, so neither enters the container.
+    login_via_secret: bool = False
 
     @property
     def base_url(self) -> str:
@@ -51,12 +55,13 @@ class IGConfig:
 
     @property
     def configured(self) -> bool:
-        # IG_API_KEY is optional: a cloud-environment network secret can attach the X-IG-API-KEY header
-        # at the proxy instead, so the key never enters the container. Username and password travel in
-        # the login body, which a header secret cannot fill, so those must be in the environment.
-        return bool(self.username and self.password)
+        # IG_API_KEY is optional: a network secret can attach the X-IG-API-KEY header at the proxy instead.
+        # Username and password come from the environment, or from a body-parameter network secret.
+        return bool(self.username and self.password) or self.login_via_secret
 
     def missing(self) -> list[str]:
+        if self.login_via_secret:
+            return []
         return [n for n, v in (("IG_USERNAME", self.username), ("IG_PASSWORD", self.password)) if not v]
 
 
@@ -67,7 +72,9 @@ def ig_config(acc_type: str | None = None) -> IGConfig:
     # Separate DEMO/LIVE credentials are supported via IG_DEMO_* / IG_LIVE_* overrides.
     def pick(key: str) -> str | None:
         return env(f"IG_{t}_{key}") or env(f"IG_{key}")
-    return IGConfig(pick("API_KEY"), pick("USERNAME"), pick("PASSWORD"), t, pick("ACC_NUMBER"))
+    user, pw = pick("USERNAME"), pick("PASSWORD")
+    via_secret = not user and not pw and (env("IG_ACC_TYPE") or "").upper() == t
+    return IGConfig(pick("API_KEY"), user, pw, t, pick("ACC_NUMBER"), via_secret)
 
 
 OPTIONAL_KEYS = {
