@@ -43,7 +43,7 @@ data/datasets/<name>/<version>/symbol=<SYMBOL>/data.parquet     # zstd, long for
 ```
 
 One schema per kind: bars are `time, symbol, open, high, low, close, volume, adj_close, spread`; series are
-`time, symbol, value`. Times are UTC. The Hive-style `symbol=` partitions register as an Iceberg table without
+`time, symbol, value`; events are `time, symbol, eps_estimate, eps_actual, surprise_pct, hour_et`. Times are UTC. The Hive-style `symbol=` partitions register as an Iceberg table without
 rewriting files, so snapshots move into the planned lake (issue #34) as they are; until then the shared folder
 is the store, which is a stopgap, not the platform.
 
@@ -54,6 +54,8 @@ Licences and coverage were checked on the providers' own pages and GitHub repos 
 | Dataset | Source | Members | From | Licence (provider's terms) |
 |---|---|---|---|---|
 | `xasset-daily` | Yahoo (yfinance) | 47: world indices, FX majors, gold/oil/metals front-month futures, UST yields, US ETFs, London UCITS ETFs (VWRP, VUKG, ISF, IGLT, VFEG, VJPA, VUAG, SGLN...), BTC, ETH | max available | Personal use only ([yfinance README](https://github.com/ranaroussi/yfinance), [Yahoo API terms](https://legal.yahoo.com/us/en/yahoo/terms/product-atos/apiforydn/index.html)) |
+| `us-stocks-daily` | Yahoo (yfinance) | 25 US mega caps (AAPL, MSFT, NVDA, AMZN, TSLA, META...) plus SPY, QQQ, IWM, DIA, sector ETFs, VIX; split- and dividend-adjusted | max available | Personal use only (as above) |
+| `us-earnings` | Yahoo (yfinance) | Earnings dates, EPS estimate, actual, surprise and announcement hour for the same mega caps (Yahoo returns up to 100 events, about 25 years) | 2000 | Personal use only (as above) |
 | `duka-1d`, `duka-1h` | [Dukascopy](https://www.dukascopy.com/swiss/english/marketwatch/historical/) datafeed | 16: 7 FX majors, XAU/USD, Brent, WTI, UK100, US500, USTEC, DE40, EU50, JP225 (CFD and spot quotes, mid OHLC plus spread) | 2003 (1d), 2012 (1h) | No published licence; treat as personal use |
 | `ust-daily` | [Fed H.15](https://www.federalreserve.gov/datadownload/Choose.aspx?rel=H15) | 3m to 30y constant-maturity yields | 1962 | US government public data |
 | `boe-daily` | [Bank of England database](https://www.bankofengland.co.uk/boeapps/database/) | SONIA, Bank Rate, 5/10/20y gilt par yields, GBP/USD, GBP/EUR, GBP/JPY | 1975 | [UK Open Government Licence](https://www.bankofengland.co.uk/legal); some FX series excluded (LSEG-sourced) |
@@ -87,6 +89,8 @@ for bulk tick history.
 - Dukascopy: complete months only; open issues on timeouts and gaps in the main downloader
   ([dukascopy-node issues](https://github.com/Leo4815162342/dukascopy-node/issues)). Index CFDs carry no
   dividends; oil CFDs have no roll in the series.
+- `us-stocks-daily` holds today's mega caps, so tests on it carry survivorship bias (names that fell out of the
+  top are missing). Fine for swing-timing rules on these names; not for "buy the biggest stocks" claims.
 - Stooq: bulk downloads now need an API key ([pandas-datareader #1012](https://github.com/pydata/pandas-datareader/issues/1012)), so it is not a dataset source.
 
 ## What free data does not cover, and what fills it

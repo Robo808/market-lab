@@ -98,3 +98,15 @@ def test_algo_reads_dataset_split(ds):
                         action="backtest", strategy="tsmom")
     f = _frames(a)["^FTSE"]
     assert f.index.min() >= pd.Timestamp("2015-01-01", tz="UTC") and f.index.max() < pd.Timestamp("2020-01-01", tz="UTC")
+
+
+def test_events_dataset(ds):
+    def fake(m, spec, log=print):
+        idx = pd.to_datetime(["2012-01-30 21:00", "2016-04-25 21:00", "2021-07-26 20:00"], utc=True)
+        return pd.DataFrame({"eps_estimate": [1.0, 1.1, 1.2], "eps_actual": [1.1, 1.0, np.nan],
+                             "surprise_pct": [10.0, -9.1, np.nan], "hour_et": [16.0, 17.0, 16.0]}, index=idx)
+    ds.build("us-earnings", members=["AMZN"], fetch=fake, log=lambda *a: None)
+    man = ds.manifest("us-earnings")
+    assert man["kind"] == "events" and man["members"]["AMZN"]["qc"]["with_actual"] == 2
+    va = ds.load("us-earnings", ["AMZN"], split="validation")["AMZN"]
+    assert len(va) == 1 and va["surprise_pct"].iloc[0] == -9.1

@@ -38,6 +38,7 @@ from .config import DATA_DIR
 DATASETS_DIR = Path(os.environ.get("MLAB_DATASETS_DIR", DATA_DIR / "data" / "datasets"))
 BAR_COLS = ["open", "high", "low", "close", "volume", "adj_close", "spread"]
 SERIES_COLS = ["value"]
+EVENT_COLS = ["eps_estimate", "eps_actual", "surprise_pct", "hour_et"]
 SPLITS = ("train", "validation", "test")
 
 # ---- sources --------------------------------------------------------------------------------
@@ -71,6 +72,10 @@ SOURCE_INFO = {
                   "licence": "Dukascopy free historical feed: no published licence, treated as personal use only",
                   "adjustments": "mid = (bid+ask)/2 OHLC, spread = ask_close - bid_close; complete months only; CFD cash-index "
                                  "and spot quotes, the closest free proxy for IG's own prices"},
+    "yahoo_earnings": {"url": "https://finance.yahoo.com (yfinance get_earnings_dates)",
+                       "licence": "Yahoo terms of service: personal, non-commercial use; no redistribution",
+                       "adjustments": "event time = announcement timestamp (UTC); hour_et = hour in New York "
+                                      "(>=16 after close, <10 before open); the next scheduled date has no actual yet"},
     "french": {"url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
                "licence": "Kenneth R. French Data Library, copyright Fama and French, free download for research",
                "adjustments": "returns in percent per day"},
@@ -89,7 +94,7 @@ class Member:
 class Spec:
     name: str
     source: str
-    kind: str            # "bars" or "series"
+    kind: str            # "bars", "series" or "events"
     interval: str
     members: tuple[Member, ...]
     splits: dict = field(default_factory=dict)   # {"train": end, "validation": end}; test = rest
@@ -102,6 +107,8 @@ def _m(*items) -> tuple[Member, ...]:
 
 
 DEFAULT_SPLITS = {"train": "2014-12-31", "validation": "2019-12-31"}
+MEGACAPS = ("AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "BRK-B", "JPM", "LLY", "V", "MA",
+            "XOM", "UNH", "COST", "NFLX", "AMD", "ORCL", "WMT", "PLTR", "CRM", "ADBE", "INTC", "BAC")
 
 CATALOG: dict[str, Spec] = {s.name: s for s in [
     Spec("xasset-daily", "yahoo", "bars", "1d", _m(
@@ -112,6 +119,13 @@ CATALOG: dict[str, Spec] = {s.name: s for s in [
         "VWRP.L", "VWRL.L", "VUKG.L", "VUKE.L", "ISF.L", "IGLT.L", "VFEG.L", "VJPA.L", "VUAG.L", "SGLN.L",
         "BTC-USD", "ETH-USD"),
         DEFAULT_SPLITS, description="Cross-asset daily bars: indices, FX, futures, US and London ETFs, crypto"),
+    Spec("us-stocks-daily", "yahoo", "bars", "1d", _m(*MEGACAPS, "SPY", "QQQ", "IWM", "DIA", "XLK", "XLF", "XLE",
+                                                       "XLV", "XLY", "XLC", "SMH", "^VIX"),
+         DEFAULT_SPLITS, description="US mega caps (today's leaders, so survivorship-biased) plus index and sector "
+                                     "ETFs, split- and dividend-adjusted closes"),
+    Spec("us-earnings", "yahoo_earnings", "events", "event", _m(*MEGACAPS),
+         DEFAULT_SPLITS, start="2000-01-01", description="Earnings dates, EPS estimate, actual and surprise for the "
+                                                          "US mega caps (about 25 years)"),
     Spec("ust-daily", "fed_h15", "series", "1d", _m(*[(f"UST_{k}", c, f"UST {k} constant maturity") for k, c in (
         ("3M", "RIFLGFCM03_N.B"), ("1Y", "RIFLGFCY01_N.B"), ("2Y", "RIFLGFCY02_N.B"), ("5Y", "RIFLGFCY05_N.B"),
         ("10Y", "RIFLGFCY10_N.B"), ("20Y", "RIFLGFCY20_N.B"), ("30Y", "RIFLGFCY30_N.B"))]),
@@ -165,6 +179,19 @@ def _utc_index(df: pd.DataFrame) -> pd.DataFrame:
 def fetch_yahoo(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     from .providers import yahoo
     return yahoo.history(m.ref, start=spec.start, end=None, interval=spec.interval)
+
+
+def fetch_yahoo_earnings(m: Member, spec: Spec, log=print) -> pd.DataFrame:
+    from .earnings import fetch_earnings_dates
+    raw = fetch_earnings_dates(m.ref, limit=100)  # Yahoo caps at 100 (about 25 years)
+    hour = raw.index.hour.astype(float)
+    df = pd.DataFrame({"eps_estimate": raw["EPS Estimate"].values, "eps_actual": raw["Reported EPS"].values,
+                       "surprise_pct": raw["Surprise(%)"].values, "hour_et": hour}, index=raw.index)
+    df = _utc_index(df)
+    # Yahoo repeats some events with a partial row; keep the most complete one per timestamp.
+    df["_n"] = df.notna().sum(axis=1)
+    df = df.sort_values("_n").groupby(level=0).last().drop(columns="_n")
+    return df.sort_index()
 
 
 def fetch_fed_h15(m: Member, spec: Spec, log=print, _memo={}) -> pd.DataFrame:
@@ -364,13 +391,16 @@ def fetch_french(m: Member, spec: Spec, log=print, _memo={}) -> pd.DataFrame:
     return _utc_index(_memo[file][[col]].rename(columns={col: "value"}).dropna())
 
 
-FETCHERS = {"yahoo": fetch_yahoo, "fed_h15": fetch_fed_h15, "ecb": fetch_ecb, "eia": fetch_eia,
+FETCHERS = {"yahoo": fetch_yahoo, "yahoo_earnings": fetch_yahoo_earnings, "fed_h15": fetch_fed_h15, "ecb": fetch_ecb, "eia": fetch_eia,
             "boe": fetch_boe, "binance": fetch_binance,
             "dukascopy": fetch_dukascopy, "french": fetch_french}
 
 
 # ---- quality checks -------------------------------------------------------------------------
 def quality(df: pd.DataFrame, kind: str, interval: str) -> dict:
+    if kind == "events":
+        return {"rows": int(len(df)), "start": str(df.index[0]), "end": str(df.index[-1]),
+                "with_actual": int(df["eps_actual"].notna().sum()), "duplicate_times": int(df.index.duplicated().sum())}
     col = "close" if kind == "bars" else "value"
     s = df[col].astype(float)
     q = {"rows": int(len(df)), "start": str(df.index[0]), "end": str(df.index[-1]),
@@ -413,7 +443,7 @@ def _git_commit() -> str | None:
 
 
 def _long(df: pd.DataFrame, kind: str, symbol: str) -> pd.DataFrame:
-    cols = BAR_COLS if kind == "bars" else SERIES_COLS
+    cols = {"bars": BAR_COLS, "series": SERIES_COLS, "events": EVENT_COLS}[kind]
     out = pd.DataFrame(index=df.index)
     for c in cols:
         out[c] = df[c].astype("float64") if c in df else np.nan
@@ -479,7 +509,7 @@ def build(name: str, members: list[str] | None = None, start: str | None = None,
     manifest = {
         "dataset": name, "version": version, "built_at": built, "kind": spec.kind, "interval": spec.interval,
         "source": spec.source, **SOURCE_INFO[spec.source], "description": spec.description,
-        "columns": ["time", "symbol"] + (BAR_COLS if spec.kind == "bars" else SERIES_COLS),
+        "columns": ["time", "symbol"] + {"bars": BAR_COLS, "series": SERIES_COLS, "events": EVENT_COLS}[spec.kind],
         "splits": splits_for(spec, end), "split_rule": "inclusive date ranges on the bar's UTC date",
         "members": files, "failed": failed,
         "software": {"mlab_commit": _git_commit(), "pandas": pd.__version__, "pyarrow": pyarrow.__version__},
