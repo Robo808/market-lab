@@ -92,6 +92,7 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab hypo new <slug> --claim "..." ; ./mlab hypo test research/hypotheses/H-....md ; ./mlab hypo list
 ./mlab datasets catalog ; ./mlab datasets build all ; ./mlab datasets list   # frozen offline snapshots
 ./mlab datasets crosscheck us-stocks-1m --days 5   # stored bars vs Massive live (Massive is never stored)
+./mlab newsstore gdelt --since 3d ; ./mlab newsstore show AMZN   # GDELT GKG raw files -> point-in-time news store
 ./mlab algo backtest tsmom UK100 US500 --dataset duka-1d --split train       # offline, fixed split
 ```
 
