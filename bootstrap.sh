@@ -22,7 +22,17 @@ if command -v uv >/dev/null 2>&1; then
   VIRTUAL_ENV="$MLAB_VENV" uv pip install -q -e "$HERE[stream,dev]"
 else
   log "creating venv with python -m venv at $MLAB_VENV"
-  [ -x "$MLAB_VENV/bin/python" ] || python3 -m venv "$MLAB_VENV"
+  # A failed earlier run (e.g. Debian/Ubuntu without pythonX.Y-venv) leaves a venv with no pip: rebuild it.
+  if [ ! -x "$MLAB_VENV/bin/pip" ]; then
+    rm -rf "$MLAB_VENV"
+    python3 -m venv "$MLAB_VENV" || {
+      rm -rf "$MLAB_VENV"
+      v="$(python3 -c 'import sys; print("%d.%d" % sys.version_info[:2])')"
+      echo "[mlab] python3 -m venv failed. Install uv (curl -LsSf https://astral.sh/uv/install.sh | sh)" >&2
+      echo "[mlab] or the venv package (sudo apt install python$v-venv), then re-run: bash bootstrap.sh" >&2
+      exit 1
+    }
+  fi
   "$MLAB_VENV/bin/pip" install -q --upgrade pip
   "$MLAB_VENV/bin/pip" install -q -e "$HERE[stream,dev]"
 fi
