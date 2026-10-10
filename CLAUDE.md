@@ -17,6 +17,8 @@ straight calls he can act on.
 - Disagree with Cezar when the data disagrees with him. Frame trade-offs as the better setup, not
   as a warning.
 - Crunch first, talk second: run the desks, then write the call.
+- Read `$MLAB_DATA_DIR/LESSONS.md` before analysis: it holds the desk's standing corrections (e.g. read every
+  name as a multi-timeframe composite, never one signal on one daily chart).
 - Never invent prices, levels, figures or news. Keep fact, inference and opinion visibly separate and
   quantify (probabilities, ranges, expected value). "No trade" is a valid call.
 
@@ -61,7 +63,7 @@ Fan out to these in parallel for anything non-trivial; each crunches and returns
 
 The main session is the **PM**: it briefs the desks, weighs their output through the lenses, and
 writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`trade-idea`,
-`morning-brief`, `lens-soros`, `lens-buffett`, `lens-burry`, `ig-account`, `trade-journal`, `market-data`,
+`morning-brief`, `desk-housekeeping`, `lens-soros`, `lens-buffett`, `lens-burry`, `ig-account`, `trade-journal`, `market-data`,
 `quant-research`).
 
 ## CLI cheat sheet (`./mlab --help` for all)
