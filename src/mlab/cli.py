@@ -53,11 +53,12 @@ def src_line(df: pd.DataFrame):
 # ---- commands -----------------------------------------------------------------------
 def cmd_doctor(a):
     from . import cache
-    from .config import DATA_DIR, OPTIONAL_KEYS, ROOT, env, ig_config
+    from .config import DATA_DIR, ENV_FILE, ENV_FILE_LOADED, OPTIONAL_KEYS, ROOT, env, ig_config
     from .net import SOURCES, probe_all
     print("## Market Lab doctor\n")
     print(f"python {sys.version.split()[0]} · pandas {pd.__version__}")
     print(f"code: {ROOT} · data (journal, reports, cache): {DATA_DIR}")
+    print(f"env file: {ENV_FILE} ({'loaded' if ENV_FILE_LOADED else 'none'})")
     if not a.offline:
         import importlib
         hosts = dict(SOURCES)

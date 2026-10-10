@@ -7,6 +7,28 @@ from pathlib import Path
 
 ROOT = Path(os.environ.get("MLAB_HOME", Path(__file__).resolve().parents[2]))
 
+# Optional KEY=VALUE file for a self-hosted machine (chmod 600, outside any repo). Values already in the
+# environment win, so a cloud network secret or an exported variable is never overridden. Never printed.
+ENV_FILE = Path(os.environ.get("MLAB_ENV_FILE") or Path.home() / ".config" / "market-lab" / "env")
+
+
+def load_env_file(path: Path = ENV_FILE) -> bool:
+    if not path.is_file():
+        return False
+    for line in path.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.removeprefix("export ").split("=", 1)
+        k, v = k.strip(), v.strip()
+        if len(v) >= 2 and v[0] == v[-1] and v[0] in "'\"":
+            v = v[1:-1]
+        os.environ.setdefault(k, v)
+    return True
+
+
+ENV_FILE_LOADED = load_env_file()
+
 # Where persistent desk state lives (journal, reports, caches, IV history, transcripts).
 # The code can run from an ephemeral repo clone; this state must outlive the container, so it
 # defaults to the project's shared folder when one exists, else to the checkout itself.

@@ -297,3 +297,18 @@ def test_data_dir_override(tmp_path, monkeypatch):
         monkeypatch.undo()
         importlib.reload(mlab.config)
         importlib.reload(mlab.journal)
+
+
+def test_env_file_fills_missing_vars_without_overriding(tmp_path, monkeypatch):
+    from mlab.config import load_env_file
+    f = tmp_path / "env"
+    f.write_text("# comment\nexport MLAB_T_A='one'\nMLAB_T_B=two=2\nMLAB_T_C=file\n\n")
+    monkeypatch.setenv("MLAB_T_C", "shell")
+    for k in ("MLAB_T_A", "MLAB_T_B"):
+        monkeypatch.delenv(k, raising=False)
+    assert load_env_file(f)
+    import os
+    assert (os.environ["MLAB_T_A"], os.environ["MLAB_T_B"], os.environ["MLAB_T_C"]) == ("one", "two=2", "shell")
+    for k in ("MLAB_T_A", "MLAB_T_B"):
+        monkeypatch.delenv(k)
+    assert not load_env_file(tmp_path / "missing")

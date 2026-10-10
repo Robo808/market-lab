@@ -119,6 +119,8 @@ signal_lab, stats, lenses, options, earnings, news, cot, risk, journal`.
   vars `IG_USERNAME`, `IG_PASSWORD`; plus `IG_ACC_TYPE` (`DEMO`|`LIVE`), optional `IG_ACC_NUMBER`, or `IG_DEMO_*` /
   `IG_LIVE_*` per environment.
   Never print, echo, log or write them anywhere. Never ask for them in chat.
+- On a self-hosted machine, `mlab` also reads `KEY=VALUE` lines from `MLAB_ENV_FILE` (default
+  `~/.config/market-lab/env`, chmod 600, outside the repo); variables already set win. `mlab doctor` shows the path only.
 - Historical prices burn the weekly allowance (10k points/week): always go through `./mlab price ig:...`
   or `IG.prices()` (cache-first, fetches only the missing tail). Prefer Yahoo/Stooq for long history
   of the underlying and IG for the exact traded instrument and recent bars.
