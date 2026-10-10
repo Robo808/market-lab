@@ -207,3 +207,20 @@ def test_crosscheck_compares_without_storing(ds, monkeypatch):
 def test_listing_ignores_staging(ds):
     (ds.DATASETS_DIR / ".staging" / "duka-stocks-1m").mkdir(parents=True)
     assert ds.listing().empty
+
+
+def test_duka_hourly_stages_complete_months(ds, monkeypatch):
+    calls = []
+    rec = struct.pack(">I4if", 0, 745520, 745191, 744888, 746179, 0.3)
+
+    def fake_get(s, url, log=print):
+        calls.append(url)
+        return lzma.compress(rec)
+    monkeypatch.setattr(ds, "_duka_get", fake_get)
+    spec = ds.CATALOG["duka-stocks-1h"]
+    m = spec.members[0]
+    monkeypatch.setattr(ds, "start_ts", lambda sp: pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=70))
+    first = ds.fetch_dukascopy(m, spec, log=lambda *a: None)
+    n = len(calls)
+    second = ds.fetch_dukascopy(m, spec, log=lambda *a: None)
+    assert len(first) == len(second) and len(calls) - n == 2  # only the current, incomplete month is refetched
