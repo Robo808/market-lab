@@ -425,7 +425,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 EXTENSIONS = ["mlab.ta_catalog", "mlab.signal_lab", "mlab.options", "mlab.earnings", "mlab.news", "mlab.cot",
-              "mlab.quant.cli"]
+              "mlab.quant.cli", "mlab.datasets"]
 
 
 def main(argv=None):

@@ -90,6 +90,8 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab algo validate tsmom ^GSPC --grid '{"lookback":[126,252]}'   # OOS, PSR/DSR, bootstrap, permutation
 ./mlab algo signal dual_momentum SPY EFA BIL ; ./mlab algo paper rsi2 SPY QQQ --book rsi2-us
 ./mlab hypo new <slug> --claim "..." ; ./mlab hypo test research/hypotheses/H-....md ; ./mlab hypo list
+./mlab datasets catalog ; ./mlab datasets build all ; ./mlab datasets list   # frozen offline snapshots
+./mlab algo backtest tsmom UK100 US500 --dataset duka-1d --split train       # offline, fixed split
 ```
 
 ## Quant research (`src/mlab/quant/`, wiki in `docs/wiki/`)
@@ -97,6 +99,8 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 - Strategy library (`strategies.py`): trend, breakout, mean reversion, seasonality, cross-sectional momentum,
   dual momentum, inverse vol, risk parity, pairs; overlays `vol_target` and `regime_filter`. Decisions at the close
   of bar t earn bar t+1; tests enforce no look-ahead by truncation.
+- Research runs on frozen datasets (`mlab datasets`, wiki `Datasets`): versioned, checksummed snapshots with fixed
+  train / validation / test splits; the test split needs `--allow-test` and every look is logged.
 - Modes: backtest, signal (today's target), paper (books in `$MLAB_DATA_DIR/paper/`). No live execution.
 - Hypotheses are pre-registered on `hypo/<yyyymmdd>-<slug>` branches in `research/hypotheses/`, graded once
   against bars set in advance, and merged to main whether PASS or FAIL. Follow the `quant-research` skill.
