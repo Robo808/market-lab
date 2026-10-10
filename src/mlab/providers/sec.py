@@ -128,5 +128,22 @@ def filings(ticker: str, forms: tuple[str, ...] | None = None, limit: int = 40) 
     return rec[["filingDate", "form", "reportDate", "primaryDocDescription", "url"]].head(limit)
 
 
+def filing_history(ticker: str, forms: tuple[str, ...] = ("8-K", "8-K/A")) -> pd.DataFrame:
+    """Every filing of these forms since EDGAR began (recent block plus the older submissions files).
+
+    Use filingDate, not acceptanceDateTime, for timing: the JSON acceptance stamps are labelled UTC but are
+    offset inconsistently by filer (AMZN's run 8-10 h ahead of the ET time on the filing index page, TSLA's
+    are correct), and filings accepted after 17:30 ET already carry the next business day's filingDate."""
+    c = cik(ticker)
+    sub = _get(f"https://data.sec.gov/submissions/CIK{c}.json")
+    parts = [pd.DataFrame(sub["filings"]["recent"])]
+    parts += [pd.DataFrame(_get(f"https://data.sec.gov/submissions/{f['name']}")) for f in sub["filings"].get("files", [])]
+    rec = pd.concat(parts, ignore_index=True)
+    rec = rec[rec["form"].isin(forms)].copy()
+    rec["filingDate"] = pd.to_datetime(rec["filingDate"])
+    cols = [x for x in ("filingDate", "form", "items", "accessionNumber", "primaryDocDescription") if x in rec]
+    return rec[cols].drop_duplicates("accessionNumber").sort_values("filingDate").reset_index(drop=True)
+
+
 def insider_filings(ticker: str, limit: int = 40) -> pd.DataFrame:
     return filings(ticker, forms=("4", "4/A"), limit=limit)
