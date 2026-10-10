@@ -110,3 +110,21 @@ def test_events_dataset(ds):
     assert man["kind"] == "events" and man["members"]["AMZN"]["qc"]["with_actual"] == 2
     va = ds.load("us-earnings", ["AMZN"], split="validation")["AMZN"]
     assert len(va) == 1 and va["surprise_pct"].iloc[0] == -9.1
+
+
+def test_accumulate_merges_previous_version(ds):
+    calls = {"n": 0}
+
+    def window(m, spec, log=print):  # each build sees a later, overlapping 10-day window
+        calls["n"] += 1
+        end = pd.Timestamp.now(tz="UTC").floor("h") - pd.Timedelta(days=10 * (2 - calls["n"]))
+        idx = pd.date_range(end - pd.Timedelta(days=10), end, freq="h")
+        c = np.linspace(100, 110, len(idx)) + calls["n"]
+        return pd.DataFrame({"open": c, "high": c + 1, "low": c - 1, "close": c, "volume": 1.0}, index=idx)
+    first = ds.build("us-stocks-1h", members=["AMZN"], fetch=window, log=lambda *a: None)
+    second = ds.build("us-stocks-1h", members=["AMZN"], fetch=window, log=lambda *a: None)
+    a = ds.load(f"us-stocks-1h@{first.name}", allow_test=True)["AMZN"]
+    b = ds.load(f"us-stocks-1h@{second.name}", allow_test=True)["AMZN"]
+    assert b.index.min() == a.index.min() and b.index.max() > a.index.max()
+    assert not b.index.duplicated().any()
+    assert ds.start_ts(ds.CATALOG["us-stocks-1m"]) > pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=31)

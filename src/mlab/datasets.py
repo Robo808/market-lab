@@ -98,8 +98,15 @@ class Spec:
     interval: str
     members: tuple[Member, ...]
     splits: dict = field(default_factory=dict)   # {"train": end, "validation": end}; test = rest
-    start: str = "1970-01-01"
+    start: str = "1970-01-01"    # ISO date, or "-<N>d" relative to the build date
     description: str = ""
+    accumulate: bool = False     # each build merges the previous version, so short free windows add up
+
+
+def start_ts(spec: Spec) -> pd.Timestamp:
+    if spec.start.startswith("-") and spec.start.endswith("d"):
+        return pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=int(spec.start[1:-1]))
+    return pd.Timestamp(spec.start, tz="UTC")
 
 
 def _m(*items) -> tuple[Member, ...]:
@@ -107,6 +114,8 @@ def _m(*items) -> tuple[Member, ...]:
 
 
 DEFAULT_SPLITS = {"train": "2014-12-31", "validation": "2019-12-31"}
+DUKA_STOCKS = ("AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "NFLX", "AMD", "JPM", "LLY", "PLTR",
+               "SPY", "QQQ", "IWM", "DIA")
 MEGACAPS = ("AAPL", "MSFT", "NVDA", "AMZN", "GOOGL", "META", "TSLA", "AVGO", "BRK-B", "JPM", "LLY", "V", "MA",
             "XOM", "UNH", "COST", "NFLX", "AMD", "ORCL", "WMT", "PLTR", "CRM", "ADBE", "INTC", "BAC")
 
@@ -126,6 +135,21 @@ CATALOG: dict[str, Spec] = {s.name: s for s in [
     Spec("us-earnings", "yahoo_earnings", "events", "event", _m(*MEGACAPS),
          DEFAULT_SPLITS, start="2000-01-01", description="Earnings dates, EPS estimate, actual and surprise for the "
                                                           "US mega caps (about 25 years)"),
+    Spec("us-stocks-1h", "yahoo", "bars", "1h", _m(*MEGACAPS, "SPY", "QQQ", "IWM", "DIA"),
+         {"train": "2025-09-30", "validation": "2026-03-31"}, start="-729d", accumulate=True,
+         description="US mega caps and index ETFs, hourly (Yahoo keeps 730 days; each build adds to the last)"),
+    Spec("us-stocks-5m", "yahoo", "bars", "5m", _m(*MEGACAPS, "SPY", "QQQ", "IWM", "DIA"),
+         {"train": "2026-12-31", "validation": "2027-03-31"}, start="-59d", accumulate=True,
+         description="US mega caps and index ETFs, 5-minute (Yahoo keeps 60 days; accumulates weekly)"),
+    Spec("us-stocks-1m", "yahoo", "bars", "1m", _m(*MEGACAPS, "SPY", "QQQ", "IWM", "DIA"),
+         {"train": "2026-12-31", "validation": "2027-03-31"}, start="-29d", accumulate=True,
+         description="US mega caps and index ETFs, 1-minute (Yahoo keeps 30 days; accumulates weekly)"),
+    *[Spec(f"duka-stocks-{iv}", "dukascopy", "bars", iv, _m(*[
+        (s, s.replace("-", "").replace("META", "FB") + "USUSD", "US stock CFD", 1e3)
+        for s in DUKA_STOCKS]),
+        {"train": "2021-12-31", "validation": "2023-12-31"}, start="2017-02-01" if iv == "1h" else "-120d",
+        accumulate=iv == "1m",
+        description=f"US mega cap and ETF CFDs, {iv} mid bars with spread (Dukascopy, from 2017)") for iv in ("1h", "1m")],
     Spec("ust-daily", "fed_h15", "series", "1d", _m(*[(f"UST_{k}", c, f"UST {k} constant maturity") for k, c in (
         ("3M", "RIFLGFCM03_N.B"), ("1Y", "RIFLGFCY01_N.B"), ("2Y", "RIFLGFCY02_N.B"), ("5Y", "RIFLGFCY05_N.B"),
         ("10Y", "RIFLGFCY10_N.B"), ("20Y", "RIFLGFCY20_N.B"), ("30Y", "RIFLGFCY30_N.B"))]),
@@ -176,9 +200,29 @@ def _utc_index(df: pd.DataFrame) -> pd.DataFrame:
     return df.sort_index()
 
 
+# Yahoo's free intraday windows (days back from today) and the span one request may cover.
+YF_WINDOW = {"1m": (29, 7), "2m": (59, 59), "5m": (59, 59), "15m": (59, 59), "30m": (59, 59),
+             "60m": (729, 729), "1h": (729, 729), "90m": (59, 59)}
+
+
 def fetch_yahoo(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     from .providers import yahoo
-    return yahoo.history(m.ref, start=spec.start, end=None, interval=spec.interval)
+    if spec.interval not in YF_WINDOW:
+        return yahoo.history(m.ref, start=start_ts(spec).date(), end=None, interval=spec.interval)
+    back, span = YF_WINDOW[spec.interval]
+    now = pd.Timestamp.now(tz="UTC")
+    a, frames = max(start_ts(spec), now.normalize() - pd.Timedelta(days=back)), []
+    while a < now:
+        b = min(a + pd.Timedelta(days=span), now + pd.Timedelta(days=1))
+        try:
+            frames.append(yahoo.history(m.ref, start=a.date(), end=b.date(), interval=spec.interval))
+        except LookupError:
+            pass
+        a = b
+    if not frames:
+        raise LookupError(f"yahoo returned no {spec.interval} bars for {m.ref}")
+    df = pd.concat(frames)
+    return df[~df.index.duplicated(keep="last")].sort_index()
 
 
 def fetch_yahoo_earnings(m: Member, spec: Spec, log=print) -> pd.DataFrame:
@@ -294,7 +338,13 @@ _DUKA = _Throttle(float(os.environ.get("MLAB_DUKA_GAP", "1.2")))
 def _duka_get(s, url: str, log=print) -> bytes | None:
     for attempt in range(8):
         _DUKA.wait()
-        r = s.get(url, timeout=60)
+        try:
+            r = s.get(url, timeout=60)
+        except (ConnectionError, OSError, __import__("requests").RequestException) as e:
+            pause = min(15 * 2 ** attempt, 300)
+            log(f"  dukascopy {type(e).__name__}, backing off {pause}s")
+            time.sleep(pause)
+            continue
         if r.status_code in (429, 503):
             pause = min(15 * 2 ** attempt, 300)
             log(f"  dukascopy {r.status_code}, backing off {pause}s")
@@ -329,17 +379,21 @@ def fetch_dukascopy(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     now = pd.Timestamp.now(tz="UTC")
     this_year = pd.Timestamp(year=now.year, month=1, day=1, tz="UTC")
     months = [(p.to_timestamp().tz_localize("UTC"), f"{p.year}/{p.month - 1:02d}/{{side}}_candles_hour_1.bi5", False)
-              for p in pd.period_range(pd.Timestamp(spec.start), now.tz_localize(None), freq="M")]
+              for p in pd.period_range(start_ts(spec).tz_localize(None), now.tz_localize(None), freq="M")]
     if spec.interval == "1d":
         # Yearly day-candle files exist for complete years only; the current year is rebuilt from
         # monthly hour candles (complete months), resampled to UTC days.
         periods = [(pd.Timestamp(year=y, month=1, day=1, tz="UTC"), f"{y}/{{side}}_candles_day_1.bi5", False)
-                   for y in range(pd.Timestamp(spec.start).year, now.year)]
-        periods += [(b, p, True) for b, p, _ in months if b >= max(this_year, pd.Timestamp(spec.start, tz="UTC"))]
+                   for y in range(start_ts(spec).year, now.year)]
+        periods += [(b, p, True) for b, p, _ in months if b >= max(this_year, start_ts(spec))]
     elif spec.interval == "1h":
         periods = months
+    elif spec.interval == "1m":  # one file per day per side: slow on the free feed, keep the window short
+        periods = [(d, f"{d.year}/{d.month - 1:02d}/{d.day:02d}/{{side}}_candles_min_1.bi5", False)
+                   for d in pd.date_range(start_ts(spec), now.normalize() - pd.Timedelta(days=1), freq="D")
+                   if d.dayofweek != 5]
     else:
-        raise ValueError("dukascopy datasets support 1d and 1h")
+        raise ValueError("dukascopy datasets support 1d, 1h and 1m")
     frames = []
     for base, path, to_daily in periods:
         sides = {}
@@ -463,9 +517,9 @@ def new_version(name: str, when: pd.Timestamp | None = None) -> str:
     return v
 
 
-def splits_for(spec: Spec, end: str) -> dict:
+def splits_for(spec: Spec, start: str, end: str) -> dict:
     tr, va = pd.Timestamp(spec.splits["train"]), pd.Timestamp(spec.splits["validation"])
-    return {"train": [spec.start, str(tr.date())],
+    return {"train": [start[:10], str(tr.date())],
             "validation": [str((tr + pd.Timedelta(days=1)).date()), str(va.date())],
             "test": [str((va + pd.Timedelta(days=1)).date()), end[:10]]}
 
@@ -484,10 +538,21 @@ def build(name: str, members: list[str] | None = None, start: str | None = None,
     shutil.rmtree(tmp, ignore_errors=True)
     tmp.mkdir(parents=True)
     files, failed = {}, {}
+    prev = {}
+    if spec.accumulate and versions(name):
+        prev = load(f"{name}@{versions(name)[-1]}", allow_test=True, _record=False)
+        log(f"  accumulating onto {name}@{versions(name)[-1]}")
     for m in chosen:
         try:
-            df = fetcher(m, spec, log=log)
-            df = df[df.index >= pd.Timestamp(spec.start, tz="UTC")]
+            try:
+                df = fetcher(m, spec, log=log)
+                df = df[df.index >= start_ts(spec)]
+            except Exception:
+                if m.symbol not in prev:
+                    raise
+                df = prev[m.symbol].iloc[:0]
+            if m.symbol in prev:  # new rows win where they overlap
+                df = pd.concat([prev[m.symbol], df])
             if df.empty:
                 raise LookupError("no rows after start date")
             df = df[~df.index.duplicated(keep="last")].sort_index()
@@ -506,12 +571,13 @@ def build(name: str, members: list[str] | None = None, start: str | None = None,
         raise RuntimeError(f"{name}: every member failed: {failed}")
     built = pd.Timestamp.now(tz="UTC").isoformat(timespec="seconds")
     end = max(f["qc"]["end"] for f in files.values())
+    first = min(f["qc"]["start"] for f in files.values())
     import pyarrow
     manifest = {
         "dataset": name, "version": version, "built_at": built, "kind": spec.kind, "interval": spec.interval,
         "source": spec.source, **SOURCE_INFO[spec.source], "description": spec.description,
         "columns": ["time", "symbol"] + {"bars": BAR_COLS, "series": SERIES_COLS, "events": EVENT_COLS}[spec.kind],
-        "splits": splits_for(spec, end), "split_rule": "inclusive date ranges on the bar's UTC date",
+        "splits": splits_for(spec, first, end), "split_rule": "inclusive date ranges on the bar's UTC date",
         "members": files, "failed": failed,
         "software": {"mlab_commit": _git_commit(), "pandas": pd.__version__, "pyarrow": pyarrow.__version__},
     }
@@ -549,7 +615,7 @@ def manifest(ref: str) -> dict:
 
 
 def load(ref: str, symbols: list[str] | None = None, split: str | None = None, allow_test: bool = False,
-         note: str = "") -> dict[str, pd.DataFrame]:
+         note: str = "", _record: bool = True) -> dict[str, pd.DataFrame]:
     """{symbol: frame indexed by UTC time}. split in train | validation | test | train+validation | None (all)."""
     name, ver, root = resolve(ref)
     man = json.loads((root / "manifest.json").read_text())
@@ -559,7 +625,7 @@ def load(ref: str, symbols: list[str] | None = None, split: str | None = None, a
     if (not split or "test" in parts) and not allow_test:
         raise PermissionError(f"{name}@{ver}: the test split is held out; pass allow_test=True (CLI --allow-test) "
                               "once, for the final grade")
-    if (not split or "test" in parts):
+    if (not split or "test" in parts) and _record:
         log_line = {"at": pd.Timestamp.now(tz="UTC").isoformat(timespec="seconds"), "split": split or "all",
                     "symbols": symbols, "note": note}
         try:
