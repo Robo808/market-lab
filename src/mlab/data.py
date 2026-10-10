@@ -13,6 +13,8 @@ from . import cache
 
 PERIODS = {"1mo": 31, "3mo": 92, "6mo": 183, "1y": 366, "2y": 731, "5y": 1827, "10y": 3653, "max": 365 * 40}
 IG_EPIC = re.compile(r"^[A-Z]{2}\.[A-Z]\.[A-Z0-9_]+\.[A-Z0-9_]+\.[A-Z0-9_]+$")
+US_TICKER = re.compile(r"^[A-Z]{1,5}([.-][A-Z])?$")
+NO_CACHE = {"massive"}  # Massive's terms are display-only: fetched and shown, never written to the cache
 YF_INTRADAY_LIMIT = {"1m": 7, "2m": 59, "5m": 59, "15m": 59, "30m": 59, "60m": 729, "1h": 729, "90m": 59}
 
 
@@ -56,19 +58,22 @@ def get_prices(symbol: str, interval: str = "1d", start=None, end=None, period: 
         return _tag(df, f"IG {ig.cfg.acc_type} {sym} {interval}")
 
     chain = {"yahoo": ["yahoo", "stooq"], "stooq": ["stooq", "yahoo"], "crypto": ["crypto"],
-             "binance": ["crypto"], "kraken": ["crypto"]}.get(provider)
+             "binance": ["crypto"], "kraken": ["crypto"], "massive": ["massive"]}.get(provider)
     if chain is None:
         raise ValueError(f"unknown provider '{provider}'")
+    if provider == "yahoo" and US_TICKER.match(sym):
+        chain = ["yahoo", "massive", "stooq"]  # Massive backs Yahoo up on US stocks and ETFs
 
     errors = []
     for prov in chain:
-        if not refresh:
+        if not refresh and prov not in NO_CACHE:
             hit = cache.load(prov, sym, interval)
             if cache.covers(hit, start_ts, end_ts, _max_age(interval)):
                 return _tag(_slice(hit, start_ts, end_ts), f"{prov} {sym} {interval} (cache)")
         try:
             df = _fetch(prov, sym, interval, start_ts, end_ts)
-            df = cache.save(prov, sym, interval, df)
+            if prov not in NO_CACHE:
+                df = cache.save(prov, sym, interval, df)
             return _tag(_slice(df, start_ts, end_ts), f"{prov} {sym} {interval}")
         except Exception as e:
             errors.append(f"{prov}: {type(e).__name__}: {str(e)[:160]}")
@@ -85,6 +90,9 @@ def _fetch(prov, sym, interval, start_ts, end_ts) -> pd.DataFrame:
     if prov == "stooq":
         from .providers import stooq
         return stooq.history(sym, start_ts, end_ts, interval)
+    if prov == "massive":
+        from .providers import massive
+        return massive.history(sym, start_ts, end_ts, interval)
     if prov == "crypto":
         from .providers import crypto
         return crypto.history(sym, start_ts, end_ts, interval)

@@ -130,24 +130,21 @@ def test_accumulate_merges_previous_version(ds):
     assert ds.start_ts(ds.CATALOG["us-stocks-1m"]) > pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=31)
 
 
-def test_massive_pages_through_next_url(ds, monkeypatch):
-    pages = [{"results": [{"t": 1704205800000, "o": 1, "h": 2, "l": 0.5, "c": 1.5, "v": 100}],
-              "next_url": "https://api.massive.com/next?cursor=abc"},
-             {"results": [{"t": 1704205860000, "o": 1.5, "h": 2, "l": 1, "c": 1.8, "v": 50}]}]
-    seen = []
+class _Resp:
+    status_code = 200
+    content = b"{}"
 
-    class R:
-        status_code = 200
+    def __init__(self, j):
+        self._j = j
 
-        def __init__(self, j):
-            self._j = j
+    def json(self):
+        return self._j
 
-        def json(self):
-            return self._j
+    def raise_for_status(self):
+        pass
 
-        def raise_for_status(self):
-            pass
 
+def _massive_session(pages, seen):
     class S:
         headers = {}
 
@@ -156,15 +153,55 @@ def test_massive_pages_through_next_url(ds, monkeypatch):
 
         def get(self, url, params=None, timeout=None):
             seen.append((url, params))
-            return R(pages[len(seen) - 1])
+            return _Resp(pages[min(len(seen), len(pages)) - 1])
+    return S()
 
-    monkeypatch.setattr("mlab.net.session", lambda *a, **k: S())
+
+def test_massive_pages_through_next_url(monkeypatch):
+    from mlab.providers import massive
+    pages = [{"results": [{"t": 1704205800000, "o": 1, "h": 2, "l": 0.5, "c": 1.5, "v": 100}],
+              "next_url": "https://api.massive.com/next?cursor=abc"},
+             {"results": [{"t": 1704205860000, "o": 1.5, "h": 2, "l": 1, "c": 1.8, "v": 50}]}]
+    seen = []
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: _massive_session(pages, seen))
     monkeypatch.setenv("MLAB_MASSIVE_GAP", "0")
-    m = ds.CATALOG["massive-1m"].members[0]
-    df = ds.fetch_massive(m, ds.CATALOG["massive-1m"], log=lambda *a: None)
+    df = massive.history("AMZN", "2024-01-02", "2024-01-02", "1m")
     assert len(df) == 2 and df["close"].tolist() == [1.5, 1.8]
     assert seen[0][1]["adjusted"] == "true" and seen[1] == ("https://api.massive.com/next?cursor=abc", None)
     assert df.index[0] == pd.Timestamp("2024-01-02 14:30", tz="UTC")
+    with pytest.raises(ValueError):
+        massive.history("^GSPC", interval="1d")
+
+
+def test_massive_backup_is_never_cached(monkeypatch, tmp_path):
+    from mlab import cache, data
+    from mlab.providers import massive, yahoo
+    saved = []
+    monkeypatch.setattr(yahoo, "history", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("yahoo down")))
+    idx = pd.date_range("2026-01-05", periods=3, freq="D", tz="UTC")
+    bars = pd.DataFrame({"open": 1.0, "high": 1.0, "low": 1.0, "close": [1.0, 2.0, 3.0], "volume": 1.0}, index=idx)
+    monkeypatch.setattr(massive, "history", lambda *a, **k: bars)
+    monkeypatch.setattr(cache, "load", lambda *a, **k: None)
+    monkeypatch.setattr(cache, "save", lambda p, *a, **k: saved.append(p) or a[-1])
+    df = data.get_prices("AMZN", start="2026-01-05", end="2026-01-07")
+    assert df.attrs["source"].startswith("massive") and saved == []
+
+
+def test_crosscheck_compares_without_storing(ds, monkeypatch):
+    from mlab.providers import massive
+    now = pd.Timestamp.now(tz="UTC").normalize()
+    idx = pd.date_range(now - pd.Timedelta(days=9), now - pd.Timedelta(days=1), freq="D")
+
+    def fake(m, spec, log=print):
+        return pd.DataFrame({"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 10.0}, index=idx)
+    ds.build("us-stocks-daily", members=["AMZN"], fetch=fake, log=lambda *a: None)
+    theirs = pd.DataFrame({"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.1, "volume": 20.0},
+                          index=idx[-5:] + pd.Timedelta(hours=4))  # Massive daily bars stamp midnight New York
+    monkeypatch.setattr(massive, "history", lambda *a, **k: theirs)
+    before = sorted(p.name for p in ds.DATASETS_DIR.rglob("*"))
+    r = ds.crosscheck("us-stocks-daily", days=5, log=lambda *a: None).iloc[0]
+    assert r["matched"] == 5 and abs(r["close_bp_median"] - 9.99) < 0.05 and r["vol_ratio_median"] == 0.5
+    assert sorted(p.name for p in ds.DATASETS_DIR.rglob("*")) == before
 
 
 def test_listing_ignores_staging(ds):

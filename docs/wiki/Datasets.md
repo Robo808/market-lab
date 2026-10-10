@@ -58,7 +58,6 @@ Licences and coverage were checked on the providers' own pages and GitHub repos 
 | `us-earnings` | Yahoo (yfinance) | Earnings dates, EPS estimate, actual, surprise and announcement hour for the same mega caps (Yahoo returns up to 100 events, about 25 years) | 2000 | Personal use only (as above) |
 | `us-stocks-1h`, `us-stocks-5m`, `us-stocks-1m` | Yahoo (yfinance) | The 25 mega caps plus SPY, QQQ, IWM, DIA | rolling: Yahoo keeps 730 days of 1h, 60 days of 5m, 30 days of 1m | Personal use only (as above). **Accumulating**: each build merges the previous version, so a weekly build grows the history past Yahoo's window |
 | `duka-stocks-1h`, `duka-stocks-1m` | Dukascopy datafeed | 13 US mega cap CFDs (AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA, AVGO, NFLX, AMD, JPM, LLY, PLTR) plus SPY, QQQ, IWM, DIA; 1h mid OHLC plus spread, 1m bid OHLC; volume is CFD tick volume | 2017-02 | As Dukascopy above. Start dates from [dukascopy-node's instrument metadata](https://github.com/Leo4815162342/dukascopy-node). The 1m backfill is ~40k throttled requests, so complete months are staged in `data/datasets/.staging/` and an interrupted build resumes |
-| `massive-1m` | [Massive](https://massive.com/pricing) free Basic plan | The 25 mega caps plus SPY, QQQ, IWM, DIA; 1m exchange bars incl. extended hours, split-adjusted, consolidated volume | last 2 years, accumulating | Massive terms. Needs `MASSIVE_API_KEY` or a network secret on `api.massive.com` injecting `Authorization: Bearer <key>`; free plan is 5 calls a minute, so a full build takes about an hour |
 | `duka-1d`, `duka-1h` | [Dukascopy](https://www.dukascopy.com/swiss/english/marketwatch/historical/) datafeed | 16: 7 FX majors, XAU/USD, Brent, WTI, UK100, US500, USTEC, DE40, EU50, JP225 (CFD and spot quotes, mid OHLC plus spread) | 2003 (1d), 2012 (1h) | No published licence; treat as personal use |
 | `ust-daily` | [Fed H.15](https://www.federalreserve.gov/datadownload/Choose.aspx?rel=H15) | 3m to 30y constant-maturity yields | 1962 | US government public data |
 | `boe-daily` | [Bank of England database](https://www.bankofengland.co.uk/boeapps/database/) | SONIA, Bank Rate, 5/10/20y gilt par yields, GBP/USD, GBP/EUR, GBP/JPY | 1975 | [UK Open Government Licence](https://www.bankofengland.co.uk/legal); some FX series excluded (LSEG-sourced) |
@@ -91,7 +90,7 @@ stored separately.
 | Bars | Free depth now | Source |
 |---|---|---|
 | 1h | 2017 onwards | `duka-stocks-1h` (CFD quotes with spread); `us-stocks-1h` for exchange prints over the last 2 years |
-| 1m | 2 years with exchange volume (Massive free), 2017 onwards as CFD quotes (Dukascopy), last 30 days (Yahoo); all growing | `massive-1m`, `duka-stocks-1m`, `us-stocks-1m` |
+| 1m | 2017 onwards as CFD quotes (Dukascopy), last 30 days (Yahoo); both growing | `duka-stocks-1m`, `us-stocks-1m` |
 | 5m | last 60 days, growing | `us-stocks-5m` |
 
 Free intraday windows roll off, so the intraday sets accumulate: build them at least weekly or the gap is lost
@@ -99,9 +98,23 @@ for good. Longer exchange-grade intraday history is a paid buy:
 
 | Vendor | What it adds | Price (checked 2026-10-10) |
 |---|---|---|
-| [Massive (formerly Polygon.io)](https://massive.com/pricing) | Minute aggregates and flat files for all US stocks | Basic $0 (2 years, 5 calls/min), Starter $29/mo (5 years), Developer $79/mo (10 years), Advanced $199/mo (20+ years) |
+| [Massive (formerly Polygon.io)](https://massive.com/pricing) | Minute aggregates and flat files for all US stocks, but its [market-data terms](https://massive.com/legal/market-data-terms-of-service) are display-only on every plan, so it can't seed a frozen dataset | Basic $0 (2 years, 5 calls/min), Starter $29/mo (5 years), Developer $79/mo (10 years), Advanced $199/mo (20+ years) |
 | [FirstRate Data](https://firstratedata.com/b/22/stock-complete) | 1m/5m/30m/1h bars for 16k US tickers from 2000, one-off download | Bundle price on the buy page; updates $59.95/mo |
 | [Databento](https://databento.com/pricing) | Exchange feeds incl. OHLCV-1s/1m, priced per GB | $125 starting credit, then pay as you go |
+
+## Cross-checking against Massive
+
+Massive's market-data terms say its data is "strictly for display use only" and must be deleted when the account
+ends ([terms](https://massive.com/legal/market-data-terms-of-service)), so mlab never stores it. It is used live:
+
+- as a backup price source for US stocks and ETFs in `mlab price` when Yahoo fails (`massive:AMZN` forces it),
+  never written to the price cache;
+- by `mlab datasets crosscheck NAME [--members AMZN TSLA] [--days 5]`, which fetches the last N sessions from
+  Massive and reports matched bars, bars only one side has (inside the sessions we hold), close differences in
+  basis points and the volume ratio. Nothing from Massive is written.
+
+Key: `MASSIVE_API_KEY` or a network secret on `api.massive.com` that injects `Authorization: Bearer <key>`. Free
+plan: 2 years of history, 5 calls a minute (`MLAB_MASSIVE_GAP`, default 12.5 s between calls).
 
 ## Known source issues
 
