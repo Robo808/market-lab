@@ -46,3 +46,61 @@ def test_filing_dates_map_to_next_session_with_spill():
     idx = pd.bdate_range("2024-01-01", periods=10, tz="UTC")
     f = ev.trading_day_flags(pd.Series(["2024-01-06"]), idx)  # Saturday -> Monday 8th and Tuesday 9th
     assert f == {pd.Timestamp("2024-01-08", tz="UTC"), pd.Timestamp("2024-01-09", tz="UTC")}
+
+
+def _gkg_zip(rows):
+    import io
+    import zipfile
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("x.gkg.csv", "\n".join("\t".join(r) for r in rows))
+    return buf.getvalue()
+
+
+def _gkg_row(orgs, tone, themes="ECON_STOCKMARKET;EPU_POLICY", title="Headline"):
+    r = [""] * 27
+    r[3], r[4], r[7], r[13] = "example.com", f"https://example.com/{orgs[:5]}", themes, orgs
+    r[15] = f"{tone},2,3,5,20,1,400"
+    r[26] = f"<PAGE_TITLE>{title}</PAGE_TITLE>"
+    return r
+
+
+def test_gdelt_org_matching():
+    from mlab.textlab.gdelt import match_symbols
+    assert match_symbols("amazon web services;white house") == {"AMZN"}
+    assert match_symbols("tesla inc;nvidia corporation") == {"TSLA", "NVDA"}
+    assert match_symbols("amazonia;teslacoil;apple daily") == set()
+    from mlab.textlab.gdelt import match
+    assert match("instagram;meta platforms", "elon musk") == {"META": "org:meta platforms", "TSLA": "person:elon musk"}
+    assert match("youtube") == {"GOOGL": "platform:youtube"}
+
+
+def test_gdelt_ingest_is_point_in_time_and_resumable(tmp_path, monkeypatch):
+    from mlab.textlab import gdelt
+    monkeypatch.setattr(gdelt, "STORE", tmp_path)
+    blob = _gkg_zip([_gkg_row("amazon;reuters", -3.5, title="Amazon cuts jobs"), _gkg_row("white house", 1.0)])
+    calls = []
+
+    class R:
+        def __init__(self, code):
+            self.status_code, self.content = code, blob
+
+        def raise_for_status(self):
+            pass
+
+    class S:
+        def get(self, url, timeout=None):
+            calls.append(url)
+            return R(404 if "1430" in url else 200)
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: S())
+    ts = pd.Timestamp("2026-10-09 14:15", tz="UTC")
+    r = gdelt.ingest("2026-10-09 14:15", "2026-10-09 14:30", workers=1, log=lambda *a: None)
+    assert r == {"ok": 1, "missing": 1, "failed": 0, "articles": 1} and len(calls) == 2
+    assert gdelt.ingest("2026-10-09 14:15", "2026-10-09 14:30", log=lambda *a: None)["ok"] == 0 and len(calls) == 2
+    assert sorted(p.name for p in tmp_path.rglob("*.parquet")) == ["2026-10-09.parquet", "2026-10-09.parquet"]
+    f = gdelt.load("firm", ["AMZN"])
+    assert f.iloc[0]["avail"] == ts and f.iloc[0]["title"] == "Amazon cuts jobs" and f.iloc[0]["tone"] == -3.5
+    m = gdelt.load("macro")
+    assert set(m["theme"]) == {"_ALL", "ECON_STOCKMARKET", "EPU_POLICY"} and m.loc[m.theme == "_ALL", "n"].item() == 2
+    d = gdelt.daily("AMZN")
+    assert d["articles"].item() == 1 and d["neg_share"].item() == 1.0

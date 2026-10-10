@@ -396,8 +396,16 @@ def fetch_dukascopy(m: Member, spec: Spec, log=print) -> pd.DataFrame:
         return _duka_minutes(s, m, spec, now, log)
     else:
         raise ValueError("dukascopy datasets support 1d, 1h and 1m")
+    stage = None
+    if spec.interval == "1h":  # hourly backfills run to hours under throttling: stage complete months to resume
+        stage = DATASETS_DIR / ".staging" / spec.name / _safe(m.symbol)
+        stage.mkdir(parents=True, exist_ok=True)
     frames = []
     for base, path, to_daily in periods:
+        staged = stage / f"{base:%Y-%m}.parquet" if stage is not None else None
+        if staged is not None and staged.exists():
+            frames.append(pd.read_parquet(staged))
+            continue
         sides = {}
         for side in ("BID", "ASK"):
             blob = _duka_get(s, f"https://datafeed.dukascopy.com/datafeed/{m.ref}/{path.format(side=side)}", log)
@@ -412,6 +420,8 @@ def fetch_dukascopy(m: Member, spec: Spec, log=print) -> pd.DataFrame:
         if to_daily:
             mid = mid.resample("1D").agg({"open": "first", "high": "max", "low": "min", "close": "last",
                                           "volume": "sum", "spread": "last"}).dropna(subset=["close"])
+        if staged is not None and (base + pd.offsets.MonthBegin(1)) <= now.normalize():
+            mid.to_parquet(staged)  # complete month: never fetched again
         frames.append(mid)
     if not frames:
         raise LookupError(f"dukascopy: no data for {m.ref}")
