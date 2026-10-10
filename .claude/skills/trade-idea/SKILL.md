@@ -4,20 +4,26 @@ description: Turn a ticker, market or theme into a crunched, sourced trade call 
 ---
 # Trade idea
 
+Read `$MLAB_DATA_DIR/LESSONS.md` first: it carries the desk's standing corrections.
+
 1. **Pin the instrument.** Yahoo symbol for analysis; IG epic if he trades it there (`./mlab ig search "<name>"`,
    or `src/mlab/universes.py` IG_COMMON_EPICS). Horizon: default swing (2-8 weeks) unless he says otherwise.
 2. **Fan out in parallel** (one message, several Agent calls):
    - always: `technicals-desk`, `news-sentiment-desk`
    - single stock: + `fundamentals-desk`, `earnings-desk` (if a print is within ~6 weeks or reactions matter), `options-desk`
    - index / FX / commodity / crypto: + `macro-desk`, `options-desk` on the listed proxy
-   Brief each with symbol, epic, horizon and what you need back.
+   Brief each with symbol, epic, horizon and what you need back. Brief `technicals-desk` for the
+   multi-timeframe composite (1wk/1d/4h/1h/1m: Heikin-Ashi, RSI regime, relative volume, open/close
+   structure), never a daily-only scan.
 3. **Frame the thesis** with the lens that fits (`lens-soros`, `lens-buffett`, `lens-burry` skills). One lens leads;
    the others are checks. Technicals decide timing, not the thesis.
-4. **Make the call.** LONG / SHORT / NO TRADE. If the desks conflict, say which one wins and why.
+4. **Make the call.** LONG / SHORT / NO TRADE. If the desks conflict, say which one wins and why. "Single
+   signals show no edge" is not a call: give the composite or trend-following setup with its tested numbers.
+   For the £5k swing pot, check the name against what the pension already owns (a short partly hedges it).
 5. **Trade card** (always last):
    `./mlab card "<name>" --bias <long|short> --entry <lo> <hi> --stop <x> --targets <t1> <t2> --risk <pct> --horizon "<h>" --conviction <1-5> --catalyst "<event date>" --kills "<invalidation>" --epic <EPIC> --lens <Soros|Buffett|Burry|TA> --thesis "<one line>" --source "<src+time>" [--equity <acct> --point-size <p>] --journal`
    - Stop at structure (S/R cluster, swing) or 1.5-2.5x ATR; targets at levels/measured moves; R:R >= 2 or say why not.
    - Risk %: 0.5% conviction 1-2, 1% conviction 3, 1.5-2% conviction 4-5 unless Cezar sets otherwise.
    - Point size: 1 for indices/shares, 0.0001 for most FX, 0.01 for JPY pairs; confirm via `./mlab ig market EPIC`.
-6. **Output shape:** call in one line, the 3-6 numbers that drive it (each with source + UTC time), the lens read in a
+6. **Output shape:** call in one line, the timeframes and inputs the read used, the 3-6 numbers that drive it (each with source + UTC time), the lens read in a
    short paragraph, the trade card, then what to watch. No disclaimers.
