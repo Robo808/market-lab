@@ -200,6 +200,9 @@ def _utc_index(df: pd.DataFrame) -> pd.DataFrame:
     return df.sort_index()
 
 
+# Multi-series files (H.15 package, French zips) are downloaded once per process and shared by members.
+_DOWNLOADS: dict[str, pd.DataFrame] = {}
+
 # Yahoo's free intraday windows (days back from today) and the span one request may cover.
 YF_WINDOW = {"1m": (29, 7), "2m": (59, 59), "5m": (59, 59), "15m": (59, 59), "30m": (59, 59),
              "60m": (729, 729), "1h": (729, 729), "90m": (59, 59)}
@@ -217,7 +220,7 @@ def fetch_yahoo(m: Member, spec: Spec, log=print) -> pd.DataFrame:
         try:
             frames.append(yahoo.history(m.ref, start=a.date(), end=b.date(), interval=spec.interval))
         except LookupError:
-            pass
+            log(f"  {m.ref}: no {spec.interval} bars {a.date()} -> {b.date()} (holiday or weekend window)")
         a = b
     if not frames:
         raise LookupError(f"yahoo returned no {spec.interval} bars for {m.ref}")
@@ -238,17 +241,17 @@ def fetch_yahoo_earnings(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     return df.sort_index()
 
 
-def fetch_fed_h15(m: Member, spec: Spec, log=print, _memo={}) -> pd.DataFrame:
+def fetch_fed_h15(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     from .net import session
-    if "h15" not in _memo:  # one package download covers every maturity
+    if "h15" not in _DOWNLOADS:  # one package download covers every maturity
         r = session("market-lab/0.1").get("https://www.federalreserve.gov/datadownload/Output.aspx", timeout=120, params={
             "rel": "H15", "series": "bf17364827e38702b42a58cf8eaa3f78", "lastobs": "", "from": "", "to": "",
             "filetype": "csv", "label": "include", "layout": "seriescolumn", "type": "package"})
         r.raise_for_status()
         df = pd.read_csv(io.StringIO(r.text), skiprows=5)
         df.index = pd.to_datetime(df.pop("Time Period"))
-        _memo["h15"] = df.apply(pd.to_numeric, errors="coerce")
-    return _utc_index(_memo["h15"][[m.ref]].rename(columns={m.ref: "value"}).dropna())
+        _DOWNLOADS["h15"] = df.apply(pd.to_numeric, errors="coerce")
+    return _utc_index(_DOWNLOADS["h15"][[m.ref]].rename(columns={m.ref: "value"}).dropna())
 
 
 def fetch_ecb(m: Member, spec: Spec, log=print) -> pd.DataFrame:
@@ -437,12 +440,12 @@ def _french_csv(name: str, s) -> pd.DataFrame:
     return df.apply(pd.to_numeric, errors="coerce")
 
 
-def fetch_french(m: Member, spec: Spec, log=print, _memo={}) -> pd.DataFrame:
+def fetch_french(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     from .net import session
     file, col = m.ref.split(":")
-    if file not in _memo:
-        _memo[file] = _french_csv(file, session())
-    return _utc_index(_memo[file][[col]].rename(columns={col: "value"}).dropna())
+    if file not in _DOWNLOADS:
+        _DOWNLOADS[file] = _french_csv(file, session())
+    return _utc_index(_DOWNLOADS[file][[col]].rename(columns={col: "value"}).dropna())
 
 
 FETCHERS = {"yahoo": fetch_yahoo, "yahoo_earnings": fetch_yahoo_earnings, "fed_h15": fetch_fed_h15,
@@ -547,9 +550,10 @@ def build(name: str, members: list[str] | None = None, start: str | None = None,
             try:
                 df = fetcher(m, spec, log=log)
                 df = df[df.index >= start_ts(spec)]
-            except Exception:
+            except Exception as e:
                 if m.symbol not in prev:
                     raise
+                log(f"  {m.symbol}: fetch failed ({type(e).__name__}), keeping the previous version's rows")
                 df = prev[m.symbol].iloc[:0]
             if m.symbol in prev:  # new rows win where they overlap
                 df = pd.concat([prev[m.symbol], df])
@@ -586,9 +590,9 @@ def build(name: str, members: list[str] | None = None, start: str | None = None,
     for p in final.rglob("*"):
         if p.is_file():
             try:
-                p.chmod(0o444)
-            except OSError:
-                pass
+                p.chmod(0o440)
+            except OSError as e:  # some mounts ignore permissions; the SHA-256 in the manifest still guards the files
+                log(f"  could not make {p.name} read-only: {e}")
     return final
 
 
@@ -631,8 +635,9 @@ def load(ref: str, symbols: list[str] | None = None, split: str | None = None, a
         try:
             with open(DATASETS_DIR / name / f"test_access.{ver}.jsonl", "a") as f:
                 f.write(json.dumps(log_line) + "\n")
-        except OSError:
-            pass
+        except OSError as e:  # never block a read on the log, but make the unrecorded look visible
+            import warnings
+            warnings.warn(f"test split access for {name}@{ver} was not recorded: {e}", stacklevel=2)
     out = {}
     want = symbols or list(man["members"])
     for s in want:

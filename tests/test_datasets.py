@@ -50,7 +50,7 @@ def test_versions_are_immutable_and_tamper_is_caught(ds):
     assert v1 != v2 and ds.versions("crypto-daily") == [v1.name, v2.name]
     assert ds.resolve("crypto-daily")[1] == v2.name
     f = next(v1.rglob("data.parquet"))
-    os.chmod(f, 0o644)
+    os.chmod(f, 0o600)
     f.write_bytes(f.read_bytes() + b"x")
     r = ds.verify(f"crypto-daily@{v1.name}")
     assert not r["ok"] and r["bad"]
