@@ -1,6 +1,6 @@
 # H-20261010-news-vs-nonews-extremes: After an extreme abnormal day, moves with identified firm news continue and moves without news revert
 
-Status: PRE-REGISTERED | Verdict: PENDING
+Status: GRADED | Verdict: FAIL
 Branch: `claude/project-thread-zph1h2` (with the engine, PR #54) | Registered: 2026-10-10 | Spec-SHA256: 6458221c095ef6490cb6cd0d1536939b4f63024a41620a985bba249b08b4b12f
 
 ## Claim
@@ -113,4 +113,93 @@ Train and validation are evaluated together once; the test split is opened once,
 ```
 
 ## Results
-_Filled after the run. Do not edit the spec._
+Run 2026-10-10 with `python -m mlab.textlab.studies research/hypotheses/H-20261010-news-vs-nonews-extremes.md` on us-stocks-daily@v20261010 (Yahoo), EDGAR 8-K
+history (all filings since 1997) and us-earnings@v20261010. 3608 extreme-move events, 2000-2019.
+
+| Bar (train + validation, CAR +1..+5, net 10 bp) | Required | Got | |
+|---|---|---|---|
+| news minus no-news | >= 50 bp | -13.5 bp | miss |
+| t (date-averaged, Welch) | >= 3.0 | -0.71 | miss |
+| permutation p | <= 0.01 | 0.961 | miss |
+
+Verdict **FAIL** on every bar. The test split (2020+) stays unopened: a failed hypothesis has nothing to confirm, and
+keeping it locked preserves it for the next one.
+
+Detail (descriptive only, not a new claim):
+
+```json
+{
+  "train": {
+    "n_flag": 757,
+    "n_noflag": 1953,
+    "dates_flag": 629,
+    "dates_noflag": 1516,
+    "mean_flag_bp": 9.5,
+    "mean_noflag_bp": 33.5,
+    "diff_bp": -24.0,
+    "t": -1.02,
+    "t_flag": 0.51,
+    "t_noflag": 2.3,
+    "perm_p": 0.5329
+  },
+  "validation": {
+    "n_flag": 378,
+    "n_noflag": 519,
+    "dates_flag": 283,
+    "dates_noflag": 331,
+    "mean_flag_bp": 4.0,
+    "mean_noflag_bp": -34.7,
+    "diff_bp": 38.7,
+    "t": 1.34,
+    "t_flag": 0.19,
+    "t_noflag": -1.79,
+    "perm_p": 0.0479
+  },
+  "by_horizon_tv": {
+    "car1": {
+      "n_flag": 1135,
+      "n_noflag": 2473,
+      "dates_flag": 912,
+      "dates_noflag": 1848,
+      "mean_flag_bp": 10.9,
+      "mean_noflag_bp": 0.6,
+      "diff_bp": 10.3,
+      "t": 1.02,
+      "t_flag": 1.28,
+      "t_noflag": 0.1,
+      "perm_p": 0.1692
+    },
+    "car5": {
+      "n_flag": 1135,
+      "n_noflag": 2472,
+      "dates_flag": 912,
+      "dates_noflag": 1847,
+      "mean_flag_bp": 7.8,
+      "mean_noflag_bp": 21.3,
+      "diff_bp": -13.5,
+      "t": -0.71,
+      "t_flag": 0.54,
+      "t_noflag": 1.71,
+      "perm_p": 0.9652
+    },
+    "car10": {
+      "n_flag": 1134,
+      "n_noflag": 2471,
+      "dates_flag": 911,
+      "dates_noflag": 1846,
+      "mean_flag_bp": 22.0,
+      "mean_noflag_bp": 0.2,
+      "diff_bp": 21.8,
+      "t": 0.83,
+      "t_flag": 1.13,
+      "t_noflag": 0.01,
+      "perm_p": 0.0796
+    }
+  }
+}
+```
+
+Read: 8-K/earnings days show no reliable continuation in mega caps (+7.8 bp, t 0.54). No-news days continued in
+2000-2014 (+33.5 bp, t 2.3) and reverted in 2015-2019 (-34.7 bp, t -1.79), so the split is unstable across regimes.
+Consistent with Ke, Kelly & Xiu: mega-cap news is priced within a day. Next tests need a cleaner news flag (GDELT,
+#52) and novelty conditioning rather than a binary 8-K flag.
