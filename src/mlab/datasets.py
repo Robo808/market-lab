@@ -72,6 +72,9 @@ SOURCE_INFO = {
                   "licence": "Dukascopy free historical feed: no published licence, treated as personal use only",
                   "adjustments": "mid = (bid+ask)/2 OHLC, spread = ask_close - bid_close; complete months only; CFD cash-index "
                                  "and spot quotes, the closest free proxy for IG's own prices"},
+    "massive": {"url": "https://api.massive.com/v2/aggs/ticker/<T>/range/1/minute/<from>/<to>",
+                "licence": "Massive (formerly Polygon.io) terms; free Basic plan, personal use",
+                "adjustments": "split-adjusted (adjusted=true), consolidated exchange volume, extended hours included"},
     "yahoo_earnings": {"url": "https://finance.yahoo.com (yfinance get_earnings_dates)",
                        "licence": "Yahoo terms of service: personal, non-commercial use; no redistribution",
                        "adjustments": "event time = announcement timestamp (UTC); hour_et = hour in New York "
@@ -147,9 +150,13 @@ CATALOG: dict[str, Spec] = {s.name: s for s in [
     *[Spec(f"duka-stocks-{iv}", "dukascopy", "bars", iv, _m(*[
         (s, s.replace("-", "").replace("META", "FB") + "USUSD", "US stock CFD", 1e3)
         for s in DUKA_STOCKS]),
-        {"train": "2021-12-31", "validation": "2023-12-31"}, start="2017-02-01" if iv == "1h" else "-120d",
-        accumulate=iv == "1m",
-        description=f"US mega cap and ETF CFDs, {iv} mid bars with spread (Dukascopy, from 2017)") for iv in ("1h", "1m")],
+        {"train": "2021-12-31", "validation": "2023-12-31"}, start="2017-02-01",
+        description=f"US mega cap and ETF CFDs, {iv} bars from 2017 (Dukascopy; 1h is mid with spread, "
+                    "1m is bid only to halve the download; volume is CFD tick volume)") for iv in ("1h", "1m")],
+    Spec("massive-1m", "massive", "bars", "1m", _m(*MEGACAPS, "SPY", "QQQ", "IWM", "DIA"),
+         {"train": "2025-09-30", "validation": "2026-03-31"}, start="-729d", accumulate=True,
+         description="US mega caps and index ETFs, 1-minute exchange bars incl. extended hours, split-adjusted "
+                     "(Massive free tier keeps 2 years; accumulates)"),
     Spec("ust-daily", "fed_h15", "series", "1d", _m(*[(f"UST_{k}", c, f"UST {k} constant maturity") for k, c in (
         ("3M", "RIFLGFCM03_N.B"), ("1Y", "RIFLGFCY01_N.B"), ("2Y", "RIFLGFCY02_N.B"), ("5Y", "RIFLGFCY05_N.B"),
         ("10Y", "RIFLGFCY10_N.B"), ("20Y", "RIFLGFCY20_N.B"), ("30Y", "RIFLGFCY30_N.B"))]),
@@ -391,10 +398,8 @@ def fetch_dukascopy(m: Member, spec: Spec, log=print) -> pd.DataFrame:
         periods += [(b, p, True) for b, p, _ in months if b >= max(this_year, start_ts(spec))]
     elif spec.interval == "1h":
         periods = months
-    elif spec.interval == "1m":  # one file per day per side: slow on the free feed, keep the window short
-        periods = [(d, f"{d.year}/{d.month - 1:02d}/{d.day:02d}/{{side}}_candles_min_1.bi5", False)
-                   for d in pd.date_range(start_ts(spec), now.normalize() - pd.Timedelta(days=1), freq="D")
-                   if d.dayofweek != 5]
+    elif spec.interval == "1m":
+        return _duka_minutes(s, m, spec, now, log)
     else:
         raise ValueError("dukascopy datasets support 1d, 1h and 1m")
     frames = []
@@ -420,6 +425,78 @@ def fetch_dukascopy(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     df = df[df.index <= now]
     df.index.name = "time"
     return df[~df.index.duplicated()].sort_index()
+
+
+def _duka_minutes(s, m: Member, spec: Spec, now: pd.Timestamp, log=print) -> pd.DataFrame:
+    """1m bid candles, one file per day. A full backfill is tens of thousands of throttled requests, so
+    complete months are staged under data/datasets/.staging/ and skipped on the next run: an interrupted
+    build resumes where it stopped."""
+    stage = DATASETS_DIR / ".staging" / spec.name / _safe(m.symbol)
+    stage.mkdir(parents=True, exist_ok=True)
+    frames = []
+    for mo in pd.period_range(start_ts(spec).tz_localize(None), now.tz_localize(None), freq="M"):
+        f = stage / f"{mo}.parquet"
+        complete = mo.end_time.tz_localize("UTC") < now.normalize()
+        if f.exists():
+            frames.append(pd.read_parquet(f))
+            continue
+        days = [d for d in pd.date_range(max(mo.start_time.tz_localize("UTC"), start_ts(spec)),
+                                         min(mo.end_time.tz_localize("UTC"), now - pd.Timedelta(days=1)), freq="D")
+                if d.dayofweek != 5]
+        parts = []
+        for d in days:
+            blob = _duka_get(s, f"https://datafeed.dukascopy.com/datafeed/{m.ref}/{d.year}/{d.month - 1:02d}/"
+                                f"{d.day:02d}/BID_candles_min_1.bi5", log)
+            if blob:
+                parts.append(_duka_decode(blob, d.normalize(), m.point))
+        month = pd.concat(parts) if parts else pd.DataFrame(columns=["open", "high", "low", "close", "volume"])
+        if complete:
+            month.to_parquet(f)
+        log(f"  {m.symbol} {mo}: {len(month)} bars")
+        frames.append(month)
+    frames = [x for x in frames if len(x)]
+    if not frames:
+        raise LookupError(f"dukascopy: no 1m data for {m.ref}")
+    df = pd.concat(frames)
+    df.index.name = "time"
+    return df[~df.index.duplicated()].sort_index()
+
+
+def fetch_massive(m: Member, spec: Spec, log=print) -> pd.DataFrame:
+    """Massive (formerly Polygon.io) aggregates. Key from MASSIVE_API_KEY, or a network secret that injects
+    'Authorization: Bearer' for api.massive.com. The free plan allows 5 calls a minute."""
+    from .config import env
+    from .net import session
+    s = session("market-lab/0.1")
+    s.mount("https://", __import__("requests").adapters.HTTPAdapter())
+    if env("MASSIVE_API_KEY"):
+        s.headers["Authorization"] = f"Bearer {env('MASSIVE_API_KEY')}"
+    gap = float(os.environ.get("MLAB_MASSIVE_GAP", "12.5"))
+    now = pd.Timestamp.now(tz="UTC")
+    span = {"1m": "minute", "1h": "hour", "1d": "day"}[spec.interval]
+    url = f"https://api.massive.com/v2/aggs/ticker/{m.ref}/range/1/{span}/{start_ts(spec).date()}/{now.date()}"
+    params, rows = {"adjusted": "true", "sort": "asc", "limit": 50000}, []
+    while url:
+        for attempt in range(6):
+            r = s.get(url, params=params, timeout=60)
+            time.sleep(gap)
+            if r.status_code != 429:
+                break
+            log(f"  massive 429, backing off {gap * 2 ** attempt:.0f}s")
+            time.sleep(gap * 2 ** attempt)
+        if r.status_code in (401, 403):
+            raise PermissionError(f"massive {r.status_code}: set MASSIVE_API_KEY or an api.massive.com network secret")
+        r.raise_for_status()
+        j = r.json()
+        rows += j.get("results") or []
+        url, params = j.get("next_url"), None  # next_url carries the cursor and the original query
+    if not rows:
+        raise LookupError(f"massive: no {spec.interval} bars for {m.ref}")
+    df = pd.DataFrame(rows)
+    df.index = pd.to_datetime(df["t"], unit="ms", utc=True)
+    df = df.rename(columns={"o": "open", "h": "high", "l": "low", "c": "close", "v": "volume"})
+    df.index.name = "time"
+    return df[["open", "high", "low", "close", "volume"]].astype(float)
 
 
 def _french_csv(name: str, s) -> pd.DataFrame:
@@ -451,7 +528,7 @@ def fetch_french(m: Member, spec: Spec, log=print) -> pd.DataFrame:
 FETCHERS = {"yahoo": fetch_yahoo, "yahoo_earnings": fetch_yahoo_earnings, "fed_h15": fetch_fed_h15,
             "ecb": fetch_ecb, "eia": fetch_eia,
             "boe": fetch_boe, "binance": fetch_binance,
-            "dukascopy": fetch_dukascopy, "french": fetch_french}
+            "dukascopy": fetch_dukascopy, "french": fetch_french, "massive": fetch_massive}
 
 
 # ---- quality checks -------------------------------------------------------------------------
@@ -671,7 +748,8 @@ def verify(ref: str) -> dict:
 
 def listing() -> pd.DataFrame:
     rows = []
-    for name in sorted(p.name for p in DATASETS_DIR.iterdir() if p.is_dir()) if DATASETS_DIR.exists() else []:
+    for name in sorted(p.name for p in DATASETS_DIR.iterdir() if p.is_dir() and not p.name.startswith(".")) \
+            if DATASETS_DIR.exists() else []:
         for v in versions(name):
             try:
                 m = json.loads((DATASETS_DIR / name / v / "manifest.json").read_text())

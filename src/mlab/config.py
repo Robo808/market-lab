@@ -74,5 +74,6 @@ OPTIONAL_KEYS = {
     "FRED_API_KEY": "FRED macro series via the official API (falls back to the keyless CSV endpoint)",
     "ALPHAVANTAGE_API_KEY": "Alpha Vantage fallback prices/fundamentals",
     "FMP_API_KEY": "Financial Modeling Prep fundamentals",
+    "MASSIVE_API_KEY": "Massive (Polygon) free key for 2 years of 1m bars (mlab datasets build massive-1m)",
     "SEC_USER_AGENT": "Contact string SEC requires, e.g. 'Your Name you@example.com'",
 }

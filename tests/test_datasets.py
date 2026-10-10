@@ -128,3 +128,45 @@ def test_accumulate_merges_previous_version(ds):
     assert b.index.min() == a.index.min() and b.index.max() > a.index.max()
     assert not b.index.duplicated().any()
     assert ds.start_ts(ds.CATALOG["us-stocks-1m"]) > pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=31)
+
+
+def test_massive_pages_through_next_url(ds, monkeypatch):
+    pages = [{"results": [{"t": 1704205800000, "o": 1, "h": 2, "l": 0.5, "c": 1.5, "v": 100}],
+              "next_url": "https://api.massive.com/next?cursor=abc"},
+             {"results": [{"t": 1704205860000, "o": 1.5, "h": 2, "l": 1, "c": 1.8, "v": 50}]}]
+    seen = []
+
+    class R:
+        status_code = 200
+
+        def __init__(self, j):
+            self._j = j
+
+        def json(self):
+            return self._j
+
+        def raise_for_status(self):
+            pass
+
+    class S:
+        headers = {}
+
+        def mount(self, *a):
+            pass
+
+        def get(self, url, params=None, timeout=None):
+            seen.append((url, params))
+            return R(pages[len(seen) - 1])
+
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: S())
+    monkeypatch.setenv("MLAB_MASSIVE_GAP", "0")
+    m = ds.CATALOG["massive-1m"].members[0]
+    df = ds.fetch_massive(m, ds.CATALOG["massive-1m"], log=lambda *a: None)
+    assert len(df) == 2 and df["close"].tolist() == [1.5, 1.8]
+    assert seen[0][1]["adjusted"] == "true" and seen[1] == ("https://api.massive.com/next?cursor=abc", None)
+    assert df.index[0] == pd.Timestamp("2024-01-02 14:30", tz="UTC")
+
+
+def test_listing_ignores_staging(ds):
+    (ds.DATASETS_DIR / ".staging" / "duka-stocks-1m").mkdir(parents=True)
+    assert ds.listing().empty

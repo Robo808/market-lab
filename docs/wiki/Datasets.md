@@ -57,7 +57,8 @@ Licences and coverage were checked on the providers' own pages and GitHub repos 
 | `us-stocks-daily` | Yahoo (yfinance) | 25 US mega caps (AAPL, MSFT, NVDA, AMZN, TSLA, META...) plus SPY, QQQ, IWM, DIA, sector ETFs, VIX; split- and dividend-adjusted | max available | Personal use only (as above) |
 | `us-earnings` | Yahoo (yfinance) | Earnings dates, EPS estimate, actual, surprise and announcement hour for the same mega caps (Yahoo returns up to 100 events, about 25 years) | 2000 | Personal use only (as above) |
 | `us-stocks-1h`, `us-stocks-5m`, `us-stocks-1m` | Yahoo (yfinance) | The 25 mega caps plus SPY, QQQ, IWM, DIA | rolling: Yahoo keeps 730 days of 1h, 60 days of 5m, 30 days of 1m | Personal use only (as above). **Accumulating**: each build merges the previous version, so a weekly build grows the history past Yahoo's window |
-| `duka-stocks-1h`, `duka-stocks-1m` | Dukascopy datafeed | 13 US mega cap CFDs (AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA, AVGO, NFLX, AMD, JPM, LLY, PLTR) plus SPY, QQQ, IWM, DIA; mid OHLC plus spread | 2017-02 (1h); last 120 days, accumulating (1m) | As Dukascopy above. Start dates from [dukascopy-node's instrument metadata](https://github.com/Leo4815162342/dukascopy-node) |
+| `duka-stocks-1h`, `duka-stocks-1m` | Dukascopy datafeed | 13 US mega cap CFDs (AAPL, MSFT, NVDA, AMZN, GOOGL, META, TSLA, AVGO, NFLX, AMD, JPM, LLY, PLTR) plus SPY, QQQ, IWM, DIA; 1h mid OHLC plus spread, 1m bid OHLC; volume is CFD tick volume | 2017-02 | As Dukascopy above. Start dates from [dukascopy-node's instrument metadata](https://github.com/Leo4815162342/dukascopy-node). The 1m backfill is ~40k throttled requests, so complete months are staged in `data/datasets/.staging/` and an interrupted build resumes |
+| `massive-1m` | [Massive](https://massive.com/pricing) free Basic plan | The 25 mega caps plus SPY, QQQ, IWM, DIA; 1m exchange bars incl. extended hours, split-adjusted, consolidated volume | last 2 years, accumulating | Massive terms. Needs `MASSIVE_API_KEY` or a network secret on `api.massive.com` injecting `Authorization: Bearer <key>`; free plan is 5 calls a minute, so a full build takes about an hour |
 | `duka-1d`, `duka-1h` | [Dukascopy](https://www.dukascopy.com/swiss/english/marketwatch/historical/) datafeed | 16: 7 FX majors, XAU/USD, Brent, WTI, UK100, US500, USTEC, DE40, EU50, JP225 (CFD and spot quotes, mid OHLC plus spread) | 2003 (1d), 2012 (1h) | No published licence; treat as personal use |
 | `ust-daily` | [Fed H.15](https://www.federalreserve.gov/datadownload/Choose.aspx?rel=H15) | 3m to 30y constant-maturity yields | 1962 | US government public data |
 | `boe-daily` | [Bank of England database](https://www.bankofengland.co.uk/boeapps/database/) | SONIA, Bank Rate, 5/10/20y gilt par yields, GBP/USD, GBP/EUR, GBP/JPY | 1975 | [UK Open Government Licence](https://www.bankofengland.co.uk/legal); some FX series excluded (LSEG-sourced) |
@@ -90,7 +91,7 @@ stored separately.
 | Bars | Free depth now | Source |
 |---|---|---|
 | 1h | 2017 onwards | `duka-stocks-1h` (CFD quotes with spread); `us-stocks-1h` for exchange prints over the last 2 years |
-| 1m | last 30 days (Yahoo), last 120 days (Dukascopy), growing with every weekly build | `us-stocks-1m`, `duka-stocks-1m` |
+| 1m | 2 years with exchange volume (Massive free), 2017 onwards as CFD quotes (Dukascopy), last 30 days (Yahoo); all growing | `massive-1m`, `duka-stocks-1m`, `us-stocks-1m` |
 | 5m | last 60 days, growing | `us-stocks-5m` |
 
 Free intraday windows roll off, so the intraday sets accumulate: build them at least weekly or the gap is lost
