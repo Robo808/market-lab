@@ -391,7 +391,8 @@ def fetch_french(m: Member, spec: Spec, log=print, _memo={}) -> pd.DataFrame:
     return _utc_index(_memo[file][[col]].rename(columns={col: "value"}).dropna())
 
 
-FETCHERS = {"yahoo": fetch_yahoo, "yahoo_earnings": fetch_yahoo_earnings, "fed_h15": fetch_fed_h15, "ecb": fetch_ecb, "eia": fetch_eia,
+FETCHERS = {"yahoo": fetch_yahoo, "yahoo_earnings": fetch_yahoo_earnings, "fed_h15": fetch_fed_h15,
+            "ecb": fetch_ecb, "eia": fetch_eia,
             "boe": fetch_boe, "binance": fetch_binance,
             "dukascopy": fetch_dukascopy, "french": fetch_french}
 
