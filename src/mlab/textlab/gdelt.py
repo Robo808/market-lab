@@ -5,11 +5,11 @@
     mlab newsstore show AMZN --since 2026-10-01         # daily article count and tone for a symbol
 
 Two tables under $MLAB_DATA_DIR/data/news/gdelt/:
-- firm/date=YYYY-MM-DD/<ts>.parquet: one row per article that names a watched company: avail (the file's 15-minute
+- firm/YYYY-MM-DD.parquet: one row per article that names a watched company: avail (the file's 15-minute
   timestamp, when GDELT published it, which is the earliest we could have known), symbol, via (org:/platform:/
   person: match), source, url, title, tone,
   pos, neg, polarity, words, themes (V1 themes, ';'-joined), orgs (all organisations in the article).
-- macro/date=YYYY-MM-DD/<ts>.parquet: per file, article counts and mean tone per ECON_/EPU_ theme plus "_ALL".
+- macro/YYYY-MM-DD.parquet: per 15-minute file, article counts and mean tone per ECON_/EPU_ theme plus "_ALL".
 
 GDELT is free for academic, commercial and governmental use with a citation and a link to
 https://www.gdeltproject.org (https://www.gdeltproject.org/about.html).
@@ -129,52 +129,82 @@ def stamps(since, until=None) -> list[pd.Timestamp]:
     return list(pd.date_range(lo, hi, freq="15min"))
 
 
-def _paths(ts: pd.Timestamp) -> tuple[Path, Path]:
-    d, name = f"date={ts:%Y-%m-%d}", f"{ts:%Y%m%d%H%M%S}.parquet"
-    return STORE / "firm" / d / name, STORE / "macro" / d / name
+def _day_paths(day: str) -> tuple[Path, Path]:
+    """One file per UTC day per table, in two flat folders: the shared folder copes badly with many folders
+    and many small files (a year of 15-minute files is 70k files)."""
+    return STORE / "firm" / f"{day}.parquet", STORE / "macro" / f"{day}.parquet"
 
 
-def ingest_one(ts: pd.Timestamp, session=None) -> str:
-    fp, mp = _paths(ts)
-    if mp.exists():
-        return "skip"
+def _done(day: str) -> set:
+    mp = _day_paths(day)[1]
+    return set(pd.read_parquet(mp, columns=["avail"])["avail"]) if mp.exists() else set()
+
+
+def _fetch(ts: pd.Timestamp, s) -> tuple[pd.DataFrame, pd.DataFrame]:
+    r = s.get(f"{BASE}/{ts:%Y%m%d%H%M%S}.gkg.csv.zip", timeout=60)
+    if r.status_code == 404:  # GDELT skips the odd slot; record it so it isn't retried forever
+        return pd.DataFrame(), pd.DataFrame([{"avail": ts, "theme": "_MISSING", "n": 0, "tone_mean": float("nan")}])
+    r.raise_for_status()
+    return parse(r.content, ts)
+
+
+def _write(df: pd.DataFrame, path: Path) -> None:
+    tmp = path.with_name(path.name + ".tmp")
+    df.to_parquet(tmp, index=False, compression="zstd")
+    tmp.replace(path)
+
+
+def ingest_day(day: str, stamps_: list[pd.Timestamp], workers: int = 4, session=None, log=print) -> dict:
+    """Fetch the given 15-minute files of one day and merge them into that day's two files."""
     from ..net import session as mk
     s = session or mk("market-lab/0.1")
-    r = s.get(f"{BASE}/{ts:%Y%m%d%H%M%S}.gkg.csv.zip", timeout=60)
-    if r.status_code == 404:
-        return "missing"
-    r.raise_for_status()
-    f, mc = parse(r.content, ts)
-    fp.parent.mkdir(parents=True, exist_ok=True)
-    mp.parent.mkdir(parents=True, exist_ok=True)
-    if len(f):
-        f.to_parquet(fp.with_suffix(".tmp"), index=False)
-        fp.with_suffix(".tmp").rename(fp)
-    mc.to_parquet(mp.with_suffix(".tmp"), index=False)  # macro written last: it marks the file as done
-    mp.with_suffix(".tmp").rename(mp)
-    return f"ok {len(f)}"
-
-
-def ingest(since, until=None, workers: int = 4, log=print) -> dict:
-    todo = [t for t in stamps(since, until) if not _paths(t)[1].exists()]
-    log(f"gdelt: {len(todo)} files to fetch into {STORE}")
     out = {"ok": 0, "missing": 0, "failed": 0, "articles": 0}
+    firms, macros = [], []
 
     def one(t):
         try:
-            return t, ingest_one(t)
+            return t, _fetch(t, s), None
         except Exception as e:  # count and carry on; a rerun picks the file up again
-            return t, f"failed {type(e).__name__}: {str(e)[:80]}"
+            return t, None, f"{type(e).__name__}: {str(e)[:80]}"
     with ThreadPoolExecutor(max(1, workers)) as ex:
-        for i, (t, res) in enumerate(ex.map(one, todo)):
-            k = res.split()[0]
-            out[k if k in out else "failed"] += 1
-            if k == "ok":
-                out["articles"] += int(res.split()[1])
-            elif k == "failed":
-                log(f"  {t:%Y-%m-%d %H:%M} {res}")
-            if i and i % 96 == 0:
-                log(f"  {i}/{len(todo)} files, {out['articles']} watched-company articles")
+        for t, res, err in ex.map(one, stamps_):
+            if err:
+                out["failed"] += 1
+                log(f"  {t:%Y-%m-%d %H:%M} failed {err}")
+                continue
+            f, mc = res
+            missing = len(mc) == 1 and mc["theme"].iloc[0] == "_MISSING"
+            out["missing" if missing else "ok"] += 1
+            out["articles"] += len(f)
+            firms.append(f)
+            macros.append(mc)
+    if not macros:
+        return out
+    fp, mp = _day_paths(day)
+    fp.parent.mkdir(parents=True, exist_ok=True)
+    mp.parent.mkdir(parents=True, exist_ok=True)
+    old_f = [pd.read_parquet(fp)] if fp.exists() else []
+    old_m = [pd.read_parquet(mp)] if mp.exists() else []
+    f = pd.concat(old_f + [x for x in firms if len(x)], ignore_index=True)
+    if len(f):
+        _write(f.sort_values("avail"), fp)
+    _write(pd.concat(old_m + macros, ignore_index=True).sort_values("avail"), mp)  # macro last: it marks done
+    return out
+
+
+def ingest(since, until=None, workers: int = 4, log=print) -> dict:
+    by_day: dict[str, list] = {}
+    for t in stamps(since, until):
+        by_day.setdefault(f"{t:%Y-%m-%d}", []).append(t)
+    todo = {d: [t for t in ts if t not in _done(d)] for d, ts in by_day.items()}
+    todo = {d: ts for d, ts in todo.items() if ts}
+    log(f"gdelt: {sum(map(len, todo.values()))} files over {len(todo)} days to fetch into {STORE}")
+    out = {"ok": 0, "missing": 0, "failed": 0, "articles": 0}
+    for i, (d, ts) in enumerate(sorted(todo.items())):
+        r = ingest_day(d, ts, workers, log=log)
+        out = {k: out[k] + r[k] for k in out}
+        if (i + 1) % 7 == 0 or i + 1 == len(todo):
+            log(f"  {d}: {i + 1}/{len(todo)} days, {out['articles']} watched-company articles")
     return out
 
 
@@ -182,17 +212,18 @@ def load(kind: str = "firm", symbols: list[str] | None = None, since=None, until
     root = STORE / kind
     if not root.exists():
         return pd.DataFrame()
-    days = sorted(root.glob("date=*"))
+    files = sorted(root.glob("????-??-??.parquet"))
     if since is not None:
-        days = [d for d in days if d.name[5:] >= str(pd.Timestamp(since).date())]
+        files = [f for f in files if f.stem >= str(pd.Timestamp(since).date())]
     if until is not None:
-        days = [d for d in days if d.name[5:] <= str(pd.Timestamp(until).date())]
-    files = [f for d in days for f in d.glob("*.parquet")]
+        files = [f for f in files if f.stem <= str(pd.Timestamp(until).date())]
     if not files:
         return pd.DataFrame()
     df = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
     if symbols and kind == "firm":
         df = df[df["symbol"].isin(symbols)]
+    if kind == "macro":
+        df = df[df["theme"] != "_MISSING"]
     df.attrs["source"] = f"{CITATION} GKG 2.0 raw files, {root}"
     return df.sort_values("avail").reset_index(drop=True)
 

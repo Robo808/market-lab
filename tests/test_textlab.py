@@ -82,8 +82,8 @@ def test_gdelt_ingest_is_point_in_time_and_resumable(tmp_path, monkeypatch):
     calls = []
 
     class R:
-        status_code = 200
-        content = blob
+        def __init__(self, code):
+            self.status_code, self.content = code, blob
 
         def raise_for_status(self):
             pass
@@ -91,10 +91,13 @@ def test_gdelt_ingest_is_point_in_time_and_resumable(tmp_path, monkeypatch):
     class S:
         def get(self, url, timeout=None):
             calls.append(url)
-            return R()
+            return R(404 if "1430" in url else 200)
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: S())
     ts = pd.Timestamp("2026-10-09 14:15", tz="UTC")
-    assert gdelt.ingest_one(ts, S()) == "ok 1"
-    assert gdelt.ingest_one(ts, S()) == "skip" and len(calls) == 1
+    r = gdelt.ingest("2026-10-09 14:15", "2026-10-09 14:30", workers=1, log=lambda *a: None)
+    assert r == {"ok": 1, "missing": 1, "failed": 0, "articles": 1} and len(calls) == 2
+    assert gdelt.ingest("2026-10-09 14:15", "2026-10-09 14:30", log=lambda *a: None)["ok"] == 0 and len(calls) == 2
+    assert sorted(p.name for p in tmp_path.rglob("*.parquet")) == ["2026-10-09.parquet", "2026-10-09.parquet"]
     f = gdelt.load("firm", ["AMZN"])
     assert f.iloc[0]["avail"] == ts and f.iloc[0]["title"] == "Amazon cuts jobs" and f.iloc[0]["tone"] == -3.5
     m = gdelt.load("macro")
