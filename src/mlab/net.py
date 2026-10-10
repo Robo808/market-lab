@@ -38,6 +38,8 @@ SOURCES: dict[str, str] = {
     "api.binance.com": "Binance crypto klines",
     "data-api.binance.vision": "Binance public market data mirror",
     "api.kraken.com": "Kraken crypto OHLC",
+    "api.massive.com": "Massive (Polygon) minute bars (MASSIVE_API_KEY or network secret)",
+    "datafeed.dukascopy.com": "Dukascopy historical candles (datasets)",
     "api.coingecko.com": "CoinGecko crypto market data",
     "api.frankfurter.app": "ECB FX reference rates",
     "api.alternative.me": "Crypto Fear & Greed index",
