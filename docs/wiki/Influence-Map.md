@@ -8,7 +8,7 @@ discipline as every other test here (point-in-time data, discovery on train year
 | Layer | Series | Source and store | From | Timing rule |
 |---|---|---|---|---|
 | Politics: events | Country-pair counts by CAMEO root (01-20) and quad class (verbal/material cooperation/conflict), Goldstein, tone, articles; where it happened | GDELT 2.0 Events, `mlab newsstore events` -> `data/news/gdelt/events/` | 2015-02-19 | Two buckets per UTC day: published before 20:00 UTC counts for day t, later counts for t+1 |
-| Politics: themes | Daily intensity of GKG themes (tariffs, sanctions, elections, military, regulation, energy, labour) by country | GDELT GKG second pass (planned) | 2015-02-19 | Same cutoff |
+| Politics: themes | Daily intensity of GKG themes (tariffs, sanctions, elections, military, regulation, energy, labour) by country | GDELT GKG second pass, `mlab newsstore themes` -> `data/news/gdelt/themes/` | 2015-02-19 | Same cutoff |
 | Economy and policy news | Article counts and tone per ECON_/EPU_ theme, every 15 minutes | GDELT GKG, `macro/` table | 2015-02-19 | Same cutoff |
 | Companies | Headline-named articles, tone, novelty for 25 mega caps | GDELT GKG, `firm/` table, `features.primary` | 2015-02-19 | Same cutoff |
 | Markets: industries | US sectors and politically exposed industries (defence ITA/XAR, banks KRE, oil and gas XOP, metals XME, semis SOXX/SMH, China internet KWEB, transport IYT, airlines JETS, solar TAN, uranium URA, lithium LIT, homebuilders XHB) | `influence-daily`, `us-stocks-daily` | 2006-2015 by ETF | Close of t |
