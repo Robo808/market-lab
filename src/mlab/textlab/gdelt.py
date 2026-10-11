@@ -247,37 +247,3 @@ def daily(symbol: str, since=None, until=None, via=None, primary: bool = True) -
     g = df.groupby(df["avail"].dt.floor("D"))
     return pd.DataFrame({"articles": g.size(), "sources": g["source"].nunique(), "tone": g["tone"].mean().round(2),
                          "neg_share": g["tone"].apply(lambda x: (x < -2).mean()).round(2)})
-
-
-# ---- CLI ------------------------------------------------------------------------------------
-def cmd_newsstore(a):
-    from ..cli import show
-    if a.action == "gdelt":
-        print(ingest(a.since or "1d", a.until, a.workers))
-        return
-    if a.action == "themes":
-        from . import gdelt_themes
-        print(gdelt_themes.ingest(a.since or "1d", a.until, a.workers))
-        return
-    if a.action == "events":
-        from . import gdelt_events
-        print(gdelt_events.ingest(a.since or "1d", a.until, a.workers))
-        return
-    if a.action == "show":
-        if not a.symbol:
-            raise SystemExit("symbol required")
-        df = daily(a.symbol.upper(), a.since, a.until)
-        if df.empty:
-            print(f"no GDELT articles stored for {a.symbol} (run `mlab newsstore gdelt --since ...` first)")
-            return
-        show(df.reset_index(names="day"), a.json, title=f"{a.symbol.upper()} GDELT daily · {CITATION}")
-
-
-def register(add):
-    q = add("newsstore", cmd_newsstore, "point-in-time news store: gdelt (GKG articles) | events (CAMEO political "
-            "events) | themes (GKG theme x country) | show SYMBOL")
-    q.add_argument("action", choices=["gdelt", "events", "themes", "show"])
-    q.add_argument("symbol", nargs="?")
-    q.add_argument("--since", help="start: date, timestamp or relative like 3d / 12h (default 1d)")
-    q.add_argument("--until", help="end (default: latest published file)")
-    q.add_argument("--workers", type=int, default=4)
