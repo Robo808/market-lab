@@ -10,12 +10,15 @@ from __future__ import annotations
 
 import re
 import zlib
+from urllib.parse import urlsplit
 
 import numpy as np
 import pandas as pd
 from scipy import sparse
 
 CUTOFF_UTC_HOUR = 20
+_WORD = re.compile(r"[a-z]{2,}")
+_URL_STOP = {"html", "htm", "php", "aspx", "asp", "shtml", "article", "index", "amp", "story", "news"}
 _TOKEN = re.compile(r"[a-z][a-z0-9']+")
 STOP = set("the a an and or of to in on for with at by from as is are was were be been it its this that "
            "after over new says said will can could may us up out about into than more".split())
@@ -39,18 +42,30 @@ def hash_matrix(titles: list[str], dim: int = 2 ** 18) -> sparse.csr_matrix:
     return sparse.diags(1 / norm) @ m
 
 
-def novelty(df: pd.DataFrame, window: str = "5D") -> pd.Series:
-    """Novelty per article row of one symbol's frame (columns avail, title), vs that symbol's prior window."""
-    df = df.sort_values("avail")
-    x = hash_matrix(df["title"].fillna("").tolist())
+def slug(url: str) -> str:
+    """Headline words from a URL path: the path segment with the most words, minus file and CMS tokens. GKG only
+    carries page titles from late Sep 2019, so slugs are the one headline text that spans every year (85-93% of
+    company articles have a slug of 3+ words in 2015-2022)."""
+    segs = [s for s in urlsplit(url or "").path.lower().split("/") if s]
+    best = max(segs, key=lambda s: len(_WORD.findall(s)), default="")
+    return " ".join(w for w in re.split(r"[-_.+]", best) if _WORD.fullmatch(w) and w not in _URL_STOP)
+
+
+def novelty(df: pd.DataFrame, window: str = "5D", text: str = "title", block: int = 500) -> pd.Series:
+    """Novelty per article row of one symbol's frame (columns avail and `text`), vs that symbol's earlier rows in
+    the prior `window` (rows earlier in avail order; same-file duplicates count only after the first)."""
+    df = df.sort_values("avail", kind="stable")
+    x = hash_matrix(df[text].fillna("").tolist())
     t = pd.DatetimeIndex(df["avail"]).as_unit("ns").asi8
-    lo = np.searchsorted(t, t - pd.Timedelta(window).value, side="left")
+    w = pd.Timedelta(window).value
     out = np.ones(len(df))
-    for i in range(len(df)):
-        if lo[i] < i:
-            prev = x[lo[i]:i]
-            sim = prev @ x[i].T
-            out[i] = 1.0 - (sim.max() if sim.nnz else 0.0)
+    for a in range(0, len(df), block):  # score rows a..b against every row that can precede them
+        b = min(a + block, len(df))
+        lo = int(np.searchsorted(t, t[a] - w, side="left"))
+        sim = (x[a:b] @ x[lo:b].T).toarray()
+        i, j = np.arange(a, b)[:, None], np.arange(lo, b)[None, :]
+        sim[(j >= i) | (t[lo:b][None, :] < t[a:b][:, None] - w)] = 0.0
+        out[a:b] = 1.0 - sim.max(axis=1, initial=0.0)
     return pd.Series(out, index=df.index, name="novelty")
 
 

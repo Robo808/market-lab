@@ -119,3 +119,52 @@ def test_novelty_and_daily_timing():
     d = ft.firm_daily(a, idx)
     # 14:00 and 15:00 count on Monday; 21:00 is after the cutoff and moves to Tuesday
     assert d.loc[idx[0], "n"] == 2 and d.loc[idx[1], "n"] == 1 and d.loc[idx[0], "n_fresh"] == 1
+
+
+def test_slug_headline_from_url():
+    from mlab.textlab import features as ft
+    assert ft.slug("https://betanews.com/2017/06/01/xbox-game-pass-opens-up-to-everyone/") == \
+        "xbox game pass opens up to everyone"
+    assert ft.slug("http://www.sunherald.com/news/business/article153733974.html") == ""
+    assert ft.slug(None) == ""
+
+
+def test_novelty_blocks_match_row_by_row():
+    from mlab.textlab import features as ft
+    rng = np.random.default_rng(0)
+    vocab = [f"w{i}" for i in range(40)]
+    n = 600
+    df = pd.DataFrame({"avail": pd.Timestamp("2020-01-01", tz="UTC")
+                       + pd.to_timedelta(np.sort(rng.integers(0, 20 * 96, n)) * 15, unit="min"),
+                       "title": [" ".join(rng.choice(vocab, 4)) for _ in range(n)]})
+    a, b = ft.novelty(df, block=n), ft.novelty(df, block=37)
+    assert np.allclose(a, b)
+    x = ft.hash_matrix(df["title"].tolist())
+    t = df["avail"]
+    i = 400  # brute force one row: max cosine vs earlier rows within 5 days
+    prev = [j for j in range(i) if t[j] >= t[i] - pd.Timedelta("5D")]
+    want = 1 - max((x[i] @ x[j].T).toarray()[0, 0] for j in prev)
+    assert abs(a[i] - want) < 1e-12
+
+
+def test_attention_events_use_prior_days_only():
+    from mlab.textlab import studies
+    idx = pd.bdate_range("2021-01-01", periods=400, tz="UTC")
+    rng = np.random.default_rng(3)
+    px = pd.DataFrame({"open": 100 * np.exp(np.cumsum(rng.normal(0, .01, 400))),
+                       "close": 100 * np.exp(np.cumsum(rng.normal(0, .01, 400)))}, index=idx)
+    mk = pd.DataFrame({"open": 100 * np.exp(np.cumsum(rng.normal(0, .01, 400))),
+                       "close": 100 * np.exp(np.cumsum(rng.normal(0, .01, 400)))}, index=idx)
+    n = rng.poisson(10, 400).astype(float)
+    n[[150, 300, 350]] = 80
+    fresh = np.floor(n * rng.uniform(.2, .8, 400))
+    d = pd.DataFrame({"n": n, "tone": rng.normal(0, 1, 400), "n_fresh": fresh}, index=idx)
+    spec = {"event": {"baseline_days": 60, "spike_sd": 2.0, "min_articles": 20, "fresh_share_days": 250},
+            "horizons": [1, 5], "costs": {"round_trip_bp": 10}}
+    ab = ev.abnormal(px, mk)
+    full = studies.attention_events(ab, d, spec)
+    assert {idx[150], idx[300], idx[350]} <= set(full["date"])  # the planted spikes are found
+    cut = 320  # truncating the future changes nothing about the day-300 event except CARs running off the end
+    part = studies.attention_events(ev.abnormal(px.iloc[:cut], mk.iloc[:cut]), d.iloc[:cut], spec)
+    a, b = full.set_index("date").loc[idx[300]], part.set_index("date").loc[idx[300]]
+    assert (a["dir"], a["flag"], a["fresh_share"], a["car5"]) == (b["dir"], b["flag"], b["fresh_share"], b["car5"])
