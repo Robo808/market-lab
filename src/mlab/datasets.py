@@ -133,6 +133,20 @@ CATALOG: dict[str, Spec] = {s.name: s for s in [
                                                        "XLV", "XLY", "XLC", "SMH", "^VIX"),
          DEFAULT_SPLITS, description="US mega caps (today's leaders, so survivorship-biased) plus index and sector "
                                      "ETFs, split- and dividend-adjusted closes"),
+    Spec("influence-daily", "yahoo", "bars", "1d", _m(
+        # US sectors and the industries politics hits first (trade, defence, energy, banks, homebuilders, China tech)
+        "XLI", "XLB", "XLU", "XLP", "XLRE", "ITA", "XAR", "XOP", "XME", "KRE", "XHB", "SOXX", "KWEB", "IYT", "JETS",
+        "TAN", "URA", "LIT",
+        # countries (US-listed ETFs, so one close time) and their currencies
+        "FXI", "MCHI", "EWJ", "EWG", "EWU", "EWQ", "EWI", "EWP", "EWZ", "EWW", "INDA", "EWT", "EWY", "EWA", "EWC",
+        "EZA", "TUR", "EIDO", "EPOL", "KSA", "ISRA", "EEM",
+        "CNY=X", "MXN=X", "TRY=X", "BRL=X", "INR=X", "KRW=X", "TWD=X", "ZAR=X", "RUB=X", "PLN=X", "ILS=X",
+        # commodities politics moves: grains (trade war), metals, gas, cocoa, coffee
+        "ZW=F", "ZC=F", "ZS=F", "PA=F", "PL=F", "CC=F", "KC=F", "SB=F",
+        # risk: vol, credit, gold miners
+        "^VIX", "^MOVE", "EMB", "GDX"),
+        DEFAULT_SPLITS, description="Influence-map market panel (#58): US industries, country ETFs, EM currencies "
+                                    "and politically exposed commodities, daily"),
     Spec("us-earnings", "yahoo_earnings", "events", "event", _m(*MEGACAPS),
          DEFAULT_SPLITS, start="2000-01-01", description="Earnings dates, EPS estimate, actual and surprise for the "
                                                           "US mega caps (about 25 years)"),
