@@ -204,8 +204,77 @@ def run_stale_reversal(path: Path, open_test: bool = False, log=print) -> dict:
             "events": len(e)}
 
 
+def nw_t(x: pd.Series, lags: int = 3) -> float:
+    """t-stat of the mean with Newey-West (Bartlett) standard errors."""
+    x = x.dropna().to_numpy(float)
+    n, u = len(x), x - x.mean()
+    v = u @ u / n
+    for k in range(1, lags + 1):
+        v += 2 * (1 - k / (lags + 1)) * (u[k:] @ u[:-k]) / n
+    return float(x.mean() / np.sqrt(v / n))
+
+
+def gpr_country_portfolio(gpr: dict[str, pd.Series], px: dict[str, pd.Series], spec: dict) -> pd.DataFrame:
+    """Monthly long-short: on the first trading day on or after day `rebalance_day` of month m+1 (when month m's
+    country GPR is published), go long the `n_side` countries with the largest log change in GPR over month m and
+    short the smallest; hold to the next rebalance. Returns one row per holding period."""
+    chg = pd.DataFrame({c: np.log(g).diff() for c, g in gpr.items()})
+    chg.index = pd.DatetimeIndex(chg.index).tz_convert("UTC")
+    closes = pd.DataFrame(px).sort_index()
+    days = closes.index
+    rows, prev = [], set()
+    for m in chg.index:
+        target = (m + pd.offsets.MonthBegin(1)) + pd.Timedelta(days=spec["rebalance_day"] - 1)
+        i = days.searchsorted(target)
+        j = days.searchsorted(target + pd.offsets.MonthBegin(1))
+        if j >= len(days):
+            break
+        sig = chg.loc[m].dropna()
+        sig = sig[[c for c in sig.index if pd.notna(closes[spec["etf"][c]].iloc[i]) and
+                   pd.notna(closes[spec["etf"][c]].iloc[j])]]
+        if len(sig) < spec["min_countries"]:
+            continue
+        k = spec["n_side"]
+        longs, shorts = list(sig.nlargest(k).index), list(sig.nsmallest(k).index)
+        r = {c: closes[spec["etf"][c]].iloc[j] / closes[spec["etf"][c]].iloc[i] - 1 for c in longs + shorts}
+        book = {f"L:{c}" for c in longs} | {f"S:{c}" for c in shorts}
+        turnover = len(book ^ prev) / (2 * k)  # share of the book replaced
+        prev = book
+        gross = np.mean([r[c] for c in longs]) - np.mean([r[c] for c in shorts])
+        rows.append({"start": days[i], "end": days[j], "n": len(sig), "gross": gross,
+                     "net": gross - turnover * spec["costs"]["round_trip_bp"] / 1e4 * 2,
+                     "longs": ",".join(longs), "shorts": ",".join(shorts)})
+    return pd.DataFrame(rows)
+
+
+def run_gpr_country_reversal(path: Path, open_test: bool = False, log=print) -> dict:
+    spec = read_spec(path)
+    if not open_test:
+        raise SystemExit("graded once on the whole window; run with --test")
+    etf = spec["etf"]
+    g = datasets.load(spec["gpr_dataset"], [f"GPRC_{c}" for c in etf], allow_test=True,
+                      note=f"{Path(path).name}: TEST OPENED")
+    p = datasets.load(spec["dataset"], sorted(set(etf.values())), allow_test=True, note=f"{Path(path).name}: TEST OPENED")
+    gpr = {c: g[f"GPRC_{c}"]["value"] for c in etf}
+    px = {}
+    for t, df in p.items():
+        s = df["adj_close"] if "adj_close" in df else df["close"]
+        px[t] = s.set_axis(pd.DatetimeIndex(s.index).tz_convert("UTC").normalize())
+    book = gpr_country_portfolio(gpr, px, spec)
+    lo, hi = (pd.Timestamp(x, tz="UTC") for x in spec["window"])
+    book = book[(book["start"] >= lo) & (book["end"] <= hi)]
+    post = book[book["start"] >= pd.Timestamp(spec["post_publication_from"], tz="UTC")]
+    out = {}
+    for name, b in (("full", book), ("post_publication", post)):
+        out[name] = {"months": len(b), "mean_net_pct": round(b["net"].mean() * 100, 3),
+                     "mean_gross_pct": round(b["gross"].mean() * 100, 3),
+                     "t_nw_net": round(nw_t(b["net"]), 2), "hit_rate": round((b["net"] > 0).mean(), 3)}
+    out["first"], out["last"] = str(book["start"].min().date()), str(book["end"].max().date())
+    return out
+
+
 STUDIES = {"news_extremes": run_news_extremes, "novelty_drift": run_novelty_drift,
-           "stale_reversal": run_stale_reversal}
+           "stale_reversal": run_stale_reversal, "gpr_country_reversal": run_gpr_country_reversal}
 
 if __name__ == "__main__":
     study = STUDIES[read_spec(Path(sys.argv[1])).get("study", "news_extremes")]

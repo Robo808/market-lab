@@ -255,3 +255,19 @@ def test_gdelt_themes_by_country_and_resume(tmp_path, monkeypatch):
     assert early.loc[("SANCTIONS", "_ALL"), "n"] == 2 and early.loc[("SANCTIONS", "RS"), "n"] == 1
     assert early.loc[("SANCTIONS", "US"), "tone"] == 2.0 and ("TAX_FNCACT_LEADER", "_ALL") not in early.index
     assert set(d["avail"].dt.hour) == {0, 20}  # the 20:00 file lands in the late bucket
+
+
+def test_gpr_country_portfolio_timing_and_sign():
+    from mlab.textlab import studies
+    days = pd.bdate_range("2020-01-01", "2020-06-30", tz="UTC")
+    months = pd.date_range("2020-01-01", "2020-05-01", freq="MS", tz="UTC")
+    gpr = {"A": pd.Series([1, 2, 2, 2, 2.0], months), "B": pd.Series([1, 1, 1, 1, 1.0], months),
+           "C": pd.Series([1, 0.5, 0.5, 0.5, 0.5], months)}
+    px = {"EA": pd.Series(np.linspace(100, 130, len(days)), days), "EB": pd.Series(100.0, days),
+          "EC": pd.Series(np.linspace(100, 90, len(days)), days)}
+    spec = {"etf": {"A": "EA", "B": "EB", "C": "EC"}, "rebalance_day": 7, "n_side": 1, "min_countries": 3,
+            "costs": {"round_trip_bp": 0}}
+    b = studies.gpr_country_portfolio(gpr, px, spec)
+    first = b[b["longs"] == "A"].iloc[0]  # February's jump in A's GPR is known in early March
+    assert first["start"] == pd.Timestamp("2020-03-09", tz="UTC") and first["shorts"] == "C" and first["gross"] > 0
+    assert abs(studies.nw_t(pd.Series([1.0, 1.1, 0.9, 1.0, 1.05]))) > 10
