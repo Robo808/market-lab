@@ -104,3 +104,18 @@ def test_gdelt_ingest_is_point_in_time_and_resumable(tmp_path, monkeypatch):
     assert set(m["theme"]) == {"_ALL", "ECON_STOCKMARKET", "EPU_POLICY"} and m.loc[m.theme == "_ALL", "n"].item() == 2
     d = gdelt.daily("AMZN")
     assert d["articles"].item() == 1 and d["neg_share"].item() == 1.0
+
+
+def test_novelty_and_daily_timing():
+    from mlab.textlab import features as ft
+    t0 = pd.Timestamp("2024-01-08 14:00", tz="UTC")
+    a = pd.DataFrame({"avail": [t0, t0 + pd.Timedelta(hours=1), t0 + pd.Timedelta(hours=7), t0 + pd.Timedelta(days=9)],
+                      "title": ["Amazon cuts 10,000 jobs in cloud unit", "Amazon cuts 10,000 jobs in cloud unit",
+                                "Amazon wins Pentagon contract", "Amazon cuts 10,000 jobs in cloud unit"],
+                      "tone": [-5.0, -5.0, 3.0, -5.0]})
+    a["novelty"] = ft.novelty(a)
+    assert a["novelty"].tolist()[0] == 1.0 and a["novelty"].tolist()[1] < 0.01 and a["novelty"].tolist()[3] == 1.0
+    idx = pd.bdate_range("2024-01-08", periods=10, tz="UTC")
+    d = ft.firm_daily(a, idx)
+    # 14:00 and 15:00 count on Monday; 21:00 is after the cutoff and moves to Tuesday
+    assert d.loc[idx[0], "n"] == 2 and d.loc[idx[1], "n"] == 1 and d.loc[idx[0], "n_fresh"] == 1
