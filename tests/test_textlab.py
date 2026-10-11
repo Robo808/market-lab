@@ -190,3 +190,42 @@ def test_gdelt_day_with_every_file_missing(tmp_path, monkeypatch):
     assert r["missing"] == 3 and r["ok"] == 0
     assert [p.parent.name for p in tmp_path.rglob("*.parquet")] == ["macro"]  # marked done, no firm file
     assert gdelt.ingest("2025-06-20 00:00", "2025-06-20 00:30", log=lambda *a: None)["missing"] == 0
+
+
+def _events_zip(rows):
+    import io
+    import zipfile
+    lines = []
+    for a1, a2, geo, root, quad, gold, arts, tone in rows:
+        r = [""] * 61
+        r[7], r[17], r[53], r[28], r[29], r[25] = a1, a2, geo, root, str(quad), "1"
+        r[30], r[33], r[34] = str(gold), str(arts), str(tone)
+        lines.append("\t".join(r))
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as z:
+        z.writestr("x.export.CSV", "\n".join(lines))
+    return buf.getvalue()
+
+
+def test_gdelt_events_aggregate_and_resume(tmp_path, monkeypatch):
+    from mlab.textlab import gdelt, gdelt_events as ge
+    monkeypatch.setattr(ge, "STORE", tmp_path / "events")
+    blob = _events_zip([("USA", "CHN", "US", "16", 4, -4.0, 3, -2.0), ("USA", "CHN", "US", "16", 4, -8.0, 1, -6.0),
+                        ("", "", "IR", "14", 3, -6.5, 2, -5.0)])
+    calls = []
+
+    class S:
+        def get(self, url, timeout=None):
+            calls.append(url)
+            code = 404 if "0030" in url else 200
+            return type("R", (), {"status_code": code, "content": blob, "raise_for_status": lambda self: None})()
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: S())
+    r = ge.ingest("2026-10-09 00:00", "2026-10-09 00:30", workers=1, log=lambda *a: None)
+    assert r == {"ok": 2, "missing": 1, "failed": 0, "events": 6} and len(calls) == 3
+    assert ge.ingest("2026-10-09 00:00", "2026-10-09 00:30", log=lambda *a: None)["ok"] == 0 and len(calls) == 3
+    df = ge.load()
+    sanc = df[(df.a1 == "USA") & (df.root == "16")].iloc[0]
+    assert sanc["avail"] == pd.Timestamp("2026-10-09 00:00", tz="UTC")  # 00:00 and 00:15 files, same bucket
+    assert ge.bucket(pd.Timestamp("2026-10-09 20:15", tz="UTC")).hour == 20
+    assert sanc["events"] == 4 and sanc["articles"] == 8 and abs(sanc["goldstein"] - (-5.0)) < 1e-9
+    assert gdelt.STORE != ge.STORE

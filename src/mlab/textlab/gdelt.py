@@ -255,6 +255,10 @@ def cmd_newsstore(a):
     if a.action == "gdelt":
         print(ingest(a.since or "1d", a.until, a.workers))
         return
+    if a.action == "events":
+        from . import gdelt_events
+        print(gdelt_events.ingest(a.since or "1d", a.until, a.workers))
+        return
     if a.action == "show":
         if not a.symbol:
             raise SystemExit("symbol required")
@@ -266,8 +270,9 @@ def cmd_newsstore(a):
 
 
 def register(add):
-    q = add("newsstore", cmd_newsstore, "point-in-time news store: gdelt (ingest GKG raw files) | show SYMBOL")
-    q.add_argument("action", choices=["gdelt", "show"])
+    q = add("newsstore", cmd_newsstore, "point-in-time news store: gdelt (GKG articles) | events (CAMEO political "
+            "events) | show SYMBOL")
+    q.add_argument("action", choices=["gdelt", "events", "show"])
     q.add_argument("symbol", nargs="?")
     q.add_argument("--since", help="start: date, timestamp or relative like 3d / 12h (default 1d)")
     q.add_argument("--until", help="end (default: latest published file)")
