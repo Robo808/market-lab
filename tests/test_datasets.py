@@ -224,3 +224,22 @@ def test_duka_hourly_stages_complete_months(ds, monkeypatch):
     n = len(calls)
     second = ds.fetch_dukascopy(m, spec, log=lambda *a: None)
     assert len(first) == len(second) and len(calls) - n == 2  # only the current, incomplete month is refetched
+
+
+def test_uncertainty_fetcher_reads_published_layouts(monkeypatch):
+    import io
+    from mlab import datasets as ds
+    csv = b"day,month,year,daily_policy_index\n1,1,1985,103.8\n2,1,1985,296.4\n"
+
+    class R:
+        content = csv
+
+        def raise_for_status(self):
+            pass
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: type("S", (), {"get": lambda self, u, timeout=None: R()})())
+    ds._UNCERTAINTY_CACHE.clear()
+    spec = ds.CATALOG["policy-daily"]
+    m = next(x for x in spec.members if x.symbol == "EPU_US")
+    df = ds.fetch_uncertainty(m, spec)
+    assert list(df["value"]) == [103.8, 296.4] and str(df.index[1].date()) == "1985-01-02" and df.index.tz is not None
+    ds._UNCERTAINTY_CACHE.clear()

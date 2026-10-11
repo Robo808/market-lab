@@ -65,6 +65,12 @@ SOURCE_INFO = {
             "licence": "Bank of England database: UK Open Government Licence; selected FX series excluded "
                        "(LSEG-sourced), fine for private backtests",
             "adjustments": "none (yields and rates in percent, FX spot at 4pm London)"},
+    "uncertainty": {"url": "https://www.matteoiacoviello.com/gpr.htm ; https://www.policyuncertainty.com/",
+                    "licence": "GPR and TPU (Caldara, Iacoviello et al.): CC BY, credit the source and authors; "
+                               "EPU and daily TPU (Baker, Bloom, Davis): CC BY 4.0. Cite the download date",
+                    "adjustments": "none (index levels as published; publishers revise history, so each build is "
+                                   "a dated vintage; GPR daily is published weekly on Mondays, EPU daily the next "
+                                   "day: lag them in tests)"},
     "binance": {"url": "https://data.binance.vision/?prefix=data/spot/monthly/klines/",
                 "licence": "Binance public data T&C: CC BY-NC-SA 4.0; personal backtesting allowed, "
                            "no live trading execution on the datasets",
@@ -147,6 +153,18 @@ CATALOG: dict[str, Spec] = {s.name: s for s in [
         "^VIX", "^MOVE", "EMB", "GDX"),
         DEFAULT_SPLITS, description="Influence-map market panel (#58): US industries, country ETFs, EM currencies "
                                     "and politically exposed commodities, daily"),
+    Spec("policy-daily", "uncertainty", "series", "1d", _m(
+        ("GPRD", "gpr_daily|GPRD", "Geopolitical risk, daily (Caldara-Iacoviello)"),
+        ("GPRD_ACT", "gpr_daily|GPRD_ACT", "Geopolitical acts"), ("GPRD_THREAT", "gpr_daily|GPRD_THREAT", "Geopolitical threats"),
+        ("EPU_US", "epu_daily|daily_policy_index", "US economic policy uncertainty, daily (Baker-Bloom-Davis)"),
+        ("TPU_EPU", "tpu_epu_daily|daily_tpu_index", "US trade policy uncertainty, daily (EPU site)"),
+        ("TPU_D", "tpu_daily|TPUD_index", "Trade policy uncertainty, daily from 2015 (Caldara et al.)")),
+        DEFAULT_SPLITS, start="1985-01-01", description="Ready-made policy and geopolitical risk indices, daily (#58)"),
+    Spec("policy-monthly", "uncertainty", "series", "1mo", _m(
+        ("GPR", "gpr_monthly|GPR"), ("GPRT", "gpr_monthly|GPRT"), ("GPRA", "gpr_monthly|GPRA"),
+        *[(f"GPRC_{c}", f"gpr_monthly|GPRC_{c}", "Country geopolitical risk") for c in ['ARG', 'AUS', 'BEL', 'BRA', 'CAN', 'CHE', 'CHL', 'CHN', 'COL', 'DEU', 'DNK', 'EGY', 'ESP', 'FIN', 'FRA', 'GBR', 'HKG', 'HUN', 'IDN', 'IND', 'ISR', 'ITA', 'JPN', 'KOR', 'MEX', 'MYS', 'NLD', 'NOR', 'PER', 'PHL', 'POL', 'PRT', 'RUS', 'SAU', 'SWE', 'THA', 'TUN', 'TUR', 'TWN', 'UKR', 'USA', 'VEN', 'VNM', 'ZAF']]),
+        DEFAULT_SPLITS, start="1985-01-01", description="Geopolitical risk monthly: world, threats, acts and 44 "
+                                                         "country indexes (#58)"),
     Spec("us-earnings", "yahoo_earnings", "events", "event", _m(*MEGACAPS),
          DEFAULT_SPLITS, start="2000-01-01", description="Earnings dates, EPS estimate, actual and surprise for the "
                                                           "US mega caps (about 25 years)"),
@@ -303,6 +321,44 @@ def fetch_boe(m: Member, spec: Spec, log=print) -> pd.DataFrame:
     df = pd.read_csv(io.StringIO(r.text))
     out = pd.DataFrame({"value": pd.to_numeric(df.iloc[:, 1], errors="coerce").values},
                        index=pd.to_datetime(df.iloc[:, 0], format="%d %b %Y"))
+    return _utc_index(out.dropna())
+
+
+UNCERTAINTY_FILES = {
+    "gpr_daily": "https://www.matteoiacoviello.com/gpr_files/data_gpr_daily_recent.xls",
+    "gpr_monthly": "https://www.matteoiacoviello.com/gpr_files/data_gpr_export.xls",
+    "epu_daily": "https://www.policyuncertainty.com/media/All_Daily_Policy_Data.csv",
+    "tpu_epu_daily": "https://policyuncertainty.com/media/All_Daily_TPU_Data.csv",
+    "tpu_daily": "https://www.matteoiacoviello.com/tpu_files/tpu_web_latest.xlsx",
+}
+_UNCERTAINTY_CACHE: dict[str, pd.DataFrame] = {}
+
+
+def _uncertainty_table(key: str) -> pd.DataFrame:
+    """One published file as a date-indexed table, downloaded once per build."""
+    if key not in _UNCERTAINTY_CACHE:
+        from .net import session
+        r = session("market-lab/0.1").get(UNCERTAINTY_FILES[key], timeout=120)
+        r.raise_for_status()
+        raw = io.BytesIO(r.content)
+        if key == "gpr_daily":
+            df = pd.read_excel(raw).set_index("date")
+        elif key == "gpr_monthly":
+            df = pd.read_excel(raw).set_index("month")
+        elif key == "tpu_daily":
+            df = pd.read_excel(raw, sheet_name="TPU_DAILY").set_index("DATE")
+        else:  # EPU-site CSVs: day, month, year columns
+            df = pd.read_csv(raw)
+            df.index = pd.to_datetime(df[["year", "month", "day"]])
+        _UNCERTAINTY_CACHE[key] = df
+    return _UNCERTAINTY_CACHE[key]
+
+
+def fetch_uncertainty(m: Member, spec: Spec, log=print) -> pd.DataFrame:
+    key, col = m.ref.split("|")
+    df = _uncertainty_table(key)
+    out = pd.DataFrame({"value": pd.to_numeric(df[col], errors="coerce").values}, index=pd.to_datetime(df.index))
+    out = out[out.index >= pd.Timestamp(spec.start)]
     return _utc_index(out.dropna())
 
 
@@ -508,7 +564,7 @@ def fetch_french(m: Member, spec: Spec, log=print) -> pd.DataFrame:
 
 FETCHERS = {"yahoo": fetch_yahoo, "yahoo_earnings": fetch_yahoo_earnings, "fed_h15": fetch_fed_h15,
             "ecb": fetch_ecb, "eia": fetch_eia,
-            "boe": fetch_boe, "binance": fetch_binance,
+            "boe": fetch_boe, "binance": fetch_binance, "uncertainty": fetch_uncertainty,
             "dukascopy": fetch_dukascopy, "french": fetch_french}
 
 

@@ -14,7 +14,13 @@ discipline as every other test here (point-in-time data, discovery on train year
 | Markets: industries | US sectors and politically exposed industries (defence ITA/XAR, banks KRE, oil and gas XOP, metals XME, semis SOXX/SMH, China internet KWEB, transport IYT, airlines JETS, solar TAN, uranium URA, lithium LIT, homebuilders XHB) | `influence-daily`, `us-stocks-daily` | 2006-2015 by ETF | Close of t |
 | Markets: countries | 22 US-listed country ETFs (one close time) and 11 EM currencies (CNY, MXN, TRY, BRL, INR, KRW, TWD, ZAR, RUB, PLN, ILS) | `influence-daily` | 2000-2015 | Close of t; FX quotes are Yahoo's daily stamp |
 | Markets: macro | Indices, G10 FX, oil, gas, gold, copper, grains, softs, Treasuries, gilts, credit, VIX, MOVE | `xasset-daily`, `influence-daily`, `ust-daily`, `boe-daily`, `duka-1d` | 1990s-2003 | Close of t |
+| Ready-made risk indices | Geopolitical risk daily (total, threats, acts) and monthly (world plus 44 countries); US economic policy uncertainty daily; trade policy uncertainty daily (two versions) | `policy-daily`, `policy-monthly` (Caldara-Iacoviello, Baker-Bloom-Davis; CC BY) | 1985 (TPU_D 2015) | Monthly GPR is stamped at the month start but published in the first days of the next month; GPR daily updates on Mondays; EPU daily the next day. Lag before use |
 | Positioning | CFTC COT net positioning by market | `mlab cot` | 2006 | Tuesday positions, published Friday: usable from the Friday |
+
+Prior work first: the published indices above are the baseline. Our GDELT series only earn a place if they add
+out-of-sample information beyond them (literature sweep: `reports/influence_literature_20261011.md` in the data
+dir). GDELT's own daily event totals roughly halved between 2016 and 2026, so raw counts drift: use shares of
+the day's total, z-scores against a trailing window, and deduplicated counts, never raw levels.
 
 Known gaps: GDELT has no files for about 13% of slots in late Sep to mid Nov 2020 and for mid June to early July
 2025 (404 at the source). Country ETFs are survivors (Russia's RSX is gone), so Russia enters through RUB and events.
