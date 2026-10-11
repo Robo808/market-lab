@@ -92,6 +92,9 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab algo validate tsmom ^GSPC --grid '{"lookback":[126,252]}'   # OOS, PSR/DSR, bootstrap, permutation
 ./mlab algo signal dual_momentum SPY EFA BIL ; ./mlab algo paper rsi2 SPY QQQ --book rsi2-us
 ./mlab hypo new <slug> --claim "..." ; ./mlab hypo test research/hypotheses/H-....md ; ./mlab hypo list
+./mlab datasets catalog ; ./mlab datasets build all ; ./mlab datasets list   # frozen offline snapshots
+./mlab datasets crosscheck us-stocks-1m --days 5   # stored bars vs Massive live (Massive is never stored)
+./mlab algo backtest tsmom UK100 US500 --dataset duka-1d --split train       # offline, fixed split
 ```
 
 ## Quant research (`src/mlab/quant/`, wiki in `docs/wiki/`)
@@ -99,6 +102,8 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 - Strategy library (`strategies.py`): trend, breakout, mean reversion, seasonality, cross-sectional momentum,
   dual momentum, inverse vol, risk parity, pairs; overlays `vol_target` and `regime_filter`. Decisions at the close
   of bar t earn bar t+1; tests enforce no look-ahead by truncation.
+- Research runs on frozen datasets (`mlab datasets`, wiki `Datasets`): versioned, checksummed snapshots with fixed
+  train / validation / test splits; the test split needs `--allow-test` and every look is logged.
 - Modes: backtest, signal (today's target), paper (books in `$MLAB_DATA_DIR/paper/`). No live execution.
 - Hypotheses are pre-registered on `hypo/<yyyymmdd>-<slug>` branches in `research/hypotheses/`, graded once
   against bars set in advance, and merged to main whether PASS or FAIL. Follow the `quant-research` skill.
@@ -111,9 +116,10 @@ signal_lab, stats, lenses, options, earnings, news, cot, risk, journal`.
 
 - `src/mlab/providers/ig.py` refuses anything except GETs and session login/switch/logout. No order
   or deal endpoints exist. Cezar executes on IG himself.
-- API key from a network secret on demo-api.ig.com / api.ig.com (header `X-IG-API-KEY`) or `IG_API_KEY`; the rest
-  only from env vars: `IG_USERNAME`, `IG_PASSWORD`, `IG_ACC_TYPE`
-  (`DEMO`|`LIVE`), optional `IG_ACC_NUMBER`, or `IG_DEMO_*` / `IG_LIVE_*` per environment.
+- API key from a network secret on demo-api.ig.com / api.ig.com (header `X-IG-API-KEY`) or `IG_API_KEY`; username and
+  password from a Body parameter network secret (path `/gateway/deal/session`, keys `identifier`, `password`) or env
+  vars `IG_USERNAME`, `IG_PASSWORD`; plus `IG_ACC_TYPE` (`DEMO`|`LIVE`), optional `IG_ACC_NUMBER`, or `IG_DEMO_*` /
+  `IG_LIVE_*` per environment.
   Never print, echo, log or write them anywhere. Never ask for them in chat.
 - Historical prices burn the weekly allowance (10k points/week): always go through `./mlab price ig:...`
   or `IG.prices()` (cache-first, fetches only the missing tail). Prefer Yahoo/Stooq for long history

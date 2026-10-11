@@ -3,10 +3,11 @@
 Only GET requests and session management (login, account switch, logout) can leave this module;
 any other method/path raises before a request is sent. Cezar executes trades himself on IG.
 
-Credentials: env vars only (IG_USERNAME, IG_PASSWORD, IG_ACC_TYPE=DEMO|LIVE, optional IG_ACC_NUMBER,
-or per-environment IG_DEMO_* / IG_LIVE_* overrides). The API key comes from IG_API_KEY or, better, from a
-cloud network secret that adds the X-IG-API-KEY header at the proxy so the key never enters the container. Session tokens
-are kept in memory for the life of the process and never written to disk.
+Credentials: IG_ACC_TYPE=DEMO|LIVE (optional IG_ACC_NUMBER) as env vars. The API key comes from IG_API_KEY or, better,
+from a cloud network secret that adds the X-IG-API-KEY header at the proxy. Username and password come from
+IG_USERNAME / IG_PASSWORD (or IG_DEMO_* / IG_LIVE_*) or, when both are absent, from a "Body parameter" network secret
+that fills `identifier` and `password` into the login body at the proxy; then no credential enters the container.
+Session tokens are kept in memory for the life of the process and never written to disk.
 
 Historical prices count against IG's weekly allowance (10,000 points/week on the standard
 plan), so price history is cached and only the missing tail is requested.
@@ -57,6 +58,11 @@ FIX_HINTS = {
     "error.security.oauth-token-invalid": "session expired: log in again",
 }
 
+# IG's validation errors when the login body arrives without identifier/password.
+LOGIN_SECRET_HINT = ("no username/password reached IG: add a network secret of type Body parameter on demo-api.ig.com "
+                     "(api.ig.com for LIVE), path prefix /gateway/deal/session, parameters identifier and password; "
+                     "or set IG_USERNAME / IG_PASSWORD")
+
 
 def fix_hint(code: str) -> str | None:
     return next((h for c, h in FIX_HINTS.items() if c in str(code)), None)
@@ -97,6 +103,9 @@ class IG:
                 self._logged_in = False  # expired session: log in once more and retry
                 return self._request(headers.get("_method", method), path, version, params, json, auth, _retry=False)
             hint = fix_hint(code)
+            if (not hint and (method, path) == ("POST", "/session") and self.cfg.login_via_secret
+                    and r.status_code == 400 and ("identifier" in str(code) or "password" in str(code))):
+                hint = LOGIN_SECRET_HINT
             raise IGError(f"IG {method} {path} -> {r.status_code}: {code}" + (f" (fix: {hint})" if hint else ""))
         return r
 
@@ -105,8 +114,10 @@ class IG:
 
     # ---- session ---------------------------------------------------------
     def login(self) -> dict:
-        r = self._request("POST", "/session", 2, auth=False, json={
-            "identifier": self.cfg.username, "password": self.cfg.password, "encryptedPassword": False})
+        body = {"encryptedPassword": False}
+        if not self.cfg.login_via_secret:  # otherwise the proxy injects identifier and password
+            body.update(identifier=self.cfg.username, password=self.cfg.password)
+        r = self._request("POST", "/session", 2, auth=False, json=body)
         self.s.headers["CST"] = r.headers["CST"]
         self.s.headers["X-SECURITY-TOKEN"] = r.headers["X-SECURITY-TOKEN"]
         body = r.json()
@@ -124,6 +135,8 @@ class IG:
         if self._logged_in:
             try:
                 self._request("DELETE", "/session", 1)
+            except IGError:
+                pass  # the session expires on IG's side anyway; a failed logout must not fail the command
             finally:
                 self._logged_in = False
 

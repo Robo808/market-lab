@@ -147,6 +147,56 @@ def test_ig_api_key_can_come_from_proxy(monkeypatch):
     assert ig.cfg.configured and "X-IG-API-KEY" not in ig.s.headers
 
 
+def _ig_secret_login(monkeypatch, handler):
+    for k in ("IG_API_KEY", "IG_USERNAME", "IG_PASSWORD", "IG_DEMO_API_KEY", "IG_DEMO_USERNAME", "IG_DEMO_PASSWORD"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("IG_ACC_TYPE", "DEMO")
+    from mlab.providers.ig import IG
+    ig = IG()
+    calls = []
+
+    def req(method, url, **kw):
+        calls.append((method, url, kw))
+        return handler(method, url, kw)
+    monkeypatch.setattr(ig.s, "request", req)
+    return ig, calls
+
+
+def test_ig_login_details_can_come_from_body_secret(monkeypatch):
+    ig, calls = _ig_secret_login(monkeypatch, lambda m, u, k: _login_ok(m, u, k) or FakeResp(200, {}))
+    assert ig.cfg.configured and ig.cfg.login_via_secret and not ig.cfg.missing()
+    ig.login()
+    m, url, kw = calls[0]
+    assert (m, url.endswith("/gateway/deal/session")) == ("POST", True)
+    assert kw["json"] == {"encryptedPassword": False}  # the proxy adds identifier and password
+    assert ig.s.headers["Content-Type"].startswith("application/json")
+
+
+def test_ig_body_secret_missing_names_the_fix(monkeypatch):
+    from mlab.providers.ig import IGError
+    ig, _ = _ig_secret_login(monkeypatch, lambda m, u, k: FakeResp(400, {"errorCode": "validation.null-not-allowed.request.identifier"}))
+    with pytest.raises(IGError, match="Body parameter"):
+        ig.login()
+
+
+def test_ig_body_secret_only_for_the_active_env(monkeypatch):
+    for k in ("IG_USERNAME", "IG_PASSWORD", "IG_DEMO_USERNAME", "IG_DEMO_PASSWORD", "IG_LIVE_USERNAME", "IG_LIVE_PASSWORD"):
+        monkeypatch.delenv(k, raising=False)
+    monkeypatch.setenv("IG_ACC_TYPE", "DEMO")
+    from mlab.config import ig_config
+    assert ig_config("DEMO").login_via_secret and not ig_config("LIVE").configured
+    monkeypatch.delenv("IG_ACC_TYPE")
+    assert not ig_config("DEMO").configured  # nothing set at all: report what is missing
+
+
+def test_ig_logout_failure_is_not_fatal(monkeypatch):
+    from mlab.providers.ig import IGError
+    ig, _ = _ig(monkeypatch, lambda m, u, k: _login_ok(m, u, k) or FakeResp(500, {"errorCode": "x"}))
+    ig.login()
+    ig.logout()
+    assert not ig._logged_in
+
+
 def test_ig_prices_parse_and_tail_cache(tmp_env, monkeypatch):
     def bar(t, px):
         p = {"bid": px - 0.5, "ask": px + 0.5, "lastTraded": None}
@@ -176,7 +226,7 @@ def test_ig_prices_parse_and_tail_cache(tmp_env, monkeypatch):
 
 
 def test_ig_missing_creds(monkeypatch):
-    for k in ("IG_API_KEY", "IG_USERNAME", "IG_PASSWORD", "IG_DEMO_API_KEY", "IG_DEMO_USERNAME", "IG_DEMO_PASSWORD"):
+    for k in ("IG_API_KEY", "IG_USERNAME", "IG_PASSWORD", "IG_DEMO_API_KEY", "IG_DEMO_USERNAME", "IG_DEMO_PASSWORD", "IG_ACC_TYPE"):
         monkeypatch.delenv(k, raising=False)
     from mlab.providers.ig import IG, IGError
     with pytest.raises(IGError, match="IG_USERNAME, IG_PASSWORD"):
