@@ -30,7 +30,15 @@ Credentials come from proxy-injected secrets or env vars, never from the repo. N
   until a cloud environment with them allowlisted is added (`docs/NETWORK.md`).
 - **Stooq**: intermittent timeouts; treat as a fallback, not a primary.
 - **Reddit**: blocked from cloud IPs. Use StockTwits and HN, or run on a local machine.
-- **GDELT**: throttles bursts; space requests out and rely on the cache.
+- **GDELT**: the DOC API throttles bursts (429s); space requests out and rely on the cache. For history use
+  `mlab newsstore gdelt`, which reads the 15-minute GKG raw files from data.gdeltproject.org (no quota, about
+  15 s per day of files with 6 workers) into `data/news/gdelt/` with the file time as the availability time.
+  Matches carry `via` (`org:`, `platform:` for "posted on Facebook"-type mentions, `person:` for CEO stories).
+  Only about 18% of GKG company matches name the company in the headline (steady 2015-2022); the rest are passing
+  mentions, which swamp single-stock counts (Netflix collects ~1,700 a day). `newsstore show` and
+  `gdelt.daily()` count headline-named ("primary") articles by default (`features.primary`). Page titles only
+  exist from late Sep 2019, so headline text is the URL slug (`features.slug`) before that.
+  GDELT requires a citation and a link to https://www.gdeltproject.org.
 - **LSE prices**: Yahoo quotes most `.L` shares in pence (GBp) and some series flip to pounds; check the units before
   computing returns or stakes. A 100x jump in a series is a units error, not a move.
 - **IG allowance**: historical price requests burn the weekly 10k-point allowance. Use Yahoo or Stooq for long history
