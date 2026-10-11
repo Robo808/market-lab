@@ -1,6 +1,6 @@
 # H-20261011-stale-spike-reversal: Tone surprises on stale-news attention spikes reverse
 
-Status: REGISTERED | Verdict: pending
+Status: GRADED | Verdict: FAIL
 Branch: `claude/project-thread-zph1h2` (with the engine, PR #56) | Registered: 2026-10-11 | Spec-SHA256: 90aab34cea1954b3ced03effe65f2334330fbf9493aa3ab1b8010b63d3596a7a
 
 ## Claim
@@ -114,4 +114,61 @@ Any pass bar missed = FAIL. The study refuses to run without --test and is run o
 ```
 
 ## Results
-Not run yet.
+Run once on 2026-10-11 with `python -m mlab.textlab.studies research/hypotheses/H-20261011-stale-spike-reversal.md --test`
+on us-stocks-daily@v20261010 and the GDELT store (every day 2022-01-01 to 2026-09-30). 1277 attention-spike
+events in the window; the test look is logged in the dataset's access log (2026-10-11T15:06:29Z).
+
+| Bar (2023-01 to 2026-09, stale-led, net 10 bp) | Required | Got | |
+|---|---|---|---|
+| CAR +1..+5 mean | <= -20 bp | 2.9 bp | miss |
+| CAR +1..+5 t | <= -2.0 | 0.17 | miss |
+| CAR +1..+10 mean | negative | -57.9 bp (t -2.22) | met |
+
+Verdict **FAIL**: the 5-day reversal seen in 2015-2022 is gone on new data (+2.9 bp, t 0.17). The 10-day
+leg kept its sign (-57.9 bp, t -2.22), which is not enough on its own and is not a new claim.
+
+```json
+{
+  "stale": {
+    "car1": {
+      "n": 1162,
+      "dates": 526,
+      "mean_bp": -7.9,
+      "t": -1.16
+    },
+    "car5": {
+      "n": 1162,
+      "dates": 526,
+      "mean_bp": 2.9,
+      "t": 0.17
+    },
+    "car10": {
+      "n": 1160,
+      "dates": 525,
+      "mean_bp": -57.9,
+      "t": -2.22
+    }
+  },
+  "fresh": {
+    "car1": {
+      "n": 113,
+      "dates": 87,
+      "mean_bp": -56.6,
+      "t": -2.47
+    },
+    "car5": {
+      "n": 113,
+      "dates": 87,
+      "mean_bp": 22.7,
+      "t": 0.4
+    },
+    "car10": {
+      "n": 113,
+      "dates": 87,
+      "mean_bp": 20.1,
+      "t": 0.23
+    }
+  },
+  "events": 1277
+}
+```
