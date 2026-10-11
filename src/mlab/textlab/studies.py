@@ -218,7 +218,8 @@ def gpr_country_portfolio(gpr: dict[str, pd.Series], px: dict[str, pd.Series], s
     """Monthly long-short: on the first trading day on or after day `rebalance_day` of month m+1 (when month m's
     country GPR is published), go long the `n_side` countries with the largest log change in GPR over month m and
     short the smallest; hold to the next rebalance. Returns one row per holding period."""
-    chg = pd.DataFrame({c: np.log(g).diff() for c, g in gpr.items()})
+    # log change is undefined when a month's index is 0 (no articles): that country sits the month out
+    chg = pd.DataFrame({c: np.log(g.where(g > 0)).diff() for c, g in gpr.items()})
     chg.index = pd.DatetimeIndex(chg.index).tz_convert("UTC")
     closes = pd.DataFrame(px).sort_index()
     days = closes.index
@@ -238,11 +239,13 @@ def gpr_country_portfolio(gpr: dict[str, pd.Series], px: dict[str, pd.Series], s
         longs, shorts = list(sig.nlargest(k).index), list(sig.nsmallest(k).index)
         r = {c: closes[spec["etf"][c]].iloc[j] / closes[spec["etf"][c]].iloc[i] - 1 for c in longs + shorts}
         book = {f"L:{c}" for c in longs} | {f"S:{c}" for c in shorts}
-        turnover = len(book ^ prev) / (2 * k)  # share of the book replaced
+        # each position is 1/k of its leg; one replaced position (an exit plus an entry, two members of the
+        # symmetric difference) costs one round trip on 1/k of capital
+        traded = len(book ^ prev) / (2 * k)
         prev = book
         gross = np.mean([r[c] for c in longs]) - np.mean([r[c] for c in shorts])
         rows.append({"start": days[i], "end": days[j], "n": len(sig), "gross": gross,
-                     "net": gross - turnover * spec["costs"]["round_trip_bp"] / 1e4 * 2,
+                     "net": gross - traded * spec["costs"]["round_trip_bp"] / 1e4,
                      "longs": ",".join(longs), "shorts": ",".join(shorts)})
     return pd.DataFrame(rows)
 

@@ -271,3 +271,16 @@ def test_gpr_country_portfolio_timing_and_sign():
     first = b[b["longs"] == "A"].iloc[0]  # February's jump in A's GPR is known in early March
     assert first["start"] == pd.Timestamp("2020-03-09", tz="UTC") and first["shorts"] == "C" and first["gross"] > 0
     assert abs(studies.nw_t(pd.Series([1.0, 1.1, 0.9, 1.0, 1.05]))) > 10
+
+
+def test_gpr_country_portfolio_costs_and_zero_index():
+    from mlab.textlab import studies
+    days = pd.bdate_range("2020-01-01", "2020-04-30", tz="UTC")
+    months = pd.date_range("2020-01-01", "2020-02-01", freq="MS", tz="UTC")
+    gpr = {"A": pd.Series([1, 2.0], months), "B": pd.Series([0, 1.0], months), "C": pd.Series([1, 0.5], months)}
+    px = {e: pd.Series(100.0, days) for e in ("EA", "EB", "EC")}
+    spec = {"etf": {"A": "EA", "B": "EB", "C": "EC"}, "rebalance_day": 7, "n_side": 1, "min_countries": 2,
+            "costs": {"round_trip_bp": 20}}
+    b = studies.gpr_country_portfolio(gpr, px, spec)
+    assert b.iloc[0]["n"] == 2  # B's index was 0 in January: no log change, sits out
+    assert abs(b.iloc[0]["net"] - (-0.0020)) < 1e-12  # opening long A and short C: one round trip each, 1/1 weight

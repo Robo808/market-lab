@@ -1,6 +1,6 @@
 # H-20261011-gpr-country-reversal: EM countries whose geopolitical risk jumped outperform the next month
 
-Status: REGISTERED | Verdict: pending
+Status: GRADED | Verdict: FAIL
 Branch: `claude/project-thread-zph1h2` (PR #56) | Registered: 2026-10-11 | Spec-SHA256: 0de5f3ef0a1bb9f7a1071a85b7a84c6125204383052b53ab1babf0ed2cbfcc4d
 
 ## Claim
@@ -74,4 +74,39 @@ Any pass bar missed = FAIL. No re-runs with other parameters.
 ```
 
 ## Results
-Not run yet.
+Run 2026-10-11 with `python -m mlab.textlab.studies research/hypotheses/H-20261011-gpr-country-reversal.md --test` on
+policy-monthly@v20261011 and influence-daily@v20261011, 196 monthly rebalances 2010-05-07 to 2026-09-01.
+
+| Bar | Required | Got | |
+|---|---|---|---|
+| Mean net return, 2010-2026 | >= 0.5%/month | -0.31%/month (gross 0.03%) | miss |
+| Newey-West t, 2010-2026 | >= 3.0 | -1.14 | miss |
+| Mean net return, 2022 on | positive | -0.033%/month (gross 0.305%) | miss |
+
+Verdict **FAIL**: before costs the long-short earns 0.03%/month on these 11 ETFs; the published ~1%/month does
+not show up in investable US-listed ETFs.
+
+Disclosure: the first run of the same frozen spec had two engine bugs, fixed before this run and covered by a test:
+a log of a zero index month produced infinite signals (those countries now sit the month out, as a log change is
+undefined), and costs were double counted. That run gave -0.64%/month net, 0.04% gross, t -2.41. Both runs fail every bar.
+
+```json
+{
+  "full": {
+    "months": 196,
+    "mean_net_pct": -0.31,
+    "mean_gross_pct": 0.03,
+    "t_nw_net": -1.14,
+    "hit_rate": 0.474
+  },
+  "post_publication": {
+    "months": 56,
+    "mean_net_pct": -0.033,
+    "mean_gross_pct": 0.305,
+    "t_nw_net": -0.06,
+    "hit_rate": 0.536
+  },
+  "first": "2010-05-07",
+  "last": "2026-09-01"
+}
+```
