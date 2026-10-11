@@ -79,9 +79,10 @@ def run_news_extremes(path: Path, open_test: bool = False, log=print) -> dict:
 
 
 def firm_text_daily(symbols: list[str], index_for: dict[str, pd.DatetimeIndex], since, until, window: str,
-                    fresh: float, min_words: int, log=print) -> dict[str, pd.DataFrame]:
-    """Daily GDELT features per symbol from company-name matches only: URL-slug headlines, deduplicated by URL,
-    scored for novelty against the firm's prior `window`, bucketed to trading days at the 20:00 UTC cutoff."""
+                    fresh: float, min_words: int, primary: bool = False, log=print) -> dict[str, pd.DataFrame]:
+    """Daily GDELT features per symbol: URL-slug headlines, deduplicated by URL, scored for novelty against the
+    firm's prior `window`, bucketed to trading days at the 20:00 UTC cutoff. primary=False (H2's frozen spec) keeps
+    company-name (org) matches; primary=True keeps any match whose headline names the company (#57)."""
     from concurrent.futures import ThreadPoolExecutor
     from . import gdelt
     files = sorted((gdelt.STORE / "firm").glob("????-??-??.parquet"))
@@ -89,9 +90,11 @@ def firm_text_daily(symbols: list[str], index_for: dict[str, pd.DatetimeIndex], 
 
     def read(f):  # slug and a URL hash per file, so ~15M rows never hold their URLs in memory at once
         d = pd.read_parquet(f, columns=["avail", "symbol", "via", "url", "tone"])
-        d = d[d["via"].str.startswith("org:") & d["symbol"].isin(symbols)]
+        d = d[(True if primary else d["via"].str.startswith("org:")) & d["symbol"].isin(symbols)]
         text = d["url"].map(ft.slug)
         keep = text.str.split().str.len() >= min_words
+        if primary:
+            keep &= pd.Series([ft.primary(t, sym) for t, sym in zip(text, d["symbol"])], index=d.index, dtype=bool)
         return pd.DataFrame({"avail": d["avail"][keep], "symbol": d["symbol"][keep].astype("category"),
                              "url_hash": pd.util.hash_pandas_object(d["url"][keep], index=False).to_numpy(),
                              "text": text[keep].astype(object), "tone": d["tone"][keep].astype("float32")})
@@ -100,7 +103,7 @@ def firm_text_daily(symbols: list[str], index_for: dict[str, pd.DatetimeIndex], 
     art = pd.concat(parts, ignore_index=True)
     del parts
     art["symbol"] = art["symbol"].astype(str)
-    log(f"  {len(art)} company-name articles with a {min_words}+ word slug from {len(files)} GDELT days "
+    log(f"  {len(art)} {'headline-named' if primary else 'company-name'} articles with a {min_words}+ word slug from {len(files)} GDELT days "
         f"({gdelt.CITATION})")
     art = art.sort_values("avail", kind="stable").drop_duplicates(["symbol", "url_hash"])
     out = {}

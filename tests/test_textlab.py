@@ -168,3 +168,11 @@ def test_attention_events_use_prior_days_only():
     part = studies.attention_events(ev.abnormal(px.iloc[:cut], mk.iloc[:cut]), d.iloc[:cut], spec)
     a, b = full.set_index("date").loc[idx[300]], part.set_index("date").loc[idx[300]]
     assert (a["dir"], a["flag"], a["fresh_share"], a["car5"]) == (b["dir"], b["flag"], b["fresh_share"], b["car5"])
+
+
+def test_primary_needs_company_in_headline():
+    from mlab.textlab import features as ft
+    assert ft.primary("netflix raises prices in uk", "NFLX")
+    assert not ft.primary("paramount heathers parkland", "NFLX")  # GKG tagged Netflix, the story isn't about it
+    assert not ft.primary("intelligence agencies warn", "INTC") and ft.primary("intel cuts guidance", "INTC")
+    assert ft.primary("facebook ending feed experiment", "META") and not ft.primary("", "META")

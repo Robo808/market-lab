@@ -51,6 +51,28 @@ def slug(url: str) -> str:
     return " ".join(w for w in re.split(r"[-_.+]", best) if _WORD.fullmatch(w) and w not in _URL_STOP)
 
 
+# Names that make an article *about* the company when they appear in its headline (URL slug words). GKG org lists
+# also tag passing mentions ("streaming on Netflix", "posted on Facebook"), which swamp single-stock counts (#57).
+SLUG_NAMES = {
+    "AAPL": ["apple", "iphone", "ipad", "macbook", "tim cook"], "MSFT": ["microsoft", "xbox", "azure", "nadella"],
+    "NVDA": ["nvidia"], "AMZN": ["amazon", "aws", "bezos", "jassy"], "GOOGL": ["google", "alphabet", "youtube"],
+    "META": ["facebook", "instagram", "whatsapp", "zuckerberg", "meta platforms"], "TSLA": ["tesla", "elon musk"],
+    "AVGO": ["broadcom"], "BRK-B": ["berkshire", "buffett"], "JPM": ["jpmorgan", "jp morgan", "dimon"],
+    "LLY": ["eli lilly", "lilly"], "V": ["visa inc", "visa card", "visa earnings"], "MA": ["mastercard"],
+    "XOM": ["exxon", "exxonmobil"], "UNH": ["unitedhealth", "unitedhealthcare", "optum"], "COST": ["costco"],
+    "NFLX": ["netflix"], "AMD": ["amd", "advanced micro devices"], "ORCL": ["oracle"], "WMT": ["walmart", "wal mart"],
+    "PLTR": ["palantir"], "CRM": ["salesforce"], "ADBE": ["adobe"], "INTC": ["intel"],
+    "BAC": ["bank of america", "bofa"],
+}
+_SLUG_RE = {s: re.compile(r"\b(" + "|".join(re.escape(n) for n in names) + r")\b") for s, names in SLUG_NAMES.items()}
+
+
+def primary(text: str, symbol: str) -> bool:
+    """True when the headline text (slug or title, lower case) names the company: the article is about it."""
+    rx = _SLUG_RE.get(symbol)
+    return bool(rx and rx.search((text or "").lower()))
+
+
 def novelty(df: pd.DataFrame, window: str = "5D", text: str = "title", block: int = 500) -> pd.Series:
     """Novelty per article row of one symbol's frame (columns avail and `text`), vs that symbol's earlier rows in
     the prior `window` (rows earlier in avail order; same-file duplicates count only after the first)."""

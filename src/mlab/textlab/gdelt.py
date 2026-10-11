@@ -228,15 +228,22 @@ def load(kind: str = "firm", symbols: list[str] | None = None, since=None, until
     return df.sort_values("avail").reset_index(drop=True)
 
 
-def daily(symbol: str, since=None, until=None, via=("org",)) -> pd.DataFrame:
-    """Per-day article count, unique sources and mean tone for one symbol (UTC days of availability), counting
-    only matches of the given kinds (default: company-name matches, not platform or CEO mentions)."""
+def daily(symbol: str, since=None, until=None, via=None, primary: bool = True) -> pd.DataFrame:
+    """Per-day article count, unique sources and mean tone for one symbol (UTC days of availability). `primary`
+    keeps articles whose headline (URL slug, or title) names the company: about 18% of GKG company-name matches,
+    the rest are passing mentions (#57). `via` optionally restricts match kinds ("org", "platform", "person")."""
+    from .features import primary as is_primary, slug
     df = load("firm", [symbol], since, until)
     if df.empty:
         return df
     if via and "via" in df:
         df = df[df["via"].str.split(":").str[0].isin(via)]
     df = df.drop_duplicates(["symbol", "url"])
+    if primary:
+        text = df["title"].fillna("").where(df["title"].fillna("") != "", df["url"].map(slug))
+        df = df[[is_primary(t, symbol) for t in text]]
+    if df.empty:
+        return pd.DataFrame()
     g = df.groupby(df["avail"].dt.floor("D"))
     return pd.DataFrame({"articles": g.size(), "sources": g["source"].nunique(), "tone": g["tone"].mean().round(2),
                          "neg_share": g["tone"].apply(lambda x: (x < -2).mean()).round(2)})
