@@ -185,9 +185,9 @@ def ingest_day(day: str, stamps_: list[pd.Timestamp], workers: int = 4, session=
     mp.parent.mkdir(parents=True, exist_ok=True)
     old_f = [pd.read_parquet(fp)] if fp.exists() else []
     old_m = [pd.read_parquet(mp)] if mp.exists() else []
-    f = pd.concat(old_f + [x for x in firms if len(x)], ignore_index=True)
-    if len(f):
-        _write(f.sort_values("avail"), fp)
+    parts = old_f + [x for x in firms if len(x)]
+    if parts:  # a day where every new file is missing at the source has no firm rows to write
+        _write(pd.concat(parts, ignore_index=True).sort_values("avail"), fp)
     _write(pd.concat(old_m + macros, ignore_index=True).sort_values("avail"), mp)  # macro last: it marks done
     return out
 

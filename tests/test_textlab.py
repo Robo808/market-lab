@@ -176,3 +176,17 @@ def test_primary_needs_company_in_headline():
     assert not ft.primary("paramount heathers parkland", "NFLX")  # GKG tagged Netflix, the story isn't about it
     assert not ft.primary("intelligence agencies warn", "INTC") and ft.primary("intel cuts guidance", "INTC")
     assert ft.primary("facebook ending feed experiment", "META") and not ft.primary("", "META")
+
+
+def test_gdelt_day_with_every_file_missing(tmp_path, monkeypatch):
+    from mlab.textlab import gdelt
+    monkeypatch.setattr(gdelt, "STORE", tmp_path)
+
+    class S:
+        def get(self, url, timeout=None):
+            return type("R", (), {"status_code": 404, "content": b"", "raise_for_status": lambda self: None})()
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: S())
+    r = gdelt.ingest("2025-06-20 00:00", "2025-06-20 00:30", workers=1, log=lambda *a: None)
+    assert r["missing"] == 3 and r["ok"] == 0
+    assert [p.parent.name for p in tmp_path.rglob("*.parquet")] == ["macro"]  # marked done, no firm file
+    assert gdelt.ingest("2025-06-20 00:00", "2025-06-20 00:30", log=lambda *a: None)["missing"] == 0
