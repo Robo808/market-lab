@@ -1,6 +1,6 @@
 # H-20261011-fresh-vs-stale-attention: Tone surprises on fresh-news attention spikes drift; on stale-news spikes they don't
 
-Status: REGISTERED | Verdict: pending
+Status: GRADED | Verdict: FAIL
 Branch: `claude/project-thread-zph1h2` (with the engine, PR #56) | Registered: 2026-10-11 | Spec-SHA256: 0da7a8896fffe4f6a2fe5e220c0ee103f05b64a7cc11abcd7cf85021aee76e24
 
 ## Claim
@@ -137,4 +137,128 @@ Train is graded, then validation, once each; the test split (2023+) is opened on
 ```
 
 ## Results
-Not run yet.
+Run 2026-10-11 with `python -m mlab.textlab.studies research/hypotheses/H-20261011-fresh-vs-stale-attention.md` on
+us-stocks-daily@v20261010 (Yahoo) and the GDELT store (every day 2015-02-19 to 2022-12-31; 12,985,620
+company-name articles with a 3+ word slug). 2216 attention-spike events, 2015-2022. A first attempt ran
+out of memory while loading articles (before any event or return was computed); it left one extra line in the
+dataset access log.
+
+| Bar (train 2015-19, CAR +1..+5, net 10 bp) | Required | Got | |
+|---|---|---|---|
+| fresh-led minus stale-led | >= 30 bp | -18.3 bp | miss |
+| t (date-averaged, Welch) | >= 2.5 | -0.46 | miss |
+| permutation p | <= 0.01 | 0.5727 | miss |
+
+Verdict **FAIL** on the train bars. Validation is reported but cannot rescue it (diff -101.1 bp,
+t -0.94). The test split (2023+) stays unopened.
+
+What the run showed (descriptive only, not a new claim):
+- Fresh-led spikes are rare: 72 of 1348 train events. Spikes are
+  mostly floods of near-duplicate syndicated stories, so the flag splits off a thin tail.
+- Company matching by GKG organisation name is noisy: NFLX (3.46M), MSFT (2.44M) and WMT (1.70M) collect far more
+  articles than AMZN (0.31M), while META (15k) and BAC (2k) collect almost none (META's "facebook" matches are
+  classed as platform mentions). Fixing entity matching comes before any further GDELT test.
+- Both groups drift against the tone surprise: stale-led spikes -21.9 bp (t -1.78) in train and
+  -44.1 bp (t -2.49) in validation at +5; at +10, -79.9 bp (t -3.31) in validation. That is
+  the reversal Tetlock (2011) predicts for stale news. It was found after looking at 2015-2022, so it can only
+  be tested as a new hypothesis on data not yet seen (2023+).
+
+```json
+{
+  "validation": {
+    "n_flag": 27,
+    "n_noflag": 837,
+    "dates_flag": 21,
+    "dates_noflag": 437,
+    "mean_flag_bp": -145.1,
+    "mean_noflag_bp": -44.1,
+    "diff_bp": -101.1,
+    "t": -0.94,
+    "t_flag": -1.37,
+    "t_noflag": -2.49,
+    "perm_p": 0.1694
+  },
+  "by_horizon_train": {
+    "car1": {
+      "n_flag": 72,
+      "n_noflag": 1276,
+      "dates_flag": 55,
+      "dates_noflag": 674,
+      "mean_flag_bp": -22.5,
+      "mean_noflag_bp": -16.2,
+      "diff_bp": -6.3,
+      "t": -0.4,
+      "t_flag": -1.56,
+      "t_noflag": -2.87,
+      "perm_p": 0.4428
+    },
+    "car5": {
+      "n_flag": 72,
+      "n_noflag": 1276,
+      "dates_flag": 55,
+      "dates_noflag": 674,
+      "mean_flag_bp": -40.2,
+      "mean_noflag_bp": -21.9,
+      "diff_bp": -18.3,
+      "t": -0.46,
+      "t_flag": -1.06,
+      "t_noflag": -1.78,
+      "perm_p": 0.5622
+    },
+    "car10": {
+      "n_flag": 72,
+      "n_noflag": 1276,
+      "dates_flag": 55,
+      "dates_noflag": 674,
+      "mean_flag_bp": -89.3,
+      "mean_noflag_bp": -42.9,
+      "diff_bp": -46.4,
+      "t": -0.76,
+      "t_flag": -1.52,
+      "t_noflag": -2.73,
+      "perm_p": 0.393
+    }
+  },
+  "by_horizon_validation": {
+    "car1": {
+      "n_flag": 27,
+      "n_noflag": 837,
+      "dates_flag": 21,
+      "dates_noflag": 437,
+      "mean_flag_bp": -2.4,
+      "mean_noflag_bp": -20.1,
+      "diff_bp": 17.8,
+      "t": 0.66,
+      "t_flag": -0.09,
+      "t_noflag": -2.57,
+      "perm_p": 0.4975
+    },
+    "car5": {
+      "n_flag": 27,
+      "n_noflag": 837,
+      "dates_flag": 21,
+      "dates_noflag": 437,
+      "mean_flag_bp": -145.1,
+      "mean_noflag_bp": -44.1,
+      "diff_bp": -101.1,
+      "t": -0.94,
+      "t_flag": -1.37,
+      "t_noflag": -2.49,
+      "perm_p": 0.1891
+    },
+    "car10": {
+      "n_flag": 27,
+      "n_noflag": 837,
+      "dates_flag": 21,
+      "dates_noflag": 437,
+      "mean_flag_bp": -53.6,
+      "mean_noflag_bp": -79.9,
+      "diff_bp": 26.3,
+      "t": 0.21,
+      "t_flag": -0.43,
+      "t_noflag": -3.31,
+      "perm_p": 0.8806
+    }
+  }
+}
+```

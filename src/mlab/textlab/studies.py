@@ -87,15 +87,22 @@ def firm_text_daily(symbols: list[str], index_for: dict[str, pd.DatetimeIndex], 
     files = sorted((gdelt.STORE / "firm").glob("????-??-??.parquet"))
     files = [f for f in files if str(pd.Timestamp(since).date()) <= f.stem <= str(pd.Timestamp(until).date())]
 
-    def read(f):
+    def read(f):  # slug and a URL hash per file, so ~15M rows never hold their URLs in memory at once
         d = pd.read_parquet(f, columns=["avail", "symbol", "via", "url", "tone"])
-        return d[d["via"].str.startswith("org:") & d["symbol"].isin(symbols)].drop(columns="via")
+        d = d[d["via"].str.startswith("org:") & d["symbol"].isin(symbols)]
+        text = d["url"].map(ft.slug)
+        keep = text.str.split().str.len() >= min_words
+        return pd.DataFrame({"avail": d["avail"][keep], "symbol": d["symbol"][keep].astype("category"),
+                             "url_hash": pd.util.hash_pandas_object(d["url"][keep], index=False).to_numpy(),
+                             "text": text[keep].astype(object), "tone": d["tone"][keep].astype("float32")})
     with ThreadPoolExecutor(4) as pool:
-        art = pd.concat(list(pool.map(read, files)), ignore_index=True)
-    log(f"  {len(art)} company-name articles from {len(files)} GDELT days ({gdelt.CITATION})")
-    art = art.sort_values("avail", kind="stable").drop_duplicates(["symbol", "url"])
-    art["text"] = art["url"].map(ft.slug)
-    art = art[art["text"].str.split().str.len() >= min_words]
+        parts = list(pool.map(read, files))
+    art = pd.concat(parts, ignore_index=True)
+    del parts
+    art["symbol"] = art["symbol"].astype(str)
+    log(f"  {len(art)} company-name articles with a {min_words}+ word slug from {len(files)} GDELT days "
+        f"({gdelt.CITATION})")
+    art = art.sort_values("avail", kind="stable").drop_duplicates(["symbol", "url_hash"])
     out = {}
     for s, a in art.groupby("symbol"):
         if s not in index_for:
