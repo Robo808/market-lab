@@ -5,6 +5,9 @@ description: Test a systematic trading idea properly - pick or add a strategy fr
 
 # Quant research loop
 
+0. **Literature first.** Before building, find the published, tested version of the idea (papers, practitioner
+   write-ups, existing indices such as GPR/EPU) and start from its method and results; say what you reused. Single-
+   company news tone has failed three pre-registered tests here (issue #55): don't re-run it without a new mechanism.
 1. **Library first.** `bash mlab algo list` (21 strategies + vol_target / regime_filter overlays). If the idea is new,
    add a function to `src/mlab/quant/strategies.py`, register it in `REGISTRY`, and add it to the no-look-ahead
    test (`tests/test_quant.py` picks up every single-instrument strategy automatically).

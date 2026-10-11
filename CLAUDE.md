@@ -163,3 +163,5 @@ The to-do list is the issue tree under the Roadmap epic (#16): five epics, one p
   `data/transcripts/` earnings call texts · `data/iv_history/` ·
   `reports/` charts and notes · `journal/trades.jsonl` + `journal/JOURNAL.md` trade journal
 - `docs/` network, skills map, proposed project instructions
+- The shared folder has a 10 GB cap and writes past it fail silently: read back anything you write there before
+  relying on it, and keep bulk data (raw news, minute bars) slim.
