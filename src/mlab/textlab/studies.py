@@ -174,7 +174,38 @@ def run_novelty_drift(path: Path, open_test: bool = False, log=print) -> dict:
     return res
 
 
-STUDIES = {"news_extremes": run_news_extremes, "novelty_drift": run_novelty_drift}
+def _group_mean(e: pd.DataFrame, col: str) -> dict:
+    """Date-averaged mean signed CAR and its t for one group of events."""
+    a = e.dropna(subset=[col]).groupby("date")[col].mean()
+    if len(a) < 5:
+        return {"n": int(len(e)), "note": "too few events"}
+    return {"n": int(e[col].notna().sum()), "dates": len(a), "mean_bp": round(a.mean() * 1e4, 1),
+            "t": round(float(a.mean() / (a.std(ddof=1) / np.sqrt(len(a)))), 2)}
+
+
+def run_stale_reversal(path: Path, open_test: bool = False, log=print) -> dict:
+    """H2's events, unchanged, graded once on a window H2 never saw: the stale-led group's signed CARs."""
+    spec = read_spec(path)
+    if not open_test:
+        raise SystemExit("this hypothesis has only a test window; run it once with --test")
+    syms, win = spec["symbols"], spec["splits"]["test"]
+    frames = datasets.load(spec["dataset"], syms + [spec["market"]], allow_test=True,
+                           note=f"{Path(path).name}: TEST OPENED ({win[0]} to {win[1]})")
+    mkt = frames.pop(spec["market"])
+    abn = {s: ev.abnormal(frames[s], mkt, spec["beta_window"], spec["sigma_window"]) for s in syms if s in frames}
+    nv = spec["novelty"]
+    feats = firm_text_daily(syms, {s: a.index for s, a in abn.items()}, spec["news_from"], win[1], nv["window"],
+                            nv["fresh"], nv["min_words"], log=log)
+    e = pd.concat([attention_events(abn[s], d, spec).assign(symbol=s) for s, d in feats.items()], ignore_index=True)
+    e = _split(e, *win)
+    stale = e[~e["flag"]]
+    return {"stale": {f"car{h}": _group_mean(stale, f"car{h}") for h in spec["horizons"]},
+            "fresh": {f"car{h}": _group_mean(e[e["flag"]], f"car{h}") for h in spec["horizons"]},
+            "events": len(e)}
+
+
+STUDIES = {"news_extremes": run_news_extremes, "novelty_drift": run_novelty_drift,
+           "stale_reversal": run_stale_reversal}
 
 if __name__ == "__main__":
     study = STUDIES[read_spec(Path(sys.argv[1])).get("study", "news_extremes")]
