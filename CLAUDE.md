@@ -94,6 +94,7 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab datasets crosscheck us-stocks-1m --days 5   # stored bars vs Massive live (Massive is never stored)
 ./mlab newsstore gdelt --since 3d ; ./mlab newsstore show AMZN   # GDELT GKG raw files -> point-in-time news store
 ./mlab newsstore events --since 3d      # GDELT CAMEO political events (country pairs, conflict/cooperation)
+./mlab newsstore themes --since 3d      # GDELT theme x country intensity (tariffs, sanctions, elections, war, energy)
 ./mlab algo backtest tsmom UK100 US500 --dataset duka-1d --split train       # offline, fixed split
 ```
 

@@ -229,3 +229,29 @@ def test_gdelt_events_aggregate_and_resume(tmp_path, monkeypatch):
     assert ge.bucket(pd.Timestamp("2026-10-09 20:15", tz="UTC")).hour == 20
     assert sanc["events"] == 4 and sanc["articles"] == 8 and abs(sanc["goldstein"] - (-5.0)) < 1e-9
     assert gdelt.STORE != ge.STORE
+
+
+def test_gdelt_themes_by_country_and_resume(tmp_path, monkeypatch):
+    from mlab.textlab import gdelt_themes as gt
+    monkeypatch.setattr(gt, "STORE", tmp_path / "themes")
+    a = _gkg_row("x", -4.0, themes="SANCTIONS;TAX_FNCACT_LEADER;ECON_TRADE_DISPUTE")
+    a[9] = "4#Moscow#RS#RS48#55#37#1;1#Russia#RS##60#100#2;1#United States#US##38#-97#3"
+    b = _gkg_row("y", 2.0, themes="SANCTIONS")
+    b[9] = "1#United States#US##38#-97#3"
+    blob = _gkg_zip([a, b, _gkg_row("z", 0.0, themes="SPORTS")])
+    calls = []
+
+    class S:
+        def get(self, url, timeout=None):
+            calls.append(url)
+            code = 404 if "2015" in url else 200
+            return type("R", (), {"status_code": code, "content": blob, "raise_for_status": lambda self: None})()
+    monkeypatch.setattr("mlab.net.session", lambda *x, **k: S())
+    r = gt.ingest("2026-10-09 19:45", "2026-10-09 20:00", workers=1, log=lambda *x: None)
+    assert r == {"ok": 2, "missing": 0, "failed": 0, "articles": 6} and len(calls) == 2
+    assert gt.ingest("2026-10-09 19:45", "2026-10-09 20:00", log=lambda *x: None)["ok"] == 0 and len(calls) == 2
+    d = gt.load()
+    early = d[d["avail"] == pd.Timestamp("2026-10-09", tz="UTC")].set_index(["theme", "country"])
+    assert early.loc[("SANCTIONS", "_ALL"), "n"] == 2 and early.loc[("SANCTIONS", "RS"), "n"] == 1
+    assert early.loc[("SANCTIONS", "US"), "tone"] == 2.0 and ("TAX_FNCACT_LEADER", "_ALL") not in early.index
+    assert set(d["avail"].dt.hour) == {0, 20}  # the 20:00 file lands in the late bucket
