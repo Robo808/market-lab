@@ -221,5 +221,6 @@ def run(path: Path, open_test: bool = False, legs: list[str] | None = None, log=
 
 if __name__ == "__main__":
     legs = [a.split("=", 1)[1] for a in sys.argv if a.startswith("--legs=")]
-    print(json.dumps(run(Path(sys.argv[1]), "--test" in sys.argv, legs[0].split(",") if legs else None),
+    print(json.dumps(run(Path(sys.argv[1]), "--test" in sys.argv, legs[0].split(",") if legs else None,
+                         log=lambda m: print(m, file=sys.stderr)),
                      indent=2, default=str))

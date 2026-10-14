@@ -1,6 +1,6 @@
 # H-20261014-hawkes-branching-vol: A Bayesian Hawkes branching ratio on extreme moves forecasts next-period realised volatility beyond a HAR baseline
 
-Status: PRE-REGISTERED | Verdict: PENDING
+Status: GRADED | Verdict: FAIL
 Branch: `claude/project-thread-zsn18q` | Registered: 2026-10-14 | Spec-SHA256: 8fbe72006f23c18b76e629b8151028717548fc405a6c38b052f1fa25c5de655c
 
 ## Claim
@@ -108,4 +108,158 @@ leg passed.
 ```
 
 ## Results
-_Filled after `python -m mlab.quant.hawkes research/hypotheses/H-20261014-hawkes-branching-vol.md`._
+Run 2026-10-14 with `python -m mlab.quant.hawkes research/hypotheses/H-20261014-hawkes-branching-vol.md` on
+crypto-1h@v20261010 (Binance, 2017-08-17..2023-06-30) and duka-1d@v20261010 (Dukascopy, 2003-01-02..2019-12-31).
+
+**Crypto leg (BTCUSDT, ETHUSDT): FAIL**
+
+| Bar | Required | Got | |
+|---|---|---|---|
+| train t(n_z) | >= 2.5 | 0.590 | miss |
+| validation coef(n_z) | > 0 | 0.011 | pass |
+| validation OOS MSE gain | >= 0.01 | 0.002 | miss |
+
+**Index leg (US500, USTEC, UK100): FAIL**
+
+| Bar | Required | Got | |
+|---|---|---|---|
+| train t(n_z) | >= 2.5 | -1.442 | miss |
+| validation coef(n_z) | > 0 | -0.106 | miss |
+| validation OOS MSE gain | >= 0.01 | -0.020 | miss |
+
+Verdict **FAIL** on both legs. Neither test split is opened: a failed hypothesis has nothing to confirm, and keeping
+them locked preserves them for the next one.
+
+Detail (descriptive only, not a new claim). On indices the sign is the opposite of the claim: in validation the
+high-n tercile had lower forward vol and shallower drawdowns.
+
+```json
+{
+  "crypto": {
+    "rows": {
+      "train": 368,
+      "validation": 206
+    },
+    "n_train_mean": 0.5110896249510379,
+    "n_train_sd": 0.17385416219101218,
+    "mean_events_per_window": 45.22554347826087,
+    "mean_accept": 0.5197663043478261,
+    "train": {
+      "coef_n_z": 0.016692178015119057,
+      "t_n_z": 0.5903384674141435,
+      "r2": 0.42158545483827337,
+      "nobs": 368,
+      "by_n_tercile": {
+        "low": {
+          "n": 0.298,
+          "fwd_rv_mean": 0.09391,
+          "fwd_dd_mean": -0.07999,
+          "fwd_dd_p10": -0.17671
+        },
+        "mid": {
+          "n": 0.552,
+          "fwd_rv_mean": 0.13205,
+          "fwd_dd_mean": -0.11053,
+          "fwd_dd_p10": -0.28607
+        },
+        "high": {
+          "n": 0.684,
+          "fwd_rv_mean": 0.12563,
+          "fwd_dd_mean": -0.08186,
+          "fwd_dd_p10": -0.20294
+        }
+      }
+    },
+    "validation": {
+      "coef_n_z": 0.011105005628718318,
+      "t_n_z": 0.36621733846777516,
+      "r2": 0.43573491156905375,
+      "nobs": 206,
+      "by_n_tercile": {
+        "low": {
+          "n": 0.249,
+          "fwd_rv_mean": 0.08236,
+          "fwd_dd_mean": -0.07102,
+          "fwd_dd_p10": -0.15661
+        },
+        "mid": {
+          "n": 0.482,
+          "fwd_rv_mean": 0.08624,
+          "fwd_dd_mean": -0.0734,
+          "fwd_dd_p10": -0.1736
+        },
+        "high": {
+          "n": 0.658,
+          "fwd_rv_mean": 0.09866,
+          "fwd_dd_mean": -0.07273,
+          "fwd_dd_p10": -0.15376
+        }
+      },
+      "oos_mse_gain": 0.0017347014195364663
+    }
+  },
+  "indices": {
+    "rows": {
+      "train": 304,
+      "validation": 205
+    },
+    "n_train_mean": 0.3886329618898741,
+    "n_train_sd": 0.12048336590781542,
+    "mean_events_per_window": 65.20723684210526,
+    "mean_accept": 0.36239473684210527,
+    "train": {
+      "coef_n_z": -0.043201301253362176,
+      "t_n_z": -1.4422611666143752,
+      "r2": 0.5340955225155997,
+      "nobs": 304,
+      "by_n_tercile": {
+        "low": {
+          "n": 0.25,
+          "fwd_rv_mean": 0.0546,
+          "fwd_dd_mean": -0.03767,
+          "fwd_dd_p10": -0.09122
+        },
+        "mid": {
+          "n": 0.412,
+          "fwd_rv_mean": 0.04901,
+          "fwd_dd_mean": -0.03213,
+          "fwd_dd_p10": -0.07772
+        },
+        "high": {
+          "n": 0.506,
+          "fwd_rv_mean": 0.05185,
+          "fwd_dd_mean": -0.03115,
+          "fwd_dd_p10": -0.07505
+        }
+      }
+    },
+    "validation": {
+      "coef_n_z": -0.10611866562092545,
+      "t_n_z": -1.8604996819015571,
+      "r2": 0.2755057908143608,
+      "nobs": 205,
+      "by_n_tercile": {
+        "low": {
+          "n": 0.238,
+          "fwd_rv_mean": 0.04264,
+          "fwd_dd_mean": -0.03527,
+          "fwd_dd_p10": -0.07965
+        },
+        "mid": {
+          "n": 0.35,
+          "fwd_rv_mean": 0.03447,
+          "fwd_dd_mean": -0.02187,
+          "fwd_dd_p10": -0.05024
+        },
+        "high": {
+          "n": 0.431,
+          "fwd_rv_mean": 0.03241,
+          "fwd_dd_mean": -0.01749,
+          "fwd_dd_p10": -0.03759
+        }
+      },
+      "oos_mse_gain": -0.0202865214331438
+    }
+  }
+}
+```
