@@ -27,7 +27,7 @@ def render(g: EconGraph) -> str:
          "Nodes: " + ", ".join(f"{k} {v}" for k, v in s["nodes"].items()) + ". Edges: "
          + ", ".join(f"{k} {v}" for k, v in s["edges"].items()) + ".", "",
          "Kinds: `ind` industry, `sig` indicator, `kpi` unit-economics KPI, `src` source, `mkt` tradable proxy, "
-         "`cls` classification code. See [[Econ Graph]] for how to traverse it.", ""]
+         + "`cls` classification code. See [[Econ Graph]] for how to traverse it.", ""]
 
     L += ["## Industry tree", ""]
     kids = defaultdict(list)
@@ -59,7 +59,7 @@ def render(g: EconGraph) -> str:
                   n.data.get("applies_to")] for n in sorted(g.of_kind("kpi"), key=lambda x: x.key)])
 
     L += ["## Sources", "", "`storage`: may the data be frozen into our offline store. `no`, `conditional` and "
-          "`unverified` mean fetch live and keep in memory until the terms are cleared.", ""]
+          + "`unverified` mean fetch live and keep in memory until the terms are cleared.", ""]
     L += _table(["id", "name", "region", "access", "cost", "commercial", "storage", "verified", "licence"],
                 [[f"`{n.key}`", n.name, n.data.get("region"), n.data.get("access"), n.data.get("cost"),
                   n.data.get("commercial_use"), n.data.get("storage_allowed"), n.data.get("verified"),
@@ -73,7 +73,7 @@ def render(g: EconGraph) -> str:
                   n.data.get("discloses")] for n in sorted(g.of_kind("mkt"), key=lambda x: x.key)])
 
     L += ["## Economic links (explicit edges)", "", "`prior` = desk prior, untested; a candidate for the lead-lag "
-          "discovery, not a fact.", ""]
+          + "discovery, not a fact.", ""]
     L += _table(["from", "type", "to", "sign", "lag (months)", "evidence", "cite / note"],
                 [[e.src, e.type, e.dst, e.attrs.get("sign"), e.attrs.get("lag"), e.attrs.get("evidence"),
                   e.attrs.get("cite") or e.attrs.get("note")]
