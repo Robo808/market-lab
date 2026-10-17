@@ -1,0 +1,122 @@
+# Explicit typed edges. Most of the graph is generated from the other files (child_of from industry
+# parents, measures from indicator.industries, published_by from series, proxies and discloses from
+# instruments, applies_to from KPIs, classified_as from codes, maps_to from crosswalks). This file holds
+# the economic links that need a judgement:
+#
+#   drives    from -> to: a change in `from` causes a change in `to` (sign + or -, lag as a range)
+#   leads     statistical lead only, no causal claim
+#   input_to  supply chain: industry `from` sells inputs or services to industry `to`
+#
+#   evidence  literature (cite given) | prior (desk prior, untested) | tested (passed a pre-registered test;
+#             link the hypothesis file). Every `prior` is a candidate for the lead-lag discovery in #58,
+#             not a fact: the export flags it so the network test treats it as a hypothesis.
+#   lag       months, as "min-max"
+#
+# Endpoints use full node ids: ind:, sig: (indicators), kpi:, src:, mkt:, cls:.
+
+edges:
+  # ---- recession and boom/bust core ----------------------------------------------------------------
+  - {from: sig:us_curve_10y3m, to: sig:us_recession_nber, type: leads, sign: "-", lag: "6-18", evidence: literature, cite: "Estrella and Mishkin (1998); NY Fed yield-curve model"}
+  - {from: sig:us_hy_oas, to: sig:us_recession_nber, type: leads, sign: "+", lag: "3-12", evidence: literature, cite: "Gilchrist and Zakrajsek (2012), credit spreads and business cycles"}
+  - {from: sig:us_sloos_ci, to: sig:us_core_capex_orders, type: drives, sign: "-", lag: "3-9", evidence: literature, cite: "Lown and Morgan (2006), credit standards and output"}
+  - {from: sig:us_sloos_consumer, to: sig:us_revolving_credit, type: drives, sign: "-", lag: "3-9", evidence: prior}
+  - {from: sig:us_initial_claims, to: sig:us_unemployment, type: leads, sign: "+", lag: "1-4", evidence: prior}
+  - {from: sig:us_unemployment, to: sig:us_sahm_rule, type: drives, sign: "+", lag: "0-0", evidence: literature, cite: "Sahm (2019), definition"}
+  - {from: sig:us_sahm_rule, to: sig:us_recession_nber, type: leads, sign: "+", lag: "0-3", evidence: literature, cite: "Sahm (2019)"}
+  - {from: sig:us_building_permits, to: sig:us_recession_nber, type: leads, sign: "-", lag: "6-18", evidence: literature, cite: "Leamer (2007), housing is the business cycle"}
+  - {from: sig:us_nfci, to: sig:us_real_pce, type: drives, sign: "-", lag: "3-9", evidence: prior}
+  - {from: sig:global_credit_gap, to: ind:banks, type: drives, sign: "-", lag: "12-36", evidence: literature, cite: "Borio and Lowe (2002); Drehmann et al. (2011), BIS credit-to-GDP gap"}
+  - {from: sig:us_margin_debt, to: sig:us_hy_oas, type: leads, sign: "-", lag: "3-12", evidence: prior, note: "leverage peaks before spread blowouts; boom/bust stage gauge"}
+  - {from: sig:us_cass_shipments, to: sig:us_recession_nber, type: leads, sign: "-", lag: "0-6", evidence: prior, note: "freight recessions often precede or coincide with broad ones, with false positives (industrial-only slowdowns)"}
+  - {from: sig:us_inventory_sales_ratio, to: sig:us_ism_manufacturing, type: leads, sign: "-", lag: "1-6", evidence: prior, note: "new orders minus inventories logic"}
+
+  # ---- income, saving and spending -----------------------------------------------------------------
+  - {from: sig:us_real_disposable_income, to: sig:us_real_pce, type: drives, sign: "+", lag: "0-3", evidence: literature, cite: "consumption function; permanent income hypothesis (Friedman 1957)"}
+  - {from: sig:us_saving_rate, to: sig:us_pce_durables, type: drives, sign: "-", lag: "0-6", evidence: prior, note: "precautionary saving cuts discretionary durables first"}
+  - {from: sig:uk_saving_ratio, to: sig:uk_household_consumption, type: drives, sign: "-", lag: "0-3", evidence: prior}
+  - {from: sig:us_consumer_sentiment, to: sig:us_pce_durables, type: leads, sign: "+", lag: "1-6", evidence: literature, cite: "Carroll, Fuhrer and Wilcox (1994), sentiment and consumption"}
+  - {from: sig:uk_consumer_confidence, to: sig:uk_retail_sales_volume, type: leads, sign: "+", lag: "1-6", evidence: prior}
+  - {from: sig:us_cpi, to: sig:us_retail_sales_real, type: drives, sign: "-", lag: "0-3", evidence: prior, note: "nominal sales hold up, volumes fall when inflation outruns pay"}
+  - {from: sig:uk_cpi, to: sig:uk_retail_sales_volume, type: drives, sign: "-", lag: "0-3", evidence: prior}
+  - {from: sig:us_avg_hourly_earnings, to: sig:us_real_disposable_income, type: drives, sign: "+", lag: "0-1", evidence: prior}
+  - {from: sig:uk_regular_pay, to: sig:uk_real_household_disposable_income, type: drives, sign: "+", lag: "0-3", evidence: prior}
+  - {from: sig:us_payrolls, to: sig:us_real_disposable_income, type: drives, sign: "+", lag: "0-1", evidence: prior}
+  - {from: sig:us_revolving_credit, to: sig:us_retail_sales_total, type: drives, sign: "+", lag: "0-3", evidence: prior}
+  - {from: sig:us_card_delinquency, to: sig:us_sloos_consumer, type: drives, sign: "+", lag: "0-6", evidence: prior}
+  - {from: sig:us_carts, to: sig:us_retail_sales_total, type: leads, sign: "+", lag: "0-1", evidence: prior, note: nowcast}
+
+  # ---- housing turnover -> renovation -> tiles, bathrooms, gardens, gnomes ----------------------------
+  - {from: sig:us_mortgage_rate, to: sig:us_existing_home_sales, type: drives, sign: "-", lag: "1-6", evidence: prior}
+  - {from: sig:us_mortgage_rate, to: sig:us_building_permits, type: drives, sign: "-", lag: "1-6", evidence: prior}
+  - {from: sig:us_existing_home_sales, to: sig:us_lira, type: drives, sign: "+", lag: "3-12", evidence: literature, cite: "JCHS LIRA methodology: home sales and permits are model inputs (jchs.harvard.edu)"}
+  - {from: sig:us_lira, to: sig:us_retail_sales_building_garden, type: leads, sign: "+", lag: "3-12", evidence: prior}
+  - {from: sig:us_house_prices, to: ind:home_rmi, type: drives, sign: "+", lag: "3-12", evidence: prior, note: "equity-financed renovation"}
+  - {from: sig:uk_mortgage_approvals, to: sig:uk_property_transactions, type: leads, sign: "+", lag: "1-3", evidence: prior, note: "approvals complete roughly a quarter later"}
+  - {from: sig:uk_property_transactions, to: ind:home_rmi, type: drives, sign: "+", lag: "3-12", evidence: prior, note: "movers renovate kitchens, bathrooms, floors and gardens in the first year"}
+  - {from: sig:uk_property_transactions, to: ind:retail_garden_centres, type: drives, sign: "+", lag: "1-9", evidence: prior}
+  - {from: sig:uk_rics_survey, to: sig:uk_mortgage_approvals, type: leads, sign: "+", lag: "1-3", evidence: prior}
+  - {from: sig:uk_house_prices_hmlr, to: ind:home_rmi, type: drives, sign: "+", lag: "3-12", evidence: prior}
+  - {from: sig:uk_bmbi, to: sig:uk_construction_output, type: leads, sign: "+", lag: "0-3", evidence: prior}
+  - {from: sig:uk_imports_ceramic_tiles, to: kpi:like_for_like_sales, type: leads, sign: "+", lag: "1-4", evidence: prior, note: "importers restock ahead of expected demand; read for tile retail"}
+  - {from: sig:uk_imports_sanitaryware, to: ind:retail_bathroom_online, type: leads, sign: "+", lag: "1-4", evidence: prior}
+  - {from: sig:uk_imports_garden_ornaments, to: ind:retail_garden_centres, type: leads, sign: "+", lag: "1-4", evidence: prior, note: "the gnome index: spring ranges are imported in winter"}
+  - {from: sig:us_imports_garden_ornaments, to: sig:us_retail_sales_lawn_garden, type: leads, sign: "+", lag: "1-4", evidence: prior}
+  - {from: sig:search_interest, to: ind:home_rmi, type: leads, sign: "+", lag: "0-3", evidence: prior, note: "intent data (renovation, tiles, bathroom) precedes orders"}
+  - {from: sig:uk_card_spending_category, to: sig:uk_retail_sales_hardware, type: leads, sign: "+", lag: "0-1", evidence: prior}
+
+  # ---- goods moving = goods being bought -------------------------------------------------------------
+  - {from: sig:us_retail_sales_building_garden, to: sig:us_ltl_tons_per_day, type: drives, sign: "+", lag: "0-2", evidence: prior, note: "home improvement replenishment rides LTL"}
+  - {from: sig:us_ltl_tons_per_day, to: sig:us_cass_shipments, type: leads, sign: "+", lag: "0-1", evidence: prior, note: "carrier monthly updates publish before the index"}
+  - {from: sig:uk_road_freight, to: sig:uk_retail_sales_volume, type: leads, sign: "+", lag: "0-3", evidence: prior}
+  - {from: sig:uk_pallet_network_volumes, to: sig:uk_bmbi, type: leads, sign: "+", lag: "0-3", evidence: prior, note: "SME and merchant replenishment travels by pallet network"}
+  - {from: sig:us_port_teus, to: sig:us_retail_inventory_ratio, type: leads, sign: "+", lag: "1-3", evidence: prior}
+  - {from: sig:container_rates, to: ind:retail, type: drives, sign: "-", lag: "3-9", evidence: prior, note: "landed cost hits gross margin of import-heavy retail (furniture, garden, tiles)"}
+  - {from: sig:container_rates, to: sig:us_cpi, type: drives, sign: "+", lag: "6-12", evidence: prior}
+  - {from: sig:us_diesel_price, to: kpi:operating_ratio, type: drives, sign: "+", lag: "0-3", evidence: prior, note: "partly passed through by fuel surcharges"}
+  - {from: sig:global_trade_volume, to: sig:baltic_dry, type: drives, sign: "+", lag: "0-3", evidence: prior}
+  - {from: sig:us_core_capex_orders, to: sig:us_industrial_production, type: leads, sign: "+", lag: "1-6", evidence: prior}
+  - {from: sig:us_ism_manufacturing, to: sig:us_industrial_production, type: leads, sign: "+", lag: "1-6", evidence: prior}
+
+  # ---- energy, travel, tech --------------------------------------------------------------------------
+  - {from: sig:oil_brent, to: ind:airlines, type: drives, sign: "-", lag: "0-6", evidence: prior, note: "fuel is the biggest variable cost; hedges delay it"}
+  - {from: sig:oil_brent, to: sig:us_rig_count, type: drives, sign: "+", lag: "3-6", evidence: prior}
+  - {from: sig:oil_brent, to: sig:us_cpi, type: drives, sign: "+", lag: "0-2", evidence: prior}
+  - {from: sig:us_crude_inventories, to: sig:oil_brent, type: drives, sign: "-", lag: "0-1", evidence: prior}
+  - {from: sig:us_tsa_throughput, to: kpi:load_factor, type: leads, sign: "+", lag: "0-1", evidence: prior}
+  - {from: sig:semis_billings, to: kpi:book_to_bill, type: leads, sign: "+", lag: "0-3", evidence: prior}
+  - {from: sig:us_curve_10y2y, to: kpi:net_interest_margin, type: drives, sign: "+", lag: "3-12", evidence: prior}
+
+  # ---- supply chains (input_to) ----------------------------------------------------------------------
+  - {from: ind:ceramic_tiles_mfg, to: ind:retail_tiles_flooring, type: input_to}
+  - {from: ind:ceramic_tiles_mfg, to: ind:builders_merchants, type: input_to}
+  - {from: ind:retail_tiles_flooring, to: ind:tiling_flooring_contractors, type: input_to}
+  - {from: ind:sanitaryware_mfg, to: ind:builders_merchants, type: input_to}
+  - {from: ind:sanitaryware_mfg, to: ind:retail_bathroom_online, type: input_to}
+  - {from: ind:builders_merchants, to: ind:plumbing_contractors, type: input_to}
+  - {from: ind:builders_merchants, to: ind:homebuilding, type: input_to}
+  - {from: ind:building_products, to: ind:builders_merchants, type: input_to}
+  - {from: ind:plastics_products, to: ind:garden_ornaments, type: input_to}
+  - {from: ind:chemicals, to: ind:plastics_products, type: input_to}
+  - {from: ind:garden_ornaments, to: ind:retail_garden_centres, type: input_to}
+  - {from: ind:garden_ornaments, to: ind:retail_home_improvement, type: input_to}
+  - {from: ind:nursery_horticulture, to: ind:retail_garden_centres, type: input_to}
+  - {from: ind:garden_equipment_mfg, to: ind:retail_garden_centres, type: input_to}
+  - {from: ind:furniture_mfg, to: ind:retail_furnishings, type: input_to}
+  - {from: ind:ocean_shipping, to: ind:warehousing, type: input_to}
+  - {from: ind:warehousing, to: ind:road_freight, type: input_to}
+  - {from: ind:pallet_networks, to: ind:builders_merchants, type: input_to}
+  - {from: ind:pallet_networks, to: ind:retail_home_improvement, type: input_to}
+  - {from: ind:pallet_networks, to: ind:retail_bathroom_online, type: input_to}
+  - {from: ind:ltl_freight, to: ind:retail_home_improvement, type: input_to}
+  - {from: ind:parcel_courier, to: ind:retail_ecommerce, type: input_to}
+  - {from: ind:road_freight, to: ind:retail, type: input_to}
+  - {from: ind:oil_gas_extraction, to: ind:road_freight, type: input_to}
+  - {from: ind:oil_gas_extraction, to: ind:airlines, type: input_to}
+  - {from: ind:oil_gas_extraction, to: ind:chemicals, type: input_to}
+  - {from: ind:metals_mining, to: ind:building_products, type: input_to}
+  - {from: ind:semiconductors, to: ind:autos, type: input_to}
+  - {from: ind:semiconductors, to: ind:software_saas, type: input_to}
+  - {from: ind:banks, to: ind:housing_market, type: input_to, note: mortgage credit}
+  - {from: ind:consumer_credit_lenders, to: ind:retail, type: input_to, note: "point-of-sale finance (furniture, bathrooms, kitchens)"}
+  - {from: ind:housing_market, to: ind:home_rmi, type: drives, sign: "+", lag: "3-12", evidence: prior, note: "movers create renovation demand"}
+  - {from: ind:home_rmi, to: ind:builders_merchants, type: drives, sign: "+", lag: "0-3", evidence: prior, note: "trade demand pulls merchant sales"}

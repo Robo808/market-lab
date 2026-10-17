@@ -1,0 +1,1384 @@
+# Source registry: who publishes each number, how to get it, what it costs and what the licence lets us do.
+# Checked against each publisher's own terms and API docs on the date in `verified_on` (licence_url is the
+# page read). `verified: false` means the official page could not be fetched or says nothing, so the
+# fields come from official-domain search excerpts or are marked "unverified": read the terms before
+# building on that source.
+#
+#   access           free | free_key | freemium | paid | members
+#   commercial_use   yes | no | conditional | unverified
+#   storage_allowed  yes | no | conditional | unverified   (no/conditional: never freeze into the offline store
+#                    without the extra permission; fetch live, keep in memory)
+#
+# Node ids: src:<key>.
+
+aar:
+  access: freemium
+  api_docs: null
+  commercial_use: unverified
+  cost: Weekly headline press releases/PDF free; detailed WRT and RTI reports paid one-year subscription for non-members
+    (price not found)
+  homepage: https://www.aar.org/data-center/
+  licence: Copyright AAR; no public licence text found
+  licence_url: https://www.aar.org/wp-content/uploads/2026/09/2026-09-09-railtraffic.pdf
+  name: AAR Weekly Rail Traffic (Weekly Railroad Traffic report; Rail Time Indicators)
+  publisher: Association of American Railroads
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Weekly PDF marked 'Copyright AAR, 2026'; data revisable up to a year. Reuse terms not found.
+  verified: false
+  verified_on: '2026-10-17'
+ata:
+  access: paid
+  api_docs: null
+  commercial_use: unverified
+  cost: Headline in free monthly press release; full Monthly Truck Tonnage Report by purchase/subscription (price
+    not found)
+  homepage: https://www.trucking.org/news-insights/ata-truck-tonnage-index-fell-1-july
+  licence: unverified
+  licence_url: https://www.trucking.org/news-insights/ata-truck-tonnage-index-fell-1-july
+  name: ATA Truck Tonnage Index
+  publisher: American Trucking Associations
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Subscribers get full report first Friday of month; licence terms not found.
+  verified: false
+  verified_on: '2026-10-17'
+atlanta_fed:
+  access: free
+  api_docs: null
+  commercial_use: 'no'
+  cost: null
+  homepage: https://www.atlantafed.org/research-and-data/data/gdpnow
+  licence: 'Atlanta Fed Terms of Use: reproduction allowed with attribution, not for commercial gain; no derivative
+    works unless expressly allowed'
+  licence_url: https://www.atlantafed.org/terms-of-use
+  name: GDPNow
+  publisher: Federal Reserve Bank of Atlanta
+  rate_limit: null
+  region: US
+  storage_allowed: conditional
+  storage_note: Storage not addressed; reproduction only non-commercial with attribution. Search snippet says GDPNow
+    page notice permits reproduction for personal and educational use only (page itself not readable via fetch).
+    Model data + historical forecasts offered as Excel.
+  verified: true
+  verified_on: '2026-10-17'
+baker_hughes:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://rigcount.bakerhughes.com/
+  licence: Permission to use granted subject to site Terms and Conditions (FAQ, via search snippet)
+  licence_url: https://rigcount.bakerhughes.com/rig-count-faqs
+  name: Baker Hughes Rig Count (North America weekly, International monthly)
+  publisher: Baker Hughes
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Site returns 403 to fetch; Excel/PDF downloads exist; T&C conditions not read.
+  verified: false
+  verified_on: '2026-10-17'
+baltic_exchange:
+  access: paid
+  api_docs: null
+  commercial_use: conditional
+  cost: Subscription bands (Headline / Full / Settlement licence); fees not published, via feed or API
+  homepage: https://www.balticexchange.com/
+  licence: Baltic Exchange Data Licence (data policy)
+  licence_url: https://balticexchange.com/en/site-services/data-policy.html
+  name: Baltic Dry Index (Baltic Exchange data)
+  publisher: Baltic Exchange
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: conditional
+  storage_note: All Baltic data copyright; non-display (automated) use and settlement use are licensed categories.
+    Policy page blocked (challenge), read via search excerpt only.
+  verified: false
+  verified_on: '2026-10-17'
+barclays_spending:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: Monthly press releases free (headline + category growth y/y); no data download found
+  homepage: https://home.barclays/news/press-releases/
+  licence: Proprietary (press material)
+  licence_url: https://www.barclayscorporate.com/insights/industry-expertise/uk-consumer-spending-report/
+  name: Barclays Consumer Spend Report
+  publisher: Barclays
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Latest seen Sep 2026 release (13 Oct 2026, +2.0% y/y); barclays.co.uk page 403; terms not found.
+  verified: false
+  verified_on: '2026-10-17'
+bea:
+  access: free_key
+  api_docs: https://apps.bea.gov/api/_pdf/bea_web_service_api_user_guide.pdf
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.bea.gov/
+  licence: US public domain (unless stated otherwise); citation appreciated; API registration requires agreeing
+    to BEA API ToS
+  licence_url: https://www.bea.gov/help/faq/147
+  name: BEA Data API (NIPA, NIUnderlyingDetail/PCE by product, Input-Output)
+  publisher: US Bureau of Economic Analysis
+  rate_limit: 100 requests/min, 100 MB/min, 30 errors/min; breach -> HTTP 429 + Retry-After, ~1 min timeout (API
+    user guide dated 2026-04-20, via search snippet)
+  region: US
+  storage_allowed: 'yes'
+  storage_note: Public domain unless stated otherwise; third-party copyrighted material excluded. API ToS PDF (https://apps.bea.gov/API/_pdf/bea_api_tos.pdf)
+    not read. Specific dataset names (NIUnderlyingDetail, InputOutput) not confirmed on fetched pages.
+  verified: true
+  verified_on: '2026-10-17'
+bis:
+  access: free
+  api_docs: unverified
+  commercial_use: conditional
+  cost: null
+  homepage: https://data.bis.org/
+  licence: Terms of permitted use of BIS statistics
+  licence_url: https://www.bis.org/terms_statistics.htm
+  name: BIS Data Portal (statistics, SDMX API)
+  publisher: Bank for International Settlements
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Use unrestricted if BIS cited; inclusion in commercial products must not add a charge for users;
+    API has separate developer terms (not read). Terms page 403 to fetcher, read via official-domain search excerpt.
+  verified: false
+  verified_on: '2026-10-17'
+bls:
+  access: free_key
+  api_docs: https://www.bls.gov/developers/
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.bls.gov/
+  licence: US public domain (except previously copyrighted photos/illustrations); citation requested; API Terms
+    of Service
+  licence_url: https://www.bls.gov/opub/copyright-information.htm
+  name: BLS Public Data API v2
+  publisher: US Bureau of Labor Statistics
+  rate_limit: 'v2 (registered key): 500 queries/day, 50 series/query, 20 years/query; v1 (no key): 25/day, 25 series,
+    10 years (FAQ https://www.bls.gov/developers/api_faqs.htm)'
+  region: US
+  storage_allowed: 'yes'
+  storage_note: 'Public domain; page does not mention commercial use explicitly but says no permission needed. API
+    ToS: https://www.bls.gov/developers/termsOfService.htm (not read). BLS emblem is trademarked.'
+  verified: true
+  verified_on: '2026-10-17'
+bmbi:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: Full report and executive summary PDFs + monthly email subscription; whether free not stated (unverified)
+  homepage: https://www.bmbi.co.uk/
+  licence: Proprietary (T&Cs not retrieved)
+  licence_url: https://www.bmbi.co.uk/
+  name: Builders Merchant Building Index (BMBI)
+  publisher: Builders Merchants Federation (data from NIQ GfK Builders Merchants Panel)
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: PDF reports only; product-category detail not confirmed on homepage; granular panel data is NIQ
+    GfK commercial product (unverified).
+  verified: false
+  verified_on: '2026-10-17'
+boe:
+  access: free
+  api_docs: null
+  commercial_use: conditional
+  cost: null
+  homepage: https://www.bankofengland.co.uk/boeapps/database/
+  licence: Open Government Licence v3.0 (with exceptions)
+  licence_url: https://www.bankofengland.co.uk/legal
+  name: Bank of England Interactive Statistical Database (Money and Credit etc.)
+  publisher: Bank of England
+  rate_limit: null
+  region: UK
+  storage_allowed: conditional
+  storage_note: Database reuse under OGL v3; excluded are selected FX series (third-party), LSEG data, Crown Dependency
+    MFI data; SONIA needs set attribution.
+  verified: true
+  verified_on: '2026-10-17'
+brc:
+  access: members
+  api_docs: null
+  commercial_use: unverified
+  cost: Full monitor and weekly 20-category benchmark are BRC membership benefits; headline growth via press releases
+  homepage: https://brc.org.uk/market-intelligence/publications/monitors/retail-sales-monitor/
+  licence: Proprietary
+  licence_url: https://brc.org.uk/insight/benchmarks
+  name: BRC-KPMG Retail Sales Monitor
+  publisher: British Retail Consortium with KPMG
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Facts from search snippets of BRC pages (direct fetch 404); series since 1995.
+  verified: false
+  verified_on: '2026-10-17'
+bts:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.bts.gov/
+  licence: US government work (public domain presumed)
+  licence_url: null
+  name: Transportation Services Index and freight indicators
+  publisher: US Bureau of Transportation Statistics
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Truck tonnage component originates with ATA
+  verified: false
+  verified_on: '2026-10-17'
+caa:
+  access: free
+  api_docs: null
+  commercial_use: conditional
+  cost: Monthly CSV/PDF tables (passengers, freight tonnes tables 13-15, mail) 2015-2026; annual; pre-2015 scans
+  homepage: https://www.caa.co.uk/data-and-analysis/uk-aviation-market/airports/uk-airport-data/
+  licence: CAA own terms (no open licence stated)
+  licence_url: https://www.caa.co.uk/data-and-analysis/uk-aviation-market/airports/uk-airport-data/uk-airport-data-2026/august-2026/
+  name: UK Civil Aviation Authority airport data
+  publisher: Civil Aviation Authority
+  rate_limit: null
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: Quote - No statistical data provided by CAA may be sold on to a third party; must reference CAA;
+    no warranty.
+  verified: true
+  verified_on: '2026-10-17'
+cass:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: Monthly report pages free to read; no data files offered
+  homepage: https://www.cassinfo.com/freight-audit-payment/cass-transportation-indexes/freight-index-archives
+  licence: (c) Cass Information Systems; Cass Freight Index is a registered trademark; site Terms of Use not read
+  licence_url: https://www.cassinfo.com/freight-audit-payment/cass-transportation-indexes/freight-index-archives
+  name: Cass Freight Index (shipments, expenditures, inferred rates)
+  publisher: Cass Information Systems
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Terms of Use / Copyrights pages linked in footer but not fetched.
+  verified: false
+  verified_on: '2026-10-17'
+census:
+  access: free_key
+  api_docs: https://www.census.gov/data/developers/guidance/api-user-guide.html
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.census.gov/data/developers.html
+  licence: Census Data API Terms of Service (non-endorsement notice required; no re-identification)
+  licence_url: https://www.census.gov/data/developers/about/terms-of-service.html
+  name: Census Data API (economic indicators time series incl. MARTS/MRTS, M3/advm3, construction spending VIP;
+    International Trade API by HS)
+  publisher: US Census Bureau
+  rate_limit: API key must be used with all data queries; max 50 variables per query; no numeric call limits published,
+    Census may throttle/block (https://www.census.gov/data/developers/guidance/api-user-guide.Query_Limits.html)
+  region: US
+  storage_allowed: unverified
+  storage_note: 'ToS doesn''t address commercial use or storage directly; requires notice ''This product uses the
+    Census Bureau Data API but is not endorsed or certified by the Census Bureau'', bars identifying persons/businesses
+    and modifying content while attributing to Census. Trade endpoints: timeseries/intltrade/exports/hs and imports/hs,
+    monthly, Jan 2010-present (HS digit levels not confirmed).'
+  verified: true
+  verified_on: '2026-10-17'
+census_naics:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.census.gov/naics/
+  licence: US federal government work (public domain) - unverified
+  licence_url: https://www.census.gov/naics/concordances/concordances.html
+  name: US Census NAICS 2022 manual and concordances
+  publisher: US Census Bureau
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: census.gov returned 403; search excerpt shows NAICS-ISIC Rev.4 concordances for 2017/2012/2007 only,
+    no 2022 file confirmed.
+  verified: false
+  verified_on: '2026-10-17'
+chicago_fed:
+  access: free
+  api_docs: null
+  commercial_use: conditional
+  cost: null
+  homepage: https://www.chicagofed.org/research/data/index
+  licence: 'Chicago Fed Legal Notices: Bank-owned materials reproducible if not for private/commercial gain and
+    credited; republication/distribution needs written permission'
+  licence_url: https://www.chicagofed.org/utilities/legal-notices
+  name: CFNAI, NFCI, CARTS
+  publisher: Federal Reserve Bank of Chicago
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Commercial use, redistribution, derivative works need written permission. CARTS built from third-party
+    data (Haver, Consumer Edge, Bloomberg Second Measure, Numerator, Facteus, SafeGraph, Advan, Morning Consult)
+    - vendor terms may also apply (https://www.chicagofed.org/research/data/carts/about).
+  verified: true
+  verified_on: '2026-10-17'
+companies_house:
+  access: free_key
+  api_docs: https://developer-specs.company-information.service.gov.uk/
+  commercial_use: 'yes'
+  cost: Free of charge (per api.gov.uk catalogue)
+  homepage: https://developer.company-information.service.gov.uk/
+  licence: Open Government Licence v3.0 (per API catalogue)
+  licence_url: https://www.api.gov.uk/ch/companies-house/
+  name: Companies House Public Data API
+  publisher: Companies House
+  rate_limit: 600 requests per 5 minutes per application (429 beyond); higher on request
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: OGL v3 per api.gov.uk; data.gov.uk lists Basic Company Data snapshot as CC-BY, so check per product.
+    Register contains personal data (officers) -> UK GDPR applies to reuse.
+  verified: true
+  verified_on: '2026-10-17'
+conference_board:
+  access: paid
+  api_docs: null
+  commercial_use: unverified
+  cost: US Business Cycle Indicators internet subscription USD 1,185/yr per Dec-2024 tech notes (USD 1,140 Jun-2024);
+    corporate site licences by quote; Data Central requires subscription
+  homepage: https://www.conference-board.org/topics/us-leading-indicators/
+  licence: Proprietary; not for redistribution or public posting without permission (stated in 2006 release; current
+    licence text not found)
+  licence_url: https://www.conference-board.org/pdf_free/press/US%20LEI%20Tech%20Notes%20Dec.%202024.pdf
+  name: Leading Economic Index (LEI) / Business Cycle Indicators
+  publisher: The Conference Board
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Current licence terms not found; headline values in free press releases only. Price is from 2024
+    docs - may have changed.
+  verified: false
+  verified_on: '2026-10-17'
+consumer_edge:
+  access: paid
+  api_docs: null
+  commercial_use: unverified
+  cost: Enterprise subscription, quote/demo only, no public prices (per third-party directories)
+  homepage: https://consumeredge.com/
+  licence: bespoke enterprise contract
+  licence_url: unverified
+  name: Consumer Edge (CE Transact card-transaction panel)
+  publisher: Consumer Edge Research
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Official site returned empty content; access model from third-party sources only (datarade etc.).
+  verified: false
+  verified_on: '2026-10-17'
+cpb_wtm:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.cpb.nl/en/worldtrademonitor
+  licence: unverified
+  licence_url: unverified
+  name: CPB World Trade Monitor
+  publisher: CPB Netherlands Bureau for Economic Policy Analysis
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Monthly release with Excel download (per past CPB release pages); current page and reuse terms could
+    not be fetched (404).
+  verified: false
+  verified_on: '2026-10-17'
+dat:
+  access: paid
+  api_docs: https://one.support.dat.com/9-troubleshooting-2734b01a/service-accounts-and-restful-api-faq-7c689bc5
+  commercial_use: unverified
+  cost: REST API requires RateView Pro/Premium (or Combo) subscription; prices by sales quote
+  homepage: https://www.dat.com/solutions/trucking-rates
+  licence: Commercial subscription; licence text not found
+  licence_url: https://www.dat.com/solutions/trucking-rates
+  name: DAT iQ / RateView freight rates
+  publisher: DAT Freight & Analytics
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Terms not published on fetched pages.
+  verified: false
+  verified_on: '2026-10-17'
+desnz_energy:
+  access: free
+  api_docs: null
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.gov.uk/government/collections/energy-trends
+  licence: Open Government Licence v3.0
+  licence_url: https://www.gov.uk/government/collections/energy-trends
+  name: DESNZ Energy Trends
+  publisher: Department for Energy Security and Net Zero
+  rate_limit: null
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: OGL v3; quarterly edition (latest 29 Sep 2026), monthly tables 2 months in arrears.
+  verified: true
+  verified_on: '2026-10-17'
+dft_road_freight:
+  access: free
+  api_docs: null
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.gov.uk/government/collections/road-freight-domestic-and-international-statistics
+  licence: Open Government Licence v3.0
+  licence_url: https://www.gov.uk/government/collections/road-freight-domestic-and-international-statistics
+  name: DfT Road freight statistics (domestic and international, RFS01 etc.)
+  publisher: Department for Transport
+  rate_limit: null
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: OGL v3; covers British and NI HGVs; rolling 12-month quarterly-ish releases (latest Apr 2025-Mar
+    2026, published 5 Aug 2026) plus annual report.
+  verified: true
+  verified_on: '2026-10-17'
+dol:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://oui.doleta.gov/unemploy/claims.asp
+  licence: US government work (public domain presumed)
+  licence_url: null
+  name: Unemployment Insurance Weekly Claims
+  publisher: US Department of Labor
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Terms not checked; FRED mirrors ICSA/CCSA
+  verified: false
+  verified_on: '2026-10-17'
+drewry_wci:
+  access: freemium
+  api_docs: null
+  commercial_use: unverified
+  cost: Headline weekly WCI free after registration; route detail/history in paid annual subscriptions (e.g. Container
+    Freight Rate Insight, 6,700 port pairs)
+  homepage: https://www.drewry.co.uk/supply-chain-advisors/supply-chain-expertise/world-container-index-assessed-by-drewry
+  licence: 'Drewry Website Terms of Use, All Rights Reserved; cite "Source: Drewry World Container Index"'
+  licence_url: https://www.drewry.co.uk/supply-chain-advisors/supply-chain-expertise/world-container-index-assessed-by-drewry
+  name: Drewry World Container Index
+  publisher: Drewry Supply Chain Advisors
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Website terms not read; weekly (latest edition Thu 15 Oct 2026).
+  verified: true
+  verified_on: '2026-10-17'
+ecb:
+  access: free
+  api_docs: https://data.ecb.europa.eu/help/getting-data-web-services-sdmx
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://data.ecb.europa.eu/
+  licence: 'ESCB policy on reuse of statistics (free, attribution "Source: ECB statistics")'
+  licence_url: https://www.ecb.europa.eu/stats/ecb_statistics/governance_and_quality_framework/html/usage_policy.en.html
+  name: ECB Data Portal API (SDMX 2.1 REST)
+  publisher: European Central Bank
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: 'yes'
+  storage_note: Free reuse irrespective of commercial use; must cite ECB and not alter figures/metadata; third-party
+    data excluded. Portal-specific API terms page not found (404).
+  verified: true
+  verified_on: '2026-10-17'
+eia:
+  access: free_key
+  api_docs: https://www.eia.gov/opendata/documentation.php
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.eia.gov/opendata/
+  licence: 'US public domain (EIA Copyrights and Reuse policy); credit ''Source: U.S. Energy Information Administration
+    (date)''; API ToS'
+  licence_url: https://www.eia.gov/about/copyrights_reuse.php
+  name: EIA Open Data API v2
+  publisher: US Energy Information Administration
+  rate_limit: No numeric limit published; must throttle per second/hour, key auto-suspended then reactivated after
+    cool-down; max 5,000 rows/request JSON (300 XML), paginate with offset/length
+  region: US
+  storage_allowed: 'yes'
+  storage_note: 'Public domain; may use and distribute data. Exceptions: third-party contributed materials, photos,
+    EIA logo. Commercial use not mentioned explicitly but no restriction stated.'
+  verified: true
+  verified_on: '2026-10-17'
+eurostat:
+  access: free
+  api_docs: unverified
+  commercial_use: conditional
+  cost: null
+  homepage: https://ec.europa.eu/eurostat
+  licence: Commission Decision 2011/833/EU reuse policy; editorial content CC BY 4.0
+  licence_url: https://ec.europa.eu/eurostat/help/copyright-notice
+  name: Eurostat API (dissemination API / SDMX)
+  publisher: Eurostat (European Commission)
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: 'yes'
+  storage_note: Commercial or non-commercial reuse with source acknowledgement; non-commercial only for non-Eurostat-source
+    data, co-publications, non-EU/EFTA/candidate country data, some CH/LI and AT 8-digit CN trade data.
+  verified: true
+  verified_on: '2026-10-17'
+finra:
+  access: free
+  api_docs: null
+  commercial_use: 'no'
+  cost: null
+  homepage: https://www.finra.org/rules-guidance/key-topics/margin-accounts/margin-statistics
+  licence: 'FINRA Terms of Use: non-commercial personal/professional use only'
+  licence_url: https://www.finra.org/terms-of-use
+  name: FINRA Margin Statistics
+  publisher: Financial Industry Regulatory Authority
+  rate_limit: null
+  region: US
+  storage_allowed: 'no'
+  storage_note: No copying/storing for later use without written consent, no database building, no scraping, and
+    explicitly no use with AI/ML/predictive analytics. Monthly .xlsx from Jan 1997; no data feeds. Permission request
+    needed for ML use.
+  verified: true
+  verified_on: '2026-10-17'
+frb:
+  access: free
+  api_docs: null
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.federalreserve.gov/datadownload/
+  licence: Public domain unless otherwise indicated; cite the Board
+  licence_url: https://www.federalreserve.gov/disclaimer.htm
+  name: Federal Reserve Board Data Download Program (G.17, G.19, SLOOS)
+  publisher: Board of Governors of the Federal Reserve System
+  rate_limit: null
+  region: US
+  storage_allowed: 'yes'
+  storage_note: Board site info is public domain and may be copied and distributed; exceptions for non-Board copyrighted
+    material, seals/logos; no framing. G.17, G.19, SLOOS all listed on DDP.
+  verified: true
+  verified_on: '2026-10-17'
+fred:
+  access: free_key
+  api_docs: https://fred.stlouisfed.org/docs/api/fred/
+  commercial_use: conditional
+  cost: null
+  homepage: https://fred.stlouisfed.org/
+  licence: 'FRED terms of use; per-series labels: Public Domain (citation requested) / Copyrighted: citation required
+    / Copyrighted: pre-approval required'
+  licence_url: https://fred.stlouisfed.org/legal/
+  name: FRED (Federal Reserve Economic Data) incl. API
+  publisher: Federal Reserve Bank of St. Louis
+  rate_limit: None published; St. Louis Fed may impose bandwidth/transaction limits at its discretion (API ToU https://fred.stlouisfed.org/docs/api/terms_of_use.html).
+    Key required; invalid keys blocked.
+  region: US
+  storage_allowed: conditional
+  storage_note: 'Terms prohibit storing/caching/archiving FRED content and giving copies to third parties, and bar
+    commercial use without written consent; exception: public-domain and citation-required series may be used for
+    internal commercial purposes and client reports with attribution. Pre-approval series need the copyright holder''s
+    permission (FRED can''t grant it). API terms bar apps that replicate FRED''s user experience.'
+  verified: true
+  verified_on: '2026-10-17'
+freddie_mac:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.freddiemac.com/pmms
+  licence: Freddie Mac terms
+  licence_url: null
+  name: Primary Mortgage Market Survey
+  publisher: Freddie Mac
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Terms not checked; FRED mirrors MORTGAGE30US
+  verified: false
+  verified_on: '2026-10-17'
+freightos_fbx:
+  access: freemium
+  api_docs: null
+  commercial_use: unverified
+  cost: Some FBX metrics free; exports and granular data need paid Freightos Terminal account
+  homepage: https://www.freightos.com/enterprise/terminal/freightos-baltic-index-global-container-pricing-index/
+  licence: Freightos T&Cs / Baltic Exchange data licence (not read)
+  licence_url: https://www.freightos.com/enterprise/terminal/freightos-baltic-index-global-container-pricing-index/
+  name: Freightos Baltic Index (FBX)
+  publisher: Freightos (calculation) / Baltic Exchange (benchmark administrator)
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Page states no licence; Baltic Exchange data policy (governs Baltic data) blocked by challenge page.
+  verified: true
+  verified_on: '2026-10-17'
+freightwaves_sonar:
+  access: paid
+  api_docs: https://knowledge.freightwaves.com/resources/sonar-data/
+  commercial_use: unverified
+  cost: Enterprise platform/API custom pricing; self-serve Quick Rates USD 24.99/mo or 249/yr, Market Monitor USD
+    199/mo (per FreightWaves news posts)
+  homepage: https://sonar.freightwaves.com/
+  licence: Commercial subscription; licence text not found
+  licence_url: https://sonar.freightwaves.com/
+  name: FreightWaves SONAR
+  publisher: FreightWaves
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Terms not found.
+  verified: false
+  verified_on: '2026-10-17'
+gfk_confidence:
+  access: freemium
+  api_docs: null
+  commercial_use: unverified
+  cost: Monthly headline + sub-indices free via press release; historical dataset access/pricing not published
+  homepage: https://nielseniq.com/global/en/news-center/2026/headline-score-up-three-points-to-14-in-august/
+  licence: Proprietary
+  licence_url: unverified
+  name: GfK Consumer Confidence Barometer UK
+  publisher: GfK, an NIQ company (with NIM since Oct 2023)
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Monthly since Jan 1974, ~2,000 adults; latest seen Aug 2026 = -14.
+  verified: false
+  verified_on: '2026-10-17'
+google_trends:
+  access: free
+  api_docs: https://developers.google.com/search/apis/trends
+  commercial_use: unverified
+  cost: Free; official API is alpha, access by application only (announced 2025-07-24)
+  homepage: https://trends.google.com/
+  licence: 'Google Terms of Service; cite ''Data source: Google Trends'''
+  licence_url: https://support.google.com/trends/answer/4365538
+  name: Google Trends (web UI; Google Trends API alpha)
+  publisher: Google
+  rate_limit: Not published
+  region: US
+  storage_allowed: unverified
+  storage_note: 'Help page: any Trends info usable subject to Google ToS with attribution; commercial use/storage
+    not addressed; no API-specific ToS found. API: 5-year rolling window, consistently scaled.'
+  verified: true
+  verified_on: '2026-10-17'
+halifax_hpi:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: Monthly PDFs with historical table free; full history via economics@spglobal.com (per PDFs)
+  homepage: https://www.lloydsbank.com/media-centre/house-price-index.html
+  licence: Proprietary
+  licence_url: unverified
+  name: Halifax House Price Index (renamed Lloyds House Price Index from July 2026)
+  publisher: Lloyds Banking Group (compiled with S&P Dow Jones Indices)
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Series from Jan 1983; halifax.co.uk/lloydsbank.com pages returned error pages; facts from search
+    snippets of official PDFs.
+  verified: false
+  verified_on: '2026-10-17'
+harvard_jchs:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.jchs.harvard.edu/research-areas/remodeling/lira
+  licence: JCHS terms
+  licence_url: null
+  name: Leading Indicator of Remodeling Activity (LIRA)
+  publisher: Joint Center for Housing Studies of Harvard University
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Quarterly release; reuse terms not checked
+  verified: false
+  verified_on: '2026-10-17'
+hmlr:
+  access: free
+  api_docs: null
+  commercial_use: conditional
+  cost: null
+  homepage: https://www.gov.uk/government/organisations/land-registry
+  licence: Open Government Licence v3.0 (+ Royal Mail/OS address caveat on PPD)
+  licence_url: https://www.gov.uk/government/statistical-data-sets/price-paid-data-downloads
+  name: HM Land Registry (UK HPI, Price Paid Data)
+  publisher: HM Land Registry
+  rate_limit: null
+  region: UK
+  storage_allowed: conditional
+  storage_note: PPD address fields (AddressBase/PAF) only for personal/non-commercial use or displaying property
+    price info; other uses need Royal Mail. UK HPI OGL v3, CSV/linked data on data.gov.uk. Attribution "Contains
+    HM Land Registry data (c) Crown copyright and database right [year]".
+  verified: true
+  verified_on: '2026-10-17'
+hmrc:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.gov.uk/government/organisations/hm-revenue-customs/about/statistics
+  licence: Open Government Licence v3 (gov.uk default, presumed)
+  licence_url: null
+  name: HMRC statistics (UK property transactions, RTI payrolled employees)
+  publisher: HM Revenue and Customs
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Licence not checked page by page
+  verified: false
+  verified_on: '2026-10-17'
+hmrc_uktradeinfo:
+  access: free
+  api_docs: https://www.uktradeinfo.com/api-documentation/
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.uktradeinfo.com/
+  licence: Open Government Licence v3.0
+  licence_url: https://www.uktradeinfo.com/api-documentation/
+  name: HMRC uktradeinfo (overseas trade by commodity code)
+  publisher: HM Revenue & Customs
+  rate_limit: 60 requests/minute; max 40,000 items per response (paginate via @odata.nextLink or $skip/$top)
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: OGL v3, Crown copyright; OData API at https://api.uktradeinfo.com, no auth header, JSON or CSV.
+  verified: true
+  verified_on: '2026-10-17'
+ilostat:
+  access: free
+  api_docs: unverified
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://ilostat.ilo.org/
+  licence: CC BY 4.0 (ILO databases/datasets published on or after 3 May 2023)
+  licence_url: https://www.ilo.org/node/9321
+  name: ILOSTAT
+  publisher: International Labour Organization
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: 'yes'
+  storage_note: CC BY 4.0 "for any purposes" with ILO credit; restricted constituent microdata excluded; older datasets
+    check individually.
+  verified: true
+  verified_on: '2026-10-17'
+imf:
+  access: free
+  api_docs: https://data.imf.org/en/Resource-Pages/IMF-API
+  commercial_use: conditional
+  cost: null
+  homepage: https://data.imf.org/
+  licence: IMF Copyright and Terms, Special Terms for Statistical Data (no CC licence)
+  licence_url: https://www.imf.org/en/about/copyright-and-terms
+  name: IMF Data portal API (SDMX 2.1 / 3.0)
+  publisher: International Monetary Fund
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: conditional
+  storage_note: Download/reuse with attribution allowed; commercial reuse needs prior permission (copyright@imf.org);
+    bulk automated downloading and systematic copying need explicit permission; no LLM training without permission.
+  verified: true
+  verified_on: '2026-10-17'
+insolvency_service:
+  access: free
+  api_docs: null
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.gov.uk/government/collections/insolvency-service-official-statistics
+  licence: Open Government Licence v3.0
+  licence_url: https://www.gov.uk/government/collections/insolvency-service-official-statistics
+  name: Company insolvency statistics
+  publisher: The Insolvency Service
+  rate_limit: null
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: OGL v3; monthly releases ~2-3 weeks after month end, seasonally adjusted and per-10,000 rates.
+  verified: true
+  verified_on: '2026-10-17'
+ism:
+  access: paid
+  api_docs: null
+  commercial_use: 'no'
+  cost: Historical data by purchase via pmireports@ismworld.org (price not published); report pages behind login
+  homepage: https://www.ismworld.org/supply-management-news-and-reports/reports/ism-report-on-business/
+  licence: ISM proprietary; personal non-commercial viewing licence only
+  licence_url: https://www.ismworld.org/supply-management-news-and-reports/reports/ism-pmi-reports/pmi/august
+  name: ISM Report On Business (Manufacturing & Services PMI)
+  publisher: Institute for Supply Management
+  rate_limit: null
+  region: US
+  storage_allowed: 'no'
+  storage_note: 'May not create, recreate, distribute, incorporate in other work an index or any portion of PMI
+    content without prior written ISM authorization. Not on FRED: all 22 ISM series removed from FRED on 2016-06-24
+    (https://news.research.stlouisfed.org/2016/06/institute-for-supply-management-data-to-be-removed-from-fred/).'
+  verified: true
+  verified_on: '2026-10-17'
+jodi:
+  access: free
+  api_docs: unverified
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.jodidata.org/
+  licence: none stated ("Copyright JODI 2026")
+  licence_url: https://www.jodidata.org/oil/database/data-downloads.aspx
+  name: JODI Oil and Gas World Databases
+  publisher: JODI (IEF-coordinated)
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Full series free to download (.ivt, .csv); free JODI account needed for REST API; monthly updates;
+    no reuse terms on page.
+  verified: true
+  verified_on: '2026-10-17'
+kantar:
+  access: freemium
+  api_docs: null
+  commercial_use: unverified
+  cost: Headline 4-weekly/12-week share via public interactive page and press releases (free view, not stated explicitly);
+    full panel data paid
+  homepage: https://www.kantar.com/uki/campaigns/grocery-market-share
+  licence: Kantar website Terms and Conditions (not read)
+  licence_url: https://www.kantar.com/uki/campaigns/grocery-market-share
+  name: Kantar Worldpanel GB grocery market share
+  publisher: Kantar (Worldpanel)
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Page has interactive timeline of retailer shares; frequency and reuse terms not stated on page.
+  verified: false
+  verified_on: '2026-10-17'
+lme:
+  access: freemium
+  api_docs: null
+  commercial_use: conditional
+  cost: Next-day delayed prices free after LME.com registration; distribution licence ($4,000 one-off for next-day
+    public display; annual fees for real-time/30-min); non-display licence
+  homepage: https://www.lme.com/
+  licence: LME market data licences (usage, non-display, distribution)
+  licence_url: https://www.lme.com/-/media/files/data/market-data-licencing/non-display/lme-non-display-licence-guidance-and-faqs-july-2026.pdf
+  name: London Metal Exchange market data
+  publisher: London Metal Exchange
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: conditional
+  storage_note: Non-display (algorithmic/automated) use needs licence regardless of delay class, with waivers; lme.com
+    403 to fetcher, facts from official-domain search excerpts.
+  verified: false
+  verified_on: '2026-10-17'
+logistics_uk:
+  access: members
+  api_docs: null
+  commercial_use: unverified
+  cost: Quarterly LPT survey of members; full reports under executive-membership paths; headline via blog/press
+  homepage: https://logistics.org.uk/research-hub/surveys/logistics-performance-tracker
+  licence: Proprietary
+  licence_url: unverified
+  name: Logistics UK (Logistics Performance Tracker, Logistics Report)
+  publisher: Logistics UK
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Q2 2026 results published 20 Aug 2026 (outlook 6.5/10); qualitative diffusion-style scores, no raw
+    volumes.
+  verified: false
+  verified_on: '2026-10-17'
+nahb:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: History tables (national, components, regional) downloadable from the page; no price shown
+  homepage: https://www.nahb.org/news-and-economics/housing-economics/indices/housing-market-index
+  licence: (c) NAHB, all rights reserved; no explicit data licence
+  licence_url: https://www.nahb.org/news-and-economics/housing-economics/indices/housing-market-index
+  name: NAHB/Wells Fargo Housing Market Index (HMI)
+  publisher: National Association of Home Builders
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: No usage terms found on the HMI page; only a copyright footer.
+  verified: false
+  verified_on: '2026-10-17'
+nar:
+  access: members
+  api_docs: null
+  commercial_use: 'no'
+  cost: Headline release free; historical/local data gated or by contact (price not published)
+  homepage: https://www.nar.realtor/research-and-statistics/housing-statistics/existing-home-sales
+  licence: NAR proprietary; reference use only
+  licence_url: https://www.nar.realtor/research-and-statistics/housing-statistics/existing-home-sales
+  name: NAR Existing-Home Sales
+  publisher: National Association of REALTORS
+  rate_limit: null
+  region: US
+  storage_allowed: 'no'
+  storage_note: Provided 'solely for use as a reference'; non-members may not reproduce, store in a retrieval system,
+    transmit or redistribute without NAR's prior written consent.
+  verified: true
+  verified_on: '2026-10-17'
+nationwide_hpi:
+  access: free
+  api_docs: null
+  commercial_use: 'no'
+  cost: Historical series folders free at /media/hpi/resources (file format not confirmed)
+  homepage: https://www.nationwide.co.uk/house-price-index/
+  licence: Proprietary, non-commercial
+  licence_url: https://www.nationwide.co.uk/media/hpi/resources
+  name: Nationwide House Price Index
+  publisher: Nationwide Building Society
+  rate_limit: null
+  region: UK
+  storage_allowed: conditional
+  storage_note: Quote 'may not be used for commercial purposes' (incl. pricing/valuing investments or measuring
+    investment performance); Nationwide owns copyright.
+  verified: true
+  verified_on: '2026-10-17'
+nber:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.nber.org/research/business-cycle-dating
+  licence: NBER terms
+  licence_url: null
+  name: Business cycle dating
+  publisher: National Bureau of Economic Research
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Recession dates; FRED USREC is derived from them
+  verified: false
+  verified_on: '2026-10-17'
+nielseniq:
+  access: paid
+  api_docs: null
+  commercial_use: 'no'
+  cost: Enterprise subscription, contact sales; academic access via Chicago Booth Kilts Center (non-commercial research
+    only)
+  homepage: https://nielseniq.com/
+  licence: proprietary contract; Kilts Center academic licence
+  licence_url: https://www.chicagobooth.edu/research/kilts/research-data/nielseniq
+  name: NielsenIQ / Circana retail scanner data
+  publisher: NielsenIQ (NIQ) / Circana
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Commercial terms not published; vendor pages not fetched.
+  verified: false
+  verified_on: '2026-10-17'
+nyfed:
+  access: free
+  api_docs: null
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.newyorkfed.org/microeconomics/hhdc
+  licence: 'NY Fed Terms of Use: non-exclusive licence to use, copy, distribute for personal or business purposes'
+  licence_url: https://www.newyorkfed.org/privacy/termsofuse
+  name: New York Fed (Household Debt and Credit Report; yield-curve recession probability)
+  publisher: Federal Reserve Bank of New York
+  rate_limit: Automated access allowed if it does not disrupt the site
+  region: US
+  storage_allowed: 'yes'
+  storage_note: May download, store, modify, redistribute (keep notices, pass on same terms, no endorsement). HHDC
+    data must be attributed 'New York Fed Consumer Credit Panel / Equifax'. Staff Reports/Working Papers not for
+    commercial distribution; third-party content view-only. Recession-probability data downloadable as Excel (https://www.newyorkfed.org/research/capital_markets/ycfaq.html).
+  verified: true
+  verified_on: '2026-10-17'
+oecd:
+  access: free
+  api_docs: https://www.oecd.org/en/data/insights/data-explainers/2024/11/Api-best-practices-and-recommendations.html
+  commercial_use: conditional
+  cost: null
+  homepage: https://data-explorer.oecd.org/
+  licence: CC BY 4.0 default (open-by-default policy, from 1 July 2024); data also under OECD T&Cs
+  licence_url: https://oecd.org/en/about/oecd-open-by-default-policy.html
+  name: OECD Data Explorer / SDMX API (incl. Composite Leading Indicators)
+  publisher: OECD
+  rate_limit: 60 data downloads/hour per OECD explainer (a mirror says 20 queries/min, 20 downloads/hour); VPN/anonymised
+    traffic blocked
+  region: GLOBAL
+  storage_allowed: 'yes'
+  storage_note: OECD itself recommends caching locally; third-party-owned datasets may carry extra restrictions
+    (check dataset metadata). T&C page 403 to fetcher, read via search excerpt only.
+  verified: false
+  verified_on: '2026-10-17'
+ons:
+  access: free
+  api_docs: https://developer.ons.gov.uk/
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.ons.gov.uk/
+  licence: Open Government Licence v3.0
+  licence_url: https://www.ons.gov.uk/methodology/geography/licences
+  name: Office for National Statistics (time series, datasets, RTI, PRODCOM)
+  notes: Real-time indicators (incl. Revolut card spending) monthly bulletin still published (18 Jun 2026 seen);
+    weekly bulletin replaced by a dashboard from 26 Mar 2026. Series codes RSI/NRJS/PRODCOM not individually checked.
+  publisher: Office for National Statistics
+  rate_limit: API base https://api.beta.ons.gov.uk/v1, no key; limits in a rate-limiting guide not read (unverified)
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: OGL v3 with attribution (Source - Office for National Statistics licensed under the OGL v3.0); third-party
+    (OS, Royal Mail, NI postcodes) carve-outs.
+  verified: true
+  verified_on: '2026-10-17'
+ons_bics:
+  access: free
+  api_docs: null
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.ons.gov.uk/economy/economicoutputandproductivity/output/datasets/businessinsightsandimpactontheukeconomy
+  licence: Open Government Licence v3.0
+  licence_url: https://www.ons.gov.uk/methodology/geography/licences
+  name: ONS Business Insights and Conditions Survey (BICS)
+  publisher: Office for National Statistics
+  rate_limit: null
+  region: UK
+  storage_allowed: 'yes'
+  storage_note: Fortnightly, official statistics in development; Wave 165 released 8 Oct 2026, next 22 Oct 2026.
+  verified: true
+  verified_on: '2026-10-17'
+ons_sic:
+  access: free
+  api_docs: null
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.ons.gov.uk/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007
+  licence: Open Government Licence v3.0
+  licence_url: https://www.ons.gov.uk/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities/uksic2007
+  name: ONS UK SIC 2007 (and UK SIC 2026)
+  publisher: Office for National Statistics
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: 'yes'
+  storage_note: SIC 2007 still labelled current (PDF, Excel structure, index). UK SIC 2026 framework published April
+    2026 (aligned to NACE Rev.2.1 / ISIC Rev.5); rollout starts in business registers, National Accounts earliest
+    Blue Book 2031.
+  verified: true
+  verified_on: '2026-10-17'
+pall_ex:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: No volume data series; occasional press figures (e.g. ~24,000 pallets/night group, H1 2020 +11%)
+  homepage: https://www.pallex.co.uk/
+  licence: Proprietary
+  licence_url: unverified
+  name: Pall-Ex Group
+  publisher: Pall-Ex Group (member/management owned since ~Dec 2019-Jan 2020)
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Only ad-hoc press figures; Companies House accounts are the only repeatable source.
+  verified: false
+  verified_on: '2026-10-17'
+palletways:
+  access: free
+  api_docs: https://find-and-update.company-information.service.gov.uk/company/02918303
+  commercial_use: conditional
+  cost: No published volume series; only marketing figures (~6m pallets/yr UK, "over 45,000 pallets daily" network)
+    and annual statutory accounts
+  homepage: https://www.palletways.com/
+  licence: Companies House filings (OGL per api.gov.uk); marketing site proprietary
+  licence_url: https://www.api.gov.uk/ch/companies-house/
+  name: Palletways (UK pallet network)
+  publisher: Palletways (UK) Limited
+  rate_limit: null
+  region: UK
+  storage_allowed: conditional
+  storage_note: 'Palletways (UK) Ltd 02918303 active, SIC 49410/52103, last accounts to 31 Dec 2025, next due 30
+    Sep 2027: annual turnover = slow micro signal. Ownership not confirmed from an official source.'
+  verified: false
+  verified_on: '2026-10-17'
+philly_fed:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.philadelphiafed.org/surveys-and-data/real-time-data-research/ads
+  licence: 'Philadelphia Fed online terms: content for informational, educational and research purposes only'
+  licence_url: https://www.philadelphiafed.org/about-us/privacy-notice
+  name: Aruoba-Diebold-Scotti (ADS) Business Conditions Index
+  publisher: Federal Reserve Bank of Philadelphia
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Terms limit use to informational/educational/research; redistribution and commercial use not addressed;
+    no ADS-specific licence found. Inputs sourced via Haver Analytics.
+  verified: true
+  verified_on: '2026-10-17'
+placer_ai:
+  access: paid
+  api_docs: https://docs.placer.ai/reference/getting-started
+  commercial_use: unverified
+  cost: Custom quotes (https://www.placer.ai/pricing); limited free tier; API is a paid add-on with per-account
+    usage plan and weekly quota; Feeds CSV/Parquet
+  homepage: https://www.placer.ai/
+  licence: Commercial contract; licence text not found
+  licence_url: https://www.placer.ai/pricing
+  name: Placer.ai foot traffic (platform, API, Feeds)
+  publisher: Placer Labs Inc.
+  rate_limit: Per-account weekly quota (docs)
+  region: US
+  storage_allowed: unverified
+  storage_note: Terms not found.
+  verified: false
+  verified_on: '2026-10-17'
+port_la:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.portoflosangeles.org/business/statistics/container-statistics
+  licence: Provided free of charge; credit the Port of Los Angeles
+  licence_url: https://www.portoflosangeles.org/business/statistics/container-statistics
+  name: Port of Los Angeles container statistics (TEUs)
+  publisher: Port of Los Angeles (City of Los Angeles)
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: HTML tables only (monthly TEUs from 1995, annual from 1981); released ~15th of following month;
+    disclaimer page has no reuse terms.
+  verified: true
+  verified_on: '2026-10-17'
+rics:
+  access: freemium
+  api_docs: null
+  commercial_use: unverified
+  cost: Monthly PDFs free (Aug 2020 onward listed); 1-year data subscription "price on request" for breakdowns/early
+    access
+  homepage: https://www.rics.org/news-insights/market-surveys/uk-residential-market-survey
+  licence: Proprietary (T&Cs not retrieved)
+  licence_url: https://www.rics.org/news-insights/market-surveys/uk-residential-market-survey
+  name: RICS UK Residential Market Survey
+  publisher: Royal Institution of Chartered Surveyors
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Free PDFs; time-series data via paid subscription.
+  verified: false
+  verified_on: '2026-10-17'
+sec_edgar:
+  access: free
+  api_docs: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
+  licence: Government content and public EDGAR filings free to access and reuse
+  licence_url: https://www.sec.gov/os/webmaster-faq
+  name: SEC EDGAR APIs (submissions, XBRL companyfacts, companyconcept, frames)
+  publisher: US Securities and Exchange Commission
+  rate_limit: Max 10 requests/second per user across all machines; must declare User-Agent 'Company Name admin@company.com'
+    or get 'Undeclared Automated Tool' block; excessive IPs may be blocked (https://www.sec.gov/about/developer-resources)
+  region: US
+  storage_allowed: 'yes'
+  storage_note: Free to access and reuse; little restricted content (e.g. stock photos). No API key or auth needed.
+  verified: true
+  verified_on: '2026-10-17'
+similarweb:
+  access: paid
+  api_docs: https://developers.similarweb.com/docs/digital-rank-api
+  commercial_use: conditional
+  cost: API quoted by sales (credit-metered); no public API price list
+  homepage: https://www.similarweb.com/
+  licence: Similarweb Terms of Service (contract supersedes)
+  licence_url: https://www.similarweb.com/corp/legal/terms/
+  name: Similarweb (web traffic intelligence, API)
+  publisher: Similarweb Ltd
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Internal business use only, no sharing of data without consent, no scraping, no competing product;
+    storage/caching not addressed.
+  verified: true
+  verified_on: '2026-10-17'
+smmt:
+  access: freemium
+  api_docs: null
+  commercial_use: unverified
+  cost: Monthly headline + "download all" zip free; detailed/latest data via SMMT DataShop (paid) or Members' Zone
+  homepage: https://www.smmt.co.uk/vehicle-data/car-registrations/
+  licence: Proprietary (site T&Cs not retrieved)
+  licence_url: https://www.smmt.co.uk/vehicle-data/car-registrations/
+  name: SMMT new car registrations
+  publisher: Society of Motor Manufacturers and Traders
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: No reuse terms on data page; T&C page URL tried returned 404.
+  verified: false
+  verified_on: '2026-10-17'
+sp_dji:
+  access: paid
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.spglobal.com/spdji/en/index-family/indicators/sp-corelogic-case-shiller/
+  licence: S&P DJI index data licence
+  licence_url: null
+  name: S&P CoreLogic Case-Shiller indices
+  publisher: S&P Dow Jones Indices
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Index data is S&P copyright; FRED display does not grant storage
+  verified: false
+  verified_on: '2026-10-17'
+sp_global_pmi:
+  access: paid
+  api_docs: null
+  commercial_use: unverified
+  cost: Full PMI data subscription only; headline press releases public (headline status unverified)
+  homepage: https://www.pmi.spglobal.com/
+  licence: S&P Global subscription agreement; reproduction without permission prohibited
+  licence_url: unverified
+  name: S&P Global PMI
+  publisher: S&P Global Market Intelligence
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: spglobal.com 403 to fetcher; "available only via subscription" from official-domain search excerpt.
+  verified: false
+  verified_on: '2026-10-17'
+sp_global_pmi_uk:
+  access: paid
+  api_docs: null
+  commercial_use: 'no'
+  cost: Headline figures free in press releases; full data via subscription/licence (platform, feed, API); price
+    not published
+  homepage: https://www.pmi.spglobal.com/
+  licence: Proprietary
+  licence_url: https://www.spglobal.com/market-intelligence/en/solutions/products/pmi
+  name: S&P Global UK PMI (manufacturing, services, construction, composite)
+  publisher: S&P Global Market Intelligence
+  rate_limit: null
+  region: UK
+  storage_allowed: 'no'
+  storage_note: Release disclaimer forbids copying/distributing/transmitting data without S&P Global prior consent;
+    licence needed to store history.
+  verified: true
+  verified_on: '2026-10-17'
+tsa:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.tsa.gov/travel/passenger-volumes
+  licence: unverified
+  licence_url: https://www.tsa.gov/travel/passenger-volumes
+  name: TSA checkpoint travel numbers
+  publisher: US Transportation Security Administration
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: Daily counts as HTML table, updated weekdays, archives 2019-2025; no API/download; no terms stated
+    on page (website policies page 404).
+  verified: false
+  verified_on: '2026-10-17'
+ukwa:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: Periodic report (2015, 2021, 2024 editions) free PDF from Savills; no regular data series found
+  homepage: https://www.ukwa.org.uk/
+  licence: Proprietary
+  licence_url: unverified
+  name: UK Warehousing Association (UKWA / Savills sector report)
+  publisher: UK Warehousing Association, report by Savills
+  rate_limit: null
+  region: UK
+  storage_allowed: unverified
+  storage_note: Low frequency (multi-year); not useful as a cyclical indicator. ukwa.org.uk homepage fetch returned
+    empty.
+  verified: false
+  verified_on: '2026-10-17'
+umich:
+  access: freemium
+  api_docs: null
+  commercial_use: conditional
+  cost: Free under CC-BY-NC-ND for research/internal use; commercial or redistribution licences via umsurvey@umich.edu
+    (price not published)
+  homepage: https://data.sca.isr.umich.edu/
+  licence: CC-BY-NC-ND (internal / non-commercial research use)
+  licence_url: https://data.sca.isr.umich.edu/agreement.php
+  name: University of Michigan Surveys of Consumers
+  publisher: Survey Research Center, University of Michigan
+  rate_limit: null
+  region: US
+  storage_allowed: conditional
+  storage_note: 'Internal use OK under CC-BY-NC-ND; redistribution on a platform/dashboard/investment advisory service,
+    or building a product/predictor to sell, needs a licence. Required credit: ''Surveys of Consumers, Survey Research
+    Center, University of Michigan.'''
+  verified: true
+  verified_on: '2026-10-17'
+un_comtrade:
+  access: freemium
+  api_docs: https://uncomtrade.org/docs/subscriptions/
+  commercial_use: unverified
+  cost: Free Basic Individual key; Premium Individual/Institutional yearly via shop.un.org (prices not listed)
+  homepage: https://comtradeplus.un.org/
+  licence: Policy on Comtrade Data Use (not fetched)
+  licence_url: https://uncomtrade.org/docs/subscriptions/
+  name: UN Comtrade API (Comtrade Plus)
+  publisher: UN Statistics Division
+  rate_limit: Free 500 calls/day, 100k records/call, 1 call/s, no bulk/async; Premium 250k records/call, 5 calls/s,
+    bulk + async
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Data-use policy page not read; WITS terms (third party, World Bank) say internal use only, no re-dissemination
+    without UNSD permission.
+  verified: true
+  verified_on: '2026-10-17'
+unsd:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://unstats.un.org/unsd/classifications/Econ
+  licence: General UN Terms of Use (no data-specific licence on page)
+  licence_url: https://unstats.un.org/unsd/classifications/Econ
+  name: UNSD economic classifications (ISIC Rev.4/Rev.5, COICOP 2018, HS correlations)
+  publisher: UN Statistics Division
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: 'Downloads: ISIC Rev.5 (manual still in copyedit) CSV/XLSX + Rev.4-Rev.5 correspondence; ISIC Rev.4
+    correspondences to NAICS/NACE/CPC; COICOP 2018 structure + COICOP 1999 correspondence; HS 2022 correlations
+    to older HS and HS-SITC-BEC.'
+  verified: true
+  verified_on: '2026-10-17'
+world_bank:
+  access: free
+  api_docs: https://datahelpdesk.worldbank.org/knowledgebase/articles/889392-about-the-indicators-api-documentation
+  commercial_use: 'yes'
+  cost: null
+  homepage: https://data.worldbank.org/
+  licence: CC BY 4.0 (default for World Bank-produced datasets)
+  licence_url: https://datacatalog.worldbank.org/public-licenses
+  name: World Bank Indicators API (WDI etc.)
+  publisher: World Bank
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: 'yes'
+  storage_note: CC BY 4.0 permits copy/modify/distribute for any purpose with attribution and change notes; some
+    datasets carry other licences.
+  verified: true
+  verified_on: '2026-10-17'
+wsts:
+  access: members
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.wsts.org/
+  licence: WSTS terms
+  licence_url: null
+  name: World Semiconductor Trade Statistics
+  publisher: WSTS
+  rate_limit: null
+  region: GLOBAL
+  storage_allowed: unverified
+  storage_note: Headline monthly sales free via SIA press releases; detailed Blue Book for members
+  verified: false
+  verified_on: '2026-10-17'

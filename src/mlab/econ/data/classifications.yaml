@@ -1,0 +1,137 @@
+# Classification systems the graph is keyed on. Open standards only (GICS is licensed by MSCI / S&P and is
+# deliberately left out). Section- and sector-level codes are listed here; finer codes live on each industry
+# node in industries.yaml. Crosswalks at this level are approximate (many-to-many): use the official
+# concordance files (see `docs`) when a 6-digit match matters.
+#
+# Node ids: cls:<system>:<code>, e.g. cls:naics:44-45, cls:isic:G, cls:hs:6907.
+
+systems:
+  naics:
+    name: North American Industry Classification System 2022
+    publisher: US Census Bureau
+    docs: https://www.census.gov/naics/
+    concordances: https://www.census.gov/naics/?68967  # NAICS <-> ISIC Rev.4 concordance files
+  isic:
+    name: International Standard Industrial Classification Rev.4
+    publisher: UN Statistics Division
+    docs: https://unstats.un.org/unsd/classifications/Econ/isic
+    note: ISIC Rev.5 was adopted in 2023; national statistics still publish on Rev.4 / NACE Rev.2 bases.
+  uksic:
+    name: UK Standard Industrial Classification 2007
+    publisher: Office for National Statistics
+    docs: https://www.ons.gov.uk/methodology/classificationsandstandards/ukstandardindustrialclassificationofeconomicactivities
+    note: Built on NACE Rev.2, which shares ISIC Rev.4 section letters.
+  coicop:
+    name: Classification of Individual Consumption According to Purpose (COICOP 1999 as used in UK and EU national accounts; COICOP 2018 adopted by UNSD)
+    publisher: UN Statistics Division
+    docs: https://unstats.un.org/unsd/classifications/Econ/coicop
+  hs:
+    name: Harmonized System (goods nomenclature, 6-digit international level)
+    publisher: World Customs Organization
+    docs: https://www.wcoomd.org/en/topics/nomenclature/overview.aspx
+    lookup: https://www.trade-tariff.service.gov.uk/  # UK tariff (8/10-digit) built on HS; free API
+
+codes:
+  naics:
+    "11": Agriculture, Forestry, Fishing and Hunting
+    "21": Mining, Quarrying, and Oil and Gas Extraction
+    "22": Utilities
+    "23": Construction
+    "31-33": Manufacturing
+    "42": Wholesale Trade
+    "44-45": Retail Trade
+    "48-49": Transportation and Warehousing
+    "51": Information
+    "52": Finance and Insurance
+    "53": Real Estate and Rental and Leasing
+    "54": Professional, Scientific, and Technical Services
+    "55": Management of Companies and Enterprises
+    "56": Administrative and Support and Waste Management and Remediation Services
+    "61": Educational Services
+    "62": Health Care and Social Assistance
+    "71": Arts, Entertainment, and Recreation
+    "72": Accommodation and Food Services
+    "81": Other Services (except Public Administration)
+    "92": Public Administration
+  isic:
+    A: Agriculture, forestry and fishing
+    B: Mining and quarrying
+    C: Manufacturing
+    D: Electricity, gas, steam and air conditioning supply
+    E: Water supply; sewerage, waste management and remediation activities
+    F: Construction
+    G: Wholesale and retail trade; repair of motor vehicles and motorcycles
+    H: Transportation and storage
+    I: Accommodation and food service activities
+    J: Information and communication
+    K: Financial and insurance activities
+    L: Real estate activities
+    M: Professional, scientific and technical activities
+    N: Administrative and support service activities
+    O: Public administration and defence; compulsory social security
+    P: Education
+    Q: Human health and social work activities
+    R: Arts, entertainment and recreation
+    S: Other service activities
+    T: Activities of households as employers
+    U: Activities of extraterritorial organizations and bodies
+  coicop:
+    "01": Food and non-alcoholic beverages
+    "02": Alcoholic beverages, tobacco and narcotics
+    "03": Clothing and footwear
+    "04": Housing, water, electricity, gas and other fuels
+    "04.3": Maintenance and repair of the dwelling
+    "05": Furnishings, household equipment and routine household maintenance
+    "05.1": Furniture and furnishings, carpets and other floor coverings
+    "05.5": Tools and equipment for house and garden
+    "06": Health
+    "07": Transport
+    "07.1": Purchase of vehicles
+    "07.2.2": Fuels and lubricants for personal transport equipment
+    "08": Communication
+    "09": Recreation and culture
+    "09.3.3": Garden and plants and flowers
+    "10": Education
+    "11": Restaurants and hotels
+    "12": Miscellaneous goods and services
+  hs:
+    "0602": Other live plants (incl. their roots), cuttings and slips; mushroom spawn
+    "3926.40": Statuettes and other ornamental articles of plastics (resin garden gnomes and ornaments)
+    "6810": Articles of cement, concrete or artificial stone (paving, garden ornaments)
+    "6907": Ceramic flags and paving, hearth or wall tiles
+    "6910": Ceramic sinks, wash basins, baths, bidets, water closet pans and similar sanitary fixtures
+    "6913": Statuettes and other ornamental ceramic articles
+    "7324": Sanitary ware and parts thereof, of iron or steel
+    "8481": Taps, cocks, valves and similar appliances
+    "8433.11": Mowers for lawns, parks or sports grounds, powered, cutting device rotating horizontally
+    "9403": Other furniture and parts thereof
+    "9405": Luminaires and lighting fittings
+    "8471": Automatic data processing machines (computers)
+    "8542": Electronic integrated circuits
+    "8703": Motor cars and other motor vehicles principally designed for the transport of persons
+    "2709": Petroleum oils and oils obtained from bituminous minerals, crude
+
+# Sector-level crosswalk, NAICS -> ISIC section (approximate, many-to-many). UK SIC 2007 sections use the
+# same letters as ISIC Rev.4, so cls:uksic:<L> is mapped one-to-one to cls:isic:<L> by the loader.
+crosswalk:
+  naics_to_isic:
+    "11": [A]
+    "21": [B]
+    "22": [D, E]
+    "23": [F]
+    "31-33": [C]
+    "42": [G]
+    "44-45": [G]
+    "48-49": [H]
+    "51": [J]
+    "52": [K]
+    "53": [L]
+    "54": [M]
+    "55": [M]
+    "56": [N, E]
+    "61": [P]
+    "62": [Q]
+    "71": [R]
+    "72": [I]
+    "81": [S]
+    "92": [O]

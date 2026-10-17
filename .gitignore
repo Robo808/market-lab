@@ -17,6 +17,7 @@ notebooks/
 .claude/settings.local.json
 paper/
 data/
+!src/mlab/econ/data/
 !data/.gitkeep
 
 # Python, editors, OS

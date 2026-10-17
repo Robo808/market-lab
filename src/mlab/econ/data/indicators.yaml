@@ -1,0 +1,1902 @@
+# The dictionary: every number we track, macro to micro. One entry per economic concept and geography;
+# the same concept from several publishers is one entry with several `series` (that is what "sideways"
+# traversal walks). Fields:
+#
+#   name       what the number is
+#   layer      macro (whole economy) | meso (sector / product line) | micro (company or transaction level)
+#   themes     tags used for grouping and feature selection
+#   geo        US | UK | EA | GLOBAL | CN ...
+#   freq       D | W | M | Q | A
+#   unit       as published
+#   cycle      leading | coincident | lagging | target (a label to model, not a feature)
+#   industries ind:<key> nodes this number measures (creates `measures` edges)
+#   series     where to get it: {source, id, dataset?, via?, note?}; `via: fred` means FRED mirrors the
+#              original publisher (fetch from FRED, freeze from the publisher: FRED's terms forbid storage)
+#   transform  ML feature hints: level, yoy, mom, diff, log, z
+#
+# Series ids are checked live with `mlab econ check` (FRED, ONS, Trade Tariff); the result is not stored
+# here. A `note: unverified` means the id is written from the publisher's catalogue and has not passed a
+# live check yet.
+
+# ======================================================================================================
+# 1. Cycle labels and composite recession / boom-bust gauges
+# ======================================================================================================
+us_recession_nber:
+  name: NBER recession indicator (1 = recession month)
+  layer: macro
+  themes: [cycle, recession]
+  geo: US
+  freq: M
+  unit: 0/1
+  cycle: target
+  industries: [economy]
+  series:
+    - {source: fred, id: USREC, via: nber}
+  transform: [level]
+us_recession_prob_chauvet:
+  name: Smoothed US recession probability (Chauvet-Piger dynamic factor model)
+  layer: macro
+  themes: [cycle, recession]
+  geo: US
+  freq: M
+  unit: percent
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: fred, id: RECPROUSM156N}
+  transform: [level]
+us_recession_prob_curve:
+  name: Probability of US recession 12 months ahead from the 10y-3m Treasury spread
+  layer: macro
+  themes: [cycle, recession, rates]
+  geo: US
+  freq: M
+  unit: percent
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: nyfed, id: yield-curve-recession-probability, note: monthly spreadsheet}
+  transform: [level, diff]
+us_sahm_rule:
+  name: Real-time Sahm rule recession indicator
+  layer: macro
+  themes: [cycle, recession, labour]
+  geo: US
+  freq: M
+  unit: percentage points
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: fred, id: SAHMREALTIME}
+  transform: [level]
+us_curve_10y3m:
+  name: 10-year minus 3-month Treasury spread
+  layer: macro
+  themes: [cycle, rates, recession]
+  geo: US
+  freq: D
+  unit: percent
+  cycle: leading
+  industries: [economy, banks]
+  series:
+    - {source: fred, id: T10Y3M}
+  transform: [level, diff]
+us_curve_10y2y:
+  name: 10-year minus 2-year Treasury spread
+  layer: macro
+  themes: [cycle, rates]
+  geo: US
+  freq: D
+  unit: percent
+  cycle: leading
+  industries: [economy, banks]
+  series:
+    - {source: fred, id: T10Y2Y}
+  transform: [level, diff]
+us_cfnai:
+  name: Chicago Fed National Activity Index (85 monthly indicators)
+  layer: macro
+  themes: [cycle, activity]
+  geo: US
+  freq: M
+  unit: index (0 = trend growth)
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: fred, id: CFNAI, via: chicago_fed}
+  transform: [level]
+us_ads_index:
+  name: Aruoba-Diebold-Scotti business conditions index (daily)
+  layer: macro
+  themes: [cycle, activity]
+  geo: US
+  freq: D
+  unit: index (0 = average)
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: philly_fed, id: ads-index}
+  transform: [level]
+us_gdpnow:
+  name: Atlanta Fed GDPNow nowcast of current-quarter real GDP growth
+  layer: macro
+  themes: [cycle, activity, nowcast]
+  geo: US
+  freq: D
+  unit: percent saar
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: atlanta_fed, id: gdpnow}
+  transform: [level, diff]
+us_lei:
+  name: Conference Board Leading Economic Index (US)
+  layer: macro
+  themes: [cycle, recession]
+  geo: US
+  freq: M
+  unit: index
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: conference_board, id: LEI-US, note: paid; headline in monthly press release}
+  transform: [yoy, mom]
+us_oecd_cli:
+  name: OECD composite leading indicator, United States (amplitude adjusted)
+  layer: macro
+  themes: [cycle]
+  geo: US
+  freq: M
+  unit: index (100 = trend)
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: oecd, id: "DSD_STES@DF_CLI/USA.M.LI...AA...H"}
+    - {source: fred, id: USALOLITOAASTSAM, via: oecd}
+  transform: [level, diff]
+uk_oecd_cli:
+  name: OECD composite leading indicator, United Kingdom (amplitude adjusted)
+  layer: macro
+  themes: [cycle]
+  geo: UK
+  freq: M
+  unit: index (100 = trend)
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: oecd, id: "DSD_STES@DF_CLI/GBR.M.LI...AA...H"}
+    - {source: fred, id: GBRLOLITOAASTSAM, via: oecd}
+  transform: [level, diff]
+us_nfci:
+  name: Chicago Fed National Financial Conditions Index
+  layer: macro
+  themes: [cycle, credit, liquidity]
+  geo: US
+  freq: W
+  unit: index (0 = average, positive = tight)
+  cycle: leading
+  industries: [economy, finance]
+  series:
+    - {source: fred, id: NFCI, via: chicago_fed}
+  transform: [level, diff]
+us_hy_oas:
+  name: ICE BofA US High Yield option-adjusted spread
+  layer: macro
+  themes: [cycle, credit, recession]
+  geo: US
+  freq: D
+  unit: percent
+  cycle: leading
+  industries: [economy, finance]
+  series:
+    - {source: fred, id: BAMLH0A0HYM2, note: ICE data; FRED shows a limited history window}
+  transform: [level, diff]
+us_sloos_ci:
+  name: Senior Loan Officer Survey, net % of banks tightening C&I standards (large firms)
+  layer: macro
+  themes: [cycle, credit, recession]
+  geo: US
+  freq: Q
+  unit: net percent
+  cycle: leading
+  industries: [banks, economy]
+  series:
+    - {source: fred, id: DRTSCILM, via: frb}
+  transform: [level, diff]
+us_sloos_consumer:
+  name: Senior Loan Officer Survey, net % of banks tightening standards on credit cards
+  layer: macro
+  themes: [cycle, credit, consumer_credit]
+  geo: US
+  freq: Q
+  unit: net percent
+  cycle: leading
+  industries: [consumer_credit_lenders, banks]
+  series:
+    - {source: fred, id: DRTSCLCC, via: frb}
+  transform: [level, diff]
+us_margin_debt:
+  name: FINRA customer margin debit balances
+  layer: macro
+  themes: [boom_bust, leverage, positioning]
+  geo: US
+  freq: M
+  unit: USD mn
+  cycle: lagging
+  industries: [finance]
+  series:
+    - {source: finra, id: margin-statistics}
+  transform: [yoy, z]
+  note: "Bubble gauge (Soros boom/bust): peaks in leverage have tended to cluster around equity tops."
+uk_insolvencies:
+  name: Company insolvencies, England and Wales (registered, monthly)
+  layer: macro
+  themes: [cycle, recession, credit]
+  geo: UK
+  freq: M
+  unit: count
+  cycle: lagging
+  industries: [economy, construction, retail, hospitality]
+  series:
+    - {source: insolvency_service, id: company-insolvency-statistics, note: by industry (SIC) in the quarterly tables}
+  transform: [yoy, z]
+
+# ======================================================================================================
+# 2. Output, income, saving
+# ======================================================================================================
+us_real_gdp:
+  name: Real gross domestic product
+  layer: macro
+  themes: [output]
+  geo: US
+  freq: Q
+  unit: chained 2017 USD bn saar
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: bea, id: "NIPA T10106 line 1"}
+    - {source: fred, id: GDPC1, via: bea}
+  transform: [yoy, diff]
+uk_real_gdp:
+  name: Real GDP, chained volume measure
+  layer: macro
+  themes: [output]
+  geo: UK
+  freq: Q
+  unit: GBP mn CVM SA
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: ons, id: ABMI, dataset: QNA}
+  transform: [yoy, diff]
+uk_monthly_gdp:
+  name: Monthly GDP index
+  layer: macro
+  themes: [output]
+  geo: UK
+  freq: M
+  unit: index 2019=100
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: ons, id: ECY2, dataset: MGDP}
+  transform: [yoy, mom]
+us_industrial_production:
+  name: Industrial production index
+  layer: macro
+  themes: [output, manufacturing]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing, utilities, energy]
+  series:
+    - {source: frb, id: G17-IP-B50001}
+    - {source: fred, id: INDPRO, via: frb}
+  transform: [yoy, mom]
+uk_industrial_production:
+  name: Index of production
+  layer: macro
+  themes: [output, manufacturing]
+  geo: UK
+  freq: M
+  unit: index
+  cycle: coincident
+  industries: [manufacturing, utilities, energy]
+  series:
+    - {source: ons, id: K222, dataset: DIOP}
+  transform: [yoy, mom]
+us_capacity_utilisation:
+  name: Capacity utilisation, total industry
+  layer: macro
+  themes: [output, inflation]
+  geo: US
+  freq: M
+  unit: percent
+  cycle: coincident
+  industries: [manufacturing]
+  series:
+    - {source: fred, id: TCU, via: frb}
+  transform: [level, diff]
+us_real_disposable_income:
+  name: Real disposable personal income
+  layer: macro
+  themes: [income, consumer]
+  geo: US
+  freq: M
+  unit: chained 2017 USD bn saar
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: fred, id: DSPIC96, via: bea}
+  transform: [yoy, mom]
+us_real_income_ex_transfers:
+  name: Real personal income excluding current transfer receipts (NBER dating input)
+  layer: macro
+  themes: [income, cycle]
+  geo: US
+  freq: M
+  unit: chained 2017 USD bn saar
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: fred, id: W875RX1, via: bea}
+  transform: [yoy, mom]
+us_saving_rate:
+  name: Personal saving rate
+  layer: macro
+  themes: [saving, consumer]
+  geo: US
+  freq: M
+  unit: percent of disposable income
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: fred, id: PSAVERT, via: bea}
+  transform: [level, diff]
+uk_saving_ratio:
+  name: Household saving ratio
+  layer: macro
+  themes: [saving, consumer]
+  geo: UK
+  freq: Q
+  unit: percent
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: ons, id: NRJS, dataset: UKEA}
+  transform: [level, diff]
+uk_real_household_disposable_income:
+  name: Real households' disposable income per head
+  layer: macro
+  themes: [income, consumer]
+  geo: UK
+  freq: Q
+  unit: GBP CVM
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: ons, id: CRXX, dataset: UKEA}
+  transform: [yoy]
+
+# ======================================================================================================
+# 3. Consumer spending (total, by product, by store, card data)
+# ======================================================================================================
+us_real_pce:
+  name: Real personal consumption expenditures
+  layer: macro
+  themes: [consumer_spending]
+  geo: US
+  freq: M
+  unit: chained 2017 USD bn saar
+  cycle: coincident
+  industries: [economy, retail]
+  series:
+    - {source: fred, id: PCEC96, via: bea}
+  transform: [yoy, mom]
+us_pce_durables:
+  name: PCE, durable goods (nominal)
+  layer: macro
+  themes: [consumer_spending, durables]
+  geo: US
+  freq: M
+  unit: USD bn saar
+  cycle: leading
+  industries: [retail, autos, retail_furnishings, retail_home_improvement]
+  series:
+    - {source: fred, id: PCEDG, via: bea}
+  transform: [yoy, mom]
+us_pce_services:
+  name: PCE, services (nominal)
+  layer: macro
+  themes: [consumer_spending, services]
+  geo: US
+  freq: M
+  unit: USD bn saar
+  cycle: lagging
+  industries: [hospitality, healthcare, airlines]
+  series:
+    - {source: fred, id: PCES, via: bea}
+  transform: [yoy, mom]
+us_pce_house_garden_tools:
+  name: PCE by product, tools and equipment for house and garden
+  layer: meso
+  themes: [consumer_spending, diy, garden]
+  geo: US
+  freq: M
+  unit: USD bn saar
+  cycle: coincident
+  industries: [retail_home_improvement, garden_equipment_mfg]
+  series:
+    - {source: bea, id: "NIPA T20405U (tools and equipment for house and garden)", note: unverified line number}
+  transform: [yoy]
+us_pce_furnishings:
+  name: PCE by product, furnishings and durable household equipment
+  layer: meso
+  themes: [consumer_spending, home]
+  geo: US
+  freq: M
+  unit: USD bn saar
+  cycle: leading
+  industries: [retail_furnishings, furniture_mfg]
+  series:
+    - {source: bea, id: "NIPA T20405U (furnishings and durable household equipment)", note: unverified line number}
+  transform: [yoy]
+uk_household_consumption:
+  name: Household final consumption expenditure, chained volume
+  layer: macro
+  themes: [consumer_spending]
+  geo: UK
+  freq: Q
+  unit: GBP mn CVM SA
+  cycle: coincident
+  industries: [economy, retail]
+  series:
+    - {source: ons, id: ABJR, dataset: UKEA}
+  transform: [yoy]
+uk_consumption_house_garden_tools:
+  name: Household consumption, COICOP 05.5 tools and equipment for house and garden (Consumer Trends)
+  layer: meso
+  themes: [consumer_spending, diy, garden]
+  geo: UK
+  freq: Q
+  unit: GBP mn CVM SA
+  cycle: coincident
+  industries: [retail_home_improvement, garden_equipment_mfg]
+  series:
+    - {source: ons, id: XYJY, dataset: CT}
+  transform: [yoy]
+uk_consumption_gardens_plants:
+  name: Household consumption, COICOP 09.3.3 gardens, plants and flowers (Consumer Trends)
+  layer: meso
+  themes: [consumer_spending, garden]
+  geo: UK
+  freq: Q
+  unit: GBP mn CVM SA
+  cycle: coincident
+  industries: [retail_garden_centres, nursery_horticulture, garden_ornaments]
+  series:
+    - {source: ons, id: AWUX, dataset: CT}
+  transform: [yoy]
+uk_consumption_dwelling_repair:
+  name: Household consumption, COICOP 04.3 maintenance and repair of the dwelling (Consumer Trends)
+  layer: meso
+  themes: [consumer_spending, renovation]
+  geo: UK
+  freq: Q
+  unit: GBP mn CVM SA
+  cycle: coincident
+  industries: [home_rmi, retail_home_improvement]
+  series:
+    - {source: ons, id: ZAVS, dataset: CT}
+  transform: [yoy]
+uk_cpi_house_garden_tools:
+  name: CPI annual rate, 05.5 tools and equipment for house and garden
+  layer: meso
+  themes: [inflation, diy, garden]
+  geo: UK
+  freq: M
+  unit: percent y/y
+  cycle: lagging
+  industries: [retail_home_improvement, retail_garden_centres]
+  series:
+    - {source: ons, id: D7GY, dataset: MM23}
+  transform: [level]
+us_retail_sales_total:
+  name: Advance retail and food services sales
+  layer: macro
+  themes: [consumer_spending, retail]
+  geo: US
+  freq: M
+  unit: USD mn SA
+  cycle: coincident
+  industries: [retail]
+  series:
+    - {source: census, id: "MARTS 44X72"}
+    - {source: fred, id: RSAFS, via: census}
+  transform: [yoy, mom]
+us_retail_sales_real:
+  name: Advance real retail and food services sales
+  layer: macro
+  themes: [consumer_spending, retail]
+  geo: US
+  freq: M
+  unit: 1982-84 USD mn SA
+  cycle: coincident
+  industries: [retail]
+  series:
+    - {source: fred, id: RRSFS, via: census}
+  transform: [yoy, mom]
+us_retail_sales_building_garden:
+  name: Retail sales, building materials and garden equipment and supplies dealers (NAICS 444)
+  layer: meso
+  themes: [consumer_spending, diy, garden, housing]
+  geo: US
+  freq: M
+  unit: USD mn SA
+  cycle: coincident
+  industries: [retail_home_improvement, retail_garden_centres]
+  series:
+    - {source: census, id: "MARTS 444"}
+    - {source: fred, id: RSBMGESD, via: census}
+  transform: [yoy, mom]
+us_retail_sales_lawn_garden:
+  name: Retail sales, lawn and garden equipment and supplies stores (NAICS 4442), not seasonally adjusted
+  layer: meso
+  themes: [consumer_spending, garden]
+  geo: US
+  freq: M
+  unit: USD mn NSA
+  cycle: coincident
+  industries: [retail_garden_centres]
+  series:
+    - {source: census, id: "MRTS 4442", note: Monthly Retail Trade detail table; no FRED mirror found}
+  transform: [yoy]
+us_retail_sales_furnishings:
+  name: Retail sales, furniture and home furnishings stores
+  layer: meso
+  themes: [consumer_spending, home]
+  geo: US
+  freq: M
+  unit: USD mn SA
+  cycle: coincident
+  industries: [retail_furnishings]
+  series:
+    - {source: fred, id: RSFHFS, via: census}
+  transform: [yoy, mom]
+us_retail_sales_nonstore:
+  name: Retail sales, nonstore retailers
+  layer: meso
+  themes: [consumer_spending, ecommerce]
+  geo: US
+  freq: M
+  unit: USD mn SA
+  cycle: coincident
+  industries: [retail_ecommerce, parcel_courier]
+  series:
+    - {source: fred, id: RSNSR, via: census}
+  transform: [yoy, mom]
+us_retail_sales_general_merch:
+  name: Retail sales, general merchandise stores
+  layer: meso
+  themes: [consumer_spending]
+  geo: US
+  freq: M
+  unit: USD mn SA
+  cycle: coincident
+  industries: [retail_staples]
+  series:
+    - {source: fred, id: RSGMS, via: census}
+  transform: [yoy, mom]
+us_ecommerce_share:
+  name: E-commerce retail sales (quarterly)
+  layer: meso
+  themes: [consumer_spending, ecommerce]
+  geo: US
+  freq: Q
+  unit: USD mn SA
+  cycle: coincident
+  industries: [retail_ecommerce, parcel_courier]
+  series:
+    - {source: fred, id: ECOMSA, via: census}
+  transform: [yoy]
+us_carts:
+  name: Chicago Fed Advance Retail Trade Summary (weekly nowcast of retail sales ex autos)
+  layer: macro
+  themes: [consumer_spending, nowcast]
+  geo: US
+  freq: W
+  unit: percent m/m
+  cycle: coincident
+  industries: [retail]
+  series:
+    - {source: chicago_fed, id: carts}
+  transform: [level]
+us_light_vehicle_sales:
+  name: Light vehicle sales, total (SAAR)
+  layer: meso
+  themes: [consumer_spending, durables, autos]
+  geo: US
+  freq: M
+  unit: mn units saar
+  cycle: leading
+  industries: [autos, auto_dealers]
+  series:
+    - {source: fred, id: TOTALSA, via: bea}
+  transform: [level, yoy]
+uk_retail_sales_volume:
+  name: Retail sales volume index, all retailing
+  layer: macro
+  themes: [consumer_spending, retail]
+  geo: UK
+  freq: M
+  unit: index SA
+  cycle: coincident
+  industries: [retail]
+  series:
+    - {source: ons, id: J5EK, dataset: DRSI}
+  transform: [yoy, mom]
+uk_retail_sales_hardware:
+  name: Retail sales volume, hardware, paints and glass stores (DIY)
+  layer: meso
+  themes: [consumer_spending, diy, renovation]
+  geo: UK
+  freq: M
+  unit: index SA
+  cycle: coincident
+  industries: [retail_home_improvement, retail_tiles_flooring]
+  series:
+    - {source: ons, id: JO5D, dataset: DRSI}
+  transform: [yoy, mom]
+uk_retail_sales_furniture:
+  name: Retail sales volume, furniture and lighting stores
+  layer: meso
+  themes: [consumer_spending, home]
+  geo: UK
+  freq: M
+  unit: index SA
+  cycle: coincident
+  industries: [retail_furnishings]
+  series:
+    - {source: ons, id: JO5G, dataset: DRSI}
+  transform: [yoy, mom]
+uk_retail_sales_online_share:
+  name: Internet sales as a percentage of total retail sales
+  layer: meso
+  themes: [consumer_spending, ecommerce]
+  geo: UK
+  freq: M
+  unit: percent
+  cycle: coincident
+  industries: [retail_ecommerce, parcel_courier, retail_bathroom_online]
+  series:
+    - {source: ons, id: J4MC, dataset: DRSI}
+  transform: [level, diff]
+uk_brc_retail_sales:
+  name: BRC-KPMG Retail Sales Monitor, total and like-for-like sales growth
+  layer: meso
+  themes: [consumer_spending, retail]
+  geo: UK
+  freq: M
+  unit: percent y/y
+  cycle: coincident
+  industries: [retail]
+  series:
+    - {source: brc, id: retail-sales-monitor}
+  transform: [level]
+uk_card_spending_category:
+  name: Card spending by category (incl. home improvements and DIY, garden centres, furniture)
+  layer: meso
+  themes: [consumer_spending, diy, garden, card_data]
+  geo: UK
+  freq: M
+  unit: percent y/y
+  cycle: coincident
+  industries: [retail_home_improvement, retail_garden_centres, retail_furnishings, hospitality]
+  series:
+    - {source: barclays_spending, id: consumer-spending-report}
+    - {source: boe, id: card-spending, note: BoE/ONS real-time CHAPS card spending indicator; check it is still published}
+  transform: [level]
+us_card_spending_panel:
+  name: Card-transaction panel spending by merchant and category (alternative data)
+  layer: micro
+  themes: [consumer_spending, card_data, alt_data]
+  geo: US
+  freq: D
+  unit: USD, panel-normalised
+  cycle: coincident
+  industries: [retail, retail_home_improvement, restaurants]
+  series:
+    - {source: consumer_edge, id: transact, note: paid}
+  transform: [yoy]
+foot_traffic:
+  name: Store visits by chain and category (mobile location panel)
+  layer: micro
+  themes: [consumer_spending, alt_data]
+  geo: US
+  freq: D
+  unit: visits
+  cycle: coincident
+  industries: [retail_home_improvement, retail_garden_centres, restaurants, retail]
+  series:
+    - {source: placer_ai, id: visits, note: paid}
+  transform: [yoy]
+web_traffic:
+  name: Website visits by domain (retailer and marketplace web traffic)
+  layer: micro
+  themes: [consumer_spending, ecommerce, alt_data]
+  geo: GLOBAL
+  freq: D
+  unit: visits
+  cycle: leading
+  industries: [retail_ecommerce, retail_bathroom_online]
+  series:
+    - {source: similarweb, id: website-traffic, note: paid}
+  transform: [yoy]
+search_interest:
+  name: Search interest by term (e.g. garden gnome, bathroom renovation, floor tiles, remortgage)
+  layer: micro
+  themes: [consumer_spending, attention, garden, diy, alt_data]
+  geo: GLOBAL
+  freq: W
+  unit: index 0-100 (relative per query)
+  cycle: leading
+  industries: [garden_ornaments, retail_garden_centres, home_rmi, retail_tiles_flooring, retail_bathroom_online]
+  series:
+    - {source: google_trends, id: explore, note: relative index; rescale per pull}
+  transform: [yoy, z]
+
+# ======================================================================================================
+# 4. Consumer balance sheet, credit and confidence
+# ======================================================================================================
+us_consumer_credit:
+  name: Consumer credit outstanding, total
+  layer: macro
+  themes: [consumer_credit]
+  geo: US
+  freq: M
+  unit: USD bn SA
+  cycle: lagging
+  industries: [consumer_credit_lenders, banks]
+  series:
+    - {source: frb, id: G19}
+    - {source: fred, id: TOTALSL, via: frb}
+  transform: [yoy, mom]
+us_revolving_credit:
+  name: Revolving consumer credit (cards)
+  layer: macro
+  themes: [consumer_credit]
+  geo: US
+  freq: M
+  unit: USD bn SA
+  cycle: coincident
+  industries: [consumer_credit_lenders]
+  series:
+    - {source: fred, id: REVOLSL, via: frb}
+  transform: [yoy, mom]
+us_card_delinquency:
+  name: Delinquency rate on credit card loans, all commercial banks
+  layer: macro
+  themes: [consumer_credit, stress]
+  geo: US
+  freq: Q
+  unit: percent SA
+  cycle: lagging
+  industries: [consumer_credit_lenders, banks]
+  series:
+    - {source: fred, id: DRCCLACBS, via: frb}
+  transform: [level, diff]
+us_household_debt_service:
+  name: Household debt service payments as a percent of disposable income
+  layer: macro
+  themes: [consumer_credit, saving]
+  geo: US
+  freq: Q
+  unit: percent
+  cycle: lagging
+  industries: [economy, consumer_credit_lenders]
+  series:
+    - {source: fred, id: TDSP, via: frb}
+  transform: [level, diff]
+us_household_debt_report:
+  name: Household debt and credit (balances, new delinquencies by loan type)
+  layer: macro
+  themes: [consumer_credit, stress]
+  geo: US
+  freq: Q
+  unit: USD tn, percent
+  cycle: lagging
+  industries: [consumer_credit_lenders, banks, housing_market]
+  series:
+    - {source: nyfed, id: household-debt-and-credit}
+  transform: [level, diff]
+us_consumer_sentiment:
+  name: University of Michigan consumer sentiment
+  layer: macro
+  themes: [confidence, consumer]
+  geo: US
+  freq: M
+  unit: index 1966Q1=100
+  cycle: leading
+  industries: [economy, retail]
+  series:
+    - {source: umich, id: sentiment}
+    - {source: fred, id: UMCSENT, via: umich}
+  transform: [level, diff]
+uk_consumer_confidence:
+  name: GfK consumer confidence index (incl. major purchase index)
+  layer: macro
+  themes: [confidence, consumer]
+  geo: UK
+  freq: M
+  unit: net balance
+  cycle: leading
+  industries: [economy, retail]
+  series:
+    - {source: gfk_confidence, id: consumer-confidence-barometer}
+  transform: [level, diff]
+uk_consumer_credit:
+  name: Consumer credit, net lending to individuals (excl. student loans)
+  layer: macro
+  themes: [consumer_credit]
+  geo: UK
+  freq: M
+  unit: GBP mn SA
+  cycle: coincident
+  industries: [consumer_credit_lenders, banks]
+  series:
+    - {source: boe, id: LPMB3PS, note: unverified code; Money and Credit release}
+  transform: [level, z]
+uk_mortgage_approvals:
+  name: Mortgage approvals for house purchase
+  layer: macro
+  themes: [housing, credit]
+  geo: UK
+  freq: M
+  unit: count SA
+  cycle: leading
+  industries: [housing_market, homebuilding, home_rmi, retail_home_improvement]
+  series:
+    - {source: boe, id: LPMVTVX}
+  transform: [level, yoy]
+
+# ======================================================================================================
+# 5. Labour
+# ======================================================================================================
+us_payrolls:
+  name: Nonfarm payrolls
+  layer: macro
+  themes: [labour]
+  geo: US
+  freq: M
+  unit: thousands SA
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: bls, id: CES0000000001}
+    - {source: fred, id: PAYEMS, via: bls}
+  transform: [diff, yoy]
+us_unemployment:
+  name: Unemployment rate
+  layer: macro
+  themes: [labour, recession]
+  geo: US
+  freq: M
+  unit: percent
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: bls, id: LNS14000000}
+    - {source: fred, id: UNRATE, via: bls}
+  transform: [level, diff]
+us_initial_claims:
+  name: Initial jobless claims
+  layer: macro
+  themes: [labour, recession]
+  geo: US
+  freq: W
+  unit: count SA
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: fred, id: ICSA, via: dol}
+  transform: [level, yoy, z]
+us_continuing_claims:
+  name: Continuing jobless claims
+  layer: macro
+  themes: [labour]
+  geo: US
+  freq: W
+  unit: count SA
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: fred, id: CCSA, via: dol}
+  transform: [level, yoy]
+us_job_openings:
+  name: JOLTS job openings
+  layer: macro
+  themes: [labour]
+  geo: US
+  freq: M
+  unit: thousands SA
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: fred, id: JTSJOL, via: bls}
+  transform: [level, yoy]
+us_quits_rate:
+  name: JOLTS quits rate
+  layer: macro
+  themes: [labour, wages]
+  geo: US
+  freq: M
+  unit: percent
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: fred, id: JTSQUR, via: bls}
+  transform: [level, diff]
+us_avg_hourly_earnings:
+  name: Average hourly earnings, total private
+  layer: macro
+  themes: [labour, wages, inflation]
+  geo: US
+  freq: M
+  unit: USD
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: fred, id: CES0500000003, via: bls}
+  transform: [yoy]
+uk_unemployment:
+  name: Unemployment rate, aged 16 and over
+  layer: macro
+  themes: [labour, recession]
+  geo: UK
+  freq: M
+  unit: percent (3-month average)
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: ons, id: MGSX, dataset: LMS}
+  transform: [level, diff]
+uk_vacancies:
+  name: Job vacancies
+  layer: macro
+  themes: [labour]
+  geo: UK
+  freq: M
+  unit: thousands (3-month average)
+  cycle: leading
+  industries: [economy]
+  series:
+    - {source: ons, id: AP2Y, dataset: LMS}
+  transform: [level, yoy]
+uk_regular_pay:
+  name: Average weekly earnings, regular pay growth (3-month average y/y)
+  layer: macro
+  themes: [labour, wages, inflation]
+  geo: UK
+  freq: M
+  unit: percent
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: ons, id: KAI9, dataset: LMS}
+  transform: [level]
+
+# ======================================================================================================
+# 6. Prices
+# ======================================================================================================
+us_cpi:
+  name: CPI, all items
+  layer: macro
+  themes: [inflation]
+  geo: US
+  freq: M
+  unit: index 1982-84=100 SA
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: bls, id: CUSR0000SA0}
+    - {source: fred, id: CPIAUCSL, via: bls}
+  transform: [yoy, mom]
+us_core_pce_prices:
+  name: Core PCE price index
+  layer: macro
+  themes: [inflation]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: fred, id: PCEPILFE, via: bea}
+  transform: [yoy, mom]
+uk_cpi:
+  name: CPI annual rate
+  layer: macro
+  themes: [inflation]
+  geo: UK
+  freq: M
+  unit: percent y/y
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: ons, id: D7G7, dataset: MM23}
+  transform: [level, diff]
+uk_cpih:
+  name: CPIH annual rate (CPI including owner occupiers' housing costs)
+  layer: macro
+  themes: [inflation]
+  geo: UK
+  freq: M
+  unit: percent y/y
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: ons, id: L55O, dataset: MM23}
+  transform: [level, diff]
+uk_ppi_input:
+  name: Producer prices, input prices for manufacturing (materials and fuels)
+  layer: macro
+  themes: [inflation, costs]
+  geo: UK
+  freq: M
+  unit: percent y/y
+  cycle: leading
+  industries: [manufacturing]
+  series:
+    - {source: ons, id: K655, dataset: MM22, note: "NSA; materials and fuels purchased, other than food, beverages, tobacco and petroleum industries"}
+  transform: [level]
+oil_brent:
+  name: Brent crude oil spot price
+  layer: macro
+  themes: [energy, inflation, costs]
+  geo: GLOBAL
+  freq: D
+  unit: USD per barrel
+  cycle: coincident
+  industries: [oil_gas_extraction, airlines, road_freight]
+  series:
+    - {source: eia, id: PET.RBRTE.D}
+    - {source: fred, id: DCOILBRENTEU, via: eia}
+  transform: [level, yoy, log]
+us_diesel_price:
+  name: US on-highway diesel retail price
+  layer: meso
+  themes: [energy, costs, freight]
+  geo: US
+  freq: W
+  unit: USD per gallon
+  cycle: coincident
+  industries: [road_freight, ltl_freight, parcel_courier]
+  series:
+    - {source: eia, id: PET.EMD_EPD2D_PTE_NUS_DPG.W}
+    - {source: fred, id: GASDESW, via: eia}
+  transform: [level, yoy]
+
+# ======================================================================================================
+# 7. Housing and the renovation chain (house moves -> renovation -> tiles, bathrooms, gardens)
+# ======================================================================================================
+us_housing_starts:
+  name: Housing starts, total
+  layer: meso
+  themes: [housing]
+  geo: US
+  freq: M
+  unit: thousands saar
+  cycle: leading
+  industries: [homebuilding, building_products, builders_merchants]
+  series:
+    - {source: fred, id: HOUST, via: census}
+  transform: [level, yoy]
+us_building_permits:
+  name: New private housing units authorised by building permits
+  layer: meso
+  themes: [housing, recession]
+  geo: US
+  freq: M
+  unit: thousands saar
+  cycle: leading
+  industries: [homebuilding, building_products]
+  series:
+    - {source: fred, id: PERMIT, via: census}
+  transform: [level, yoy]
+us_new_home_sales:
+  name: New one-family houses sold
+  layer: meso
+  themes: [housing]
+  geo: US
+  freq: M
+  unit: thousands saar
+  cycle: leading
+  industries: [homebuilding]
+  series:
+    - {source: fred, id: HSN1F, via: census}
+  transform: [level, yoy]
+us_existing_home_sales:
+  name: Existing-home sales
+  layer: meso
+  themes: [housing, renovation]
+  geo: US
+  freq: M
+  unit: mn saar
+  cycle: leading
+  industries: [housing_market, home_rmi, retail_home_improvement]
+  series:
+    - {source: nar, id: existing-home-sales}
+    - {source: fred, id: EXHOSLUSM495S, via: nar, note: FRED carries a short rolling window only}
+  transform: [level, yoy]
+us_mortgage_rate:
+  name: 30-year fixed mortgage rate (Freddie Mac PMMS)
+  layer: macro
+  themes: [housing, rates]
+  geo: US
+  freq: W
+  unit: percent
+  cycle: leading
+  industries: [housing_market, homebuilding]
+  series:
+    - {source: fred, id: MORTGAGE30US, via: freddie_mac}
+  transform: [level, diff]
+us_house_prices:
+  name: S&P CoreLogic Case-Shiller US national home price index
+  layer: macro
+  themes: [housing, wealth]
+  geo: US
+  freq: M
+  unit: index NSA
+  cycle: lagging
+  industries: [housing_market, home_rmi]
+  series:
+    - {source: fred, id: CSUSHPINSA, via: sp_dji, note: S&P copyright; FRED shows it, storage needs S&P terms}
+  transform: [yoy]
+us_nahb_hmi:
+  name: NAHB/Wells Fargo Housing Market Index (builder sentiment)
+  layer: meso
+  themes: [housing, confidence]
+  geo: US
+  freq: M
+  unit: index
+  cycle: leading
+  industries: [homebuilding]
+  series:
+    - {source: nahb, id: hmi}
+  transform: [level, diff]
+us_construction_spending:
+  name: Construction spending, total
+  layer: meso
+  themes: [construction]
+  geo: US
+  freq: M
+  unit: USD mn saar
+  cycle: coincident
+  industries: [construction]
+  series:
+    - {source: fred, id: TTLCONS, via: census}
+  transform: [yoy]
+us_residential_construction_spending:
+  name: Private residential construction spending
+  layer: meso
+  themes: [construction, housing, renovation]
+  geo: US
+  freq: M
+  unit: USD mn saar
+  cycle: coincident
+  industries: [homebuilding, home_rmi]
+  series:
+    - {source: fred, id: PRRESCONS, via: census}
+    - {source: census, id: "C30 private residential improvements", note: improvements line; unverified id}
+  transform: [yoy]
+us_lira:
+  name: Leading Indicator of Remodeling Activity (owner-occupied improvement and repair spending, 4 quarters ahead)
+  layer: meso
+  themes: [renovation, diy, housing]
+  geo: US
+  freq: Q
+  unit: USD bn, 4-quarter moving total
+  cycle: leading
+  industries: [home_rmi, retail_home_improvement, plumbing_contractors, tiling_flooring_contractors]
+  series:
+    - {source: harvard_jchs, id: lira}
+  transform: [yoy]
+uk_house_prices_hmlr:
+  name: UK House Price Index (official, all dwellings)
+  layer: macro
+  themes: [housing, wealth]
+  geo: UK
+  freq: M
+  unit: GBP, index
+  cycle: lagging
+  industries: [housing_market, home_rmi]
+  series:
+    - {source: hmlr, id: uk-hpi}
+  transform: [yoy]
+uk_house_prices_nationwide:
+  name: Nationwide house price index
+  layer: macro
+  themes: [housing, wealth]
+  geo: UK
+  freq: M
+  unit: index, GBP average
+  cycle: coincident
+  industries: [housing_market]
+  series:
+    - {source: nationwide_hpi, id: hpi}
+  transform: [yoy, mom]
+uk_house_prices_halifax:
+  name: Halifax house price index
+  layer: macro
+  themes: [housing, wealth]
+  geo: UK
+  freq: M
+  unit: index, GBP average
+  cycle: coincident
+  industries: [housing_market]
+  series:
+    - {source: halifax_hpi, id: hpi}
+  transform: [yoy, mom]
+uk_property_transactions:
+  name: Residential property transactions (sales completions) and price-paid records
+  layer: meso
+  themes: [housing, renovation]
+  geo: UK
+  freq: M
+  unit: count
+  cycle: leading
+  industries: [housing_market, home_rmi, retail_home_improvement, retail_garden_centres]
+  series:
+    - {source: hmrc, id: uk-property-transactions, note: HMRC monthly property transactions; unverified}
+    - {source: hmlr, id: price-paid-data}
+  transform: [level, yoy]
+uk_rics_survey:
+  name: RICS residential market survey (new buyer enquiries, agreed sales, price balance)
+  layer: meso
+  themes: [housing, confidence]
+  geo: UK
+  freq: M
+  unit: net balance
+  cycle: leading
+  industries: [housing_market]
+  series:
+    - {source: rics, id: residential-market-survey}
+  transform: [level, diff]
+uk_construction_output:
+  name: Construction output volume, incl. private housing repair and maintenance
+  layer: meso
+  themes: [construction, renovation]
+  geo: UK
+  freq: M
+  unit: index / GBP mn CVM
+  cycle: coincident
+  industries: [construction, homebuilding, home_rmi]
+  series:
+    - {source: ons, id: output-in-the-construction-industry, note: series by type of work; unverified CDIDs}
+  transform: [yoy, mom]
+uk_bmbi:
+  name: Builders Merchants Building Index (sales by category incl. landscaping, kitchens and bathrooms, timber, heavy building materials)
+  layer: meso
+  themes: [construction, renovation, garden, diy]
+  geo: UK
+  freq: M
+  unit: index, percent y/y
+  cycle: coincident
+  industries: [builders_merchants, home_rmi, plumbing_contractors, tiling_flooring_contractors, garden_ornaments]
+  series:
+    - {source: bmbi, id: monthly-report}
+  transform: [yoy]
+
+# ======================================================================================================
+# 8. Goods trade by HS code (where the garden gnomes, tiles and basins show up first)
+# ======================================================================================================
+uk_imports_garden_ornaments:
+  name: UK imports of statuettes and ornamental articles (HS 3926.40 plastics, 6913 ceramic, 6810 concrete)
+  layer: meso
+  themes: [trade, garden, discretionary]
+  geo: UK
+  freq: M
+  unit: GBP, kg
+  cycle: leading
+  industries: [garden_ornaments, retail_garden_centres]
+  series:
+    - {source: hmrc_uktradeinfo, id: "HS 392640 / 691390 / 6810", note: OData by commodity code and partner country}
+  transform: [yoy, log]
+us_imports_garden_ornaments:
+  name: US imports of statuettes and ornamental articles (HS 3926.40, 6913)
+  layer: meso
+  themes: [trade, garden, discretionary]
+  geo: US
+  freq: M
+  unit: USD, kg
+  cycle: leading
+  industries: [garden_ornaments, retail_garden_centres]
+  series:
+    - {source: census, id: "intltrade/imports/hs I_COMMODITY=392640,6913"}
+  transform: [yoy, log]
+uk_imports_ceramic_tiles:
+  name: UK imports of ceramic tiles and flags (HS 6907)
+  layer: meso
+  themes: [trade, renovation]
+  geo: UK
+  freq: M
+  unit: GBP, kg
+  cycle: leading
+  industries: [ceramic_tiles_mfg, retail_tiles_flooring, tiling_flooring_contractors]
+  series:
+    - {source: hmrc_uktradeinfo, id: "HS 6907"}
+  transform: [yoy, log]
+us_imports_ceramic_tiles:
+  name: US imports of ceramic tiles (HS 6907)
+  layer: meso
+  themes: [trade, renovation]
+  geo: US
+  freq: M
+  unit: USD, kg
+  cycle: leading
+  industries: [ceramic_tiles_mfg, retail_tiles_flooring]
+  series:
+    - {source: census, id: "intltrade/imports/hs I_COMMODITY=6907"}
+  transform: [yoy, log]
+uk_imports_sanitaryware:
+  name: UK imports of ceramic sanitary fixtures, steel sanitary ware and taps (HS 6910, 7324, 8481)
+  layer: meso
+  themes: [trade, renovation, plumbing]
+  geo: UK
+  freq: M
+  unit: GBP, kg
+  cycle: leading
+  industries: [sanitaryware_mfg, retail_bathroom_online, plumbing_contractors, builders_merchants]
+  series:
+    - {source: hmrc_uktradeinfo, id: "HS 6910 / 7324 / 8481"}
+  transform: [yoy, log]
+uk_imports_live_plants:
+  name: UK imports of live plants (HS 0602)
+  layer: meso
+  themes: [trade, garden]
+  geo: UK
+  freq: M
+  unit: GBP, kg
+  cycle: leading
+  industries: [nursery_horticulture, retail_garden_centres]
+  series:
+    - {source: hmrc_uktradeinfo, id: "HS 0602"}
+  transform: [yoy]
+uk_imports_lawnmowers:
+  name: UK imports of powered rotary lawnmowers (HS 8433.11)
+  layer: meso
+  themes: [trade, garden, durables]
+  geo: UK
+  freq: M
+  unit: GBP, units
+  cycle: leading
+  industries: [garden_equipment_mfg, retail_garden_centres]
+  series:
+    - {source: hmrc_uktradeinfo, id: "HS 843311"}
+  transform: [yoy]
+global_trade_volume:
+  name: World trade volume (CPB World Trade Monitor)
+  layer: macro
+  themes: [trade, cycle]
+  geo: GLOBAL
+  freq: M
+  unit: index 2021=100
+  cycle: coincident
+  industries: [ocean_shipping, air_freight, manufacturing]
+  series:
+    - {source: cpb_wtm, id: world-trade-monitor}
+  transform: [yoy]
+global_trade_by_hs:
+  name: Bilateral merchandise trade by HS code (all reporters)
+  layer: meso
+  themes: [trade]
+  geo: GLOBAL
+  freq: M
+  unit: USD, kg
+  cycle: leading
+  industries: [manufacturing, ocean_shipping]
+  series:
+    - {source: un_comtrade, id: "C/M/HS"}
+  transform: [yoy]
+
+# ======================================================================================================
+# 9. Freight and logistics (goods moving = goods being bought)
+# ======================================================================================================
+us_cass_shipments:
+  name: Cass Freight Index, shipments
+  layer: meso
+  themes: [freight, goods_demand, recession]
+  geo: US
+  freq: M
+  unit: index Jan 1990=1
+  cycle: leading
+  industries: [road_freight, ltl_freight, rail_freight, transport_logistics]
+  series:
+    - {source: cass, id: freight-index-shipments}
+    - {source: fred, id: FRGSHPUSM649NCIS, via: cass}
+  transform: [yoy]
+us_cass_expenditures:
+  name: Cass Freight Index, expenditures (volume x rates)
+  layer: meso
+  themes: [freight, pricing]
+  geo: US
+  freq: M
+  unit: index Jan 1990=1
+  cycle: coincident
+  industries: [road_freight, transport_logistics]
+  series:
+    - {source: cass, id: freight-index-expenditures}
+    - {source: fred, id: FRGEXPUSM649NCIS, via: cass}
+  transform: [yoy]
+us_truck_tonnage:
+  name: Truck tonnage index (ATA, as carried in the BTS Transportation Services Index)
+  layer: meso
+  themes: [freight, goods_demand]
+  geo: US
+  freq: M
+  unit: index SA
+  cycle: coincident
+  industries: [road_freight]
+  series:
+    - {source: ata, id: truck-tonnage, note: members / paid}
+    - {source: fred, id: TRUCKD11, via: bts}
+  transform: [yoy]
+us_tsi_freight:
+  name: BTS Transportation Services Index, freight
+  layer: meso
+  themes: [freight, goods_demand, cycle]
+  geo: US
+  freq: M
+  unit: index 2000=100 SA
+  cycle: leading
+  industries: [transport_logistics]
+  series:
+    - {source: fred, id: TSIFRGHT, via: bts}
+  transform: [yoy]
+us_rail_carloads:
+  name: Rail freight carloads and intermodal units
+  layer: meso
+  themes: [freight, goods_demand]
+  geo: US
+  freq: W
+  unit: carloads, units
+  cycle: coincident
+  industries: [rail_freight, ocean_shipping]
+  series:
+    - {source: aar, id: weekly-rail-traffic}
+    - {source: fred, id: RAILFRTCARLOADSD11, via: bts}
+    - {source: fred, id: RAILFRTINTERMODALD11, via: bts}
+  transform: [yoy]
+us_ltl_tons_per_day:
+  name: Public LTL carriers' monthly tons per day and shipments per day (operating updates)
+  layer: micro
+  themes: [freight, goods_demand, diy]
+  geo: US
+  freq: M
+  unit: tons/day, percent y/y
+  cycle: leading
+  industries: [ltl_freight, retail_home_improvement, builders_merchants]
+  series:
+    - {source: sec_edgar, id: 8-K operating updates, note: carriers that publish monthly LTL stats (see instruments)}
+  transform: [yoy]
+us_truck_spot_rates:
+  name: Truckload spot and contract rates, load-to-truck ratio
+  layer: meso
+  themes: [freight, pricing]
+  geo: US
+  freq: W
+  unit: USD per mile, ratio
+  cycle: leading
+  industries: [road_freight]
+  series:
+    - {source: dat, id: trendlines, note: paid beyond free weekly headline}
+    - {source: freightwaves_sonar, id: tender-volumes, note: paid}
+  transform: [yoy]
+us_port_teus:
+  name: Port of Los Angeles container volumes (loaded imports, exports, empties)
+  layer: meso
+  themes: [freight, trade, inventories]
+  geo: US
+  freq: M
+  unit: TEU
+  cycle: leading
+  industries: [ocean_shipping, warehousing, retail]
+  series:
+    - {source: port_la, id: container-statistics}
+  transform: [yoy]
+container_rates:
+  name: Container spot freight rates (Drewry WCI, Freightos FBX)
+  layer: macro
+  themes: [freight, trade, inflation]
+  geo: GLOBAL
+  freq: W
+  unit: USD per 40ft
+  cycle: leading
+  industries: [ocean_shipping, retail]
+  series:
+    - {source: drewry_wci, id: world-container-index}
+    - {source: freightos_fbx, id: fbx-global}
+  transform: [level, yoy, log]
+baltic_dry:
+  name: Baltic Dry Index
+  layer: macro
+  themes: [freight, trade, commodities]
+  geo: GLOBAL
+  freq: D
+  unit: index
+  cycle: leading
+  industries: [ocean_shipping, metals_mining]
+  series:
+    - {source: baltic_exchange, id: BDI, note: paid licence for data}
+  transform: [log, yoy]
+uk_road_freight:
+  name: Domestic road freight lifted and moved by GB-registered HGVs (tonnes, tonne-km, by commodity)
+  layer: meso
+  themes: [freight, goods_demand]
+  geo: UK
+  freq: Q
+  unit: tonnes, tonne-km
+  cycle: coincident
+  industries: [road_freight, pallet_networks]
+  series:
+    - {source: dft_road_freight, id: RFS01, note: statistical tables; unverified table id}
+  transform: [yoy]
+uk_pallet_network_volumes:
+  name: UK pallet network volumes, revenue per pallet and member count (company filings)
+  layer: micro
+  themes: [freight, goods_demand, diy, sme]
+  geo: UK
+  freq: A
+  unit: pallets, GBP
+  cycle: coincident
+  industries: [pallet_networks]
+  series:
+    - {source: companies_house, id: filing-history, note: annual accounts and strategic reports of pallet network operators}
+    - {source: logistics_uk, id: logistics-performance-tracker, note: members}
+  transform: [yoy]
+uk_warehouse_space:
+  name: UK warehouse take-up and vacancy
+  layer: meso
+  themes: [freight, inventories, real_estate]
+  geo: UK
+  freq: Q
+  unit: sq ft, percent
+  cycle: lagging
+  industries: [warehousing]
+  series:
+    - {source: ukwa, id: reports}
+  transform: [yoy]
+us_inventory_sales_ratio:
+  name: Total business inventories to sales ratio
+  layer: macro
+  themes: [inventories, cycle]
+  geo: US
+  freq: M
+  unit: ratio
+  cycle: leading
+  industries: [retail, wholesale, manufacturing, warehousing]
+  series:
+    - {source: fred, id: ISRATIO, via: census}
+  transform: [level, diff]
+us_retail_inventory_ratio:
+  name: Retailers' inventories to sales ratio
+  layer: meso
+  themes: [inventories]
+  geo: US
+  freq: M
+  unit: ratio
+  cycle: leading
+  industries: [retail]
+  series:
+    - {source: fred, id: RETAILIRSA, via: census}
+  transform: [level, diff]
+
+# ======================================================================================================
+# 10. Business surveys and orders
+# ======================================================================================================
+us_ism_manufacturing:
+  name: ISM manufacturing PMI and new orders
+  layer: macro
+  themes: [cycle, manufacturing, survey]
+  geo: US
+  freq: M
+  unit: diffusion index
+  cycle: leading
+  industries: [manufacturing]
+  series:
+    - {source: ism, id: report-on-business, note: headline public; historical data licensed}
+  transform: [level, diff]
+pmi_sp_global:
+  name: S&P Global PMIs (UK, US, euro area, global; manufacturing, services, composite)
+  layer: macro
+  themes: [cycle, survey]
+  geo: GLOBAL
+  freq: M
+  unit: diffusion index
+  cycle: leading
+  industries: [manufacturing, economy]
+  series:
+    - {source: sp_global_pmi, id: pmi, note: headline public; history paid}
+  transform: [level, diff]
+us_philly_fed_mfg:
+  name: Philadelphia Fed manufacturing business outlook, current activity
+  layer: macro
+  themes: [cycle, manufacturing, survey]
+  geo: US
+  freq: M
+  unit: diffusion index
+  cycle: leading
+  industries: [manufacturing]
+  series:
+    - {source: fred, id: GACDFSA066MSFRBPHI, via: philly_fed}
+  transform: [level, diff]
+us_empire_mfg:
+  name: NY Fed Empire State manufacturing survey, general business conditions
+  layer: macro
+  themes: [cycle, manufacturing, survey]
+  geo: US
+  freq: M
+  unit: diffusion index
+  cycle: leading
+  industries: [manufacturing]
+  series:
+    - {source: fred, id: GACDISA066MSFRBNY, via: nyfed}
+  transform: [level, diff]
+us_core_capex_orders:
+  name: New orders, nondefense capital goods excluding aircraft
+  layer: macro
+  themes: [capex, cycle]
+  geo: US
+  freq: M
+  unit: USD mn SA
+  cycle: leading
+  industries: [manufacturing, semiconductors]
+  series:
+    - {source: census, id: "M3 NXA"}
+    - {source: fred, id: NEWORDER, via: census}
+  transform: [yoy, mom]
+us_durable_orders:
+  name: New orders, durable goods
+  layer: macro
+  themes: [capex, durables]
+  geo: US
+  freq: M
+  unit: USD mn SA
+  cycle: leading
+  industries: [manufacturing]
+  series:
+    - {source: fred, id: DGORDER, via: census}
+  transform: [yoy, mom]
+uk_bics:
+  name: Business Insights and Conditions Survey (turnover, prices, trading expectations by industry)
+  layer: meso
+  themes: [survey]
+  geo: UK
+  freq: M
+  unit: percent of firms
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: ons_bics, id: bics}
+  transform: [level]
+semis_billings:
+  name: Worldwide semiconductor sales (WSTS 3-month average)
+  layer: meso
+  themes: [semis, tech, cycle]
+  geo: GLOBAL
+  freq: M
+  unit: USD bn
+  cycle: coincident
+  industries: [semiconductors]
+  series:
+    - {source: wsts, id: blue-book, note: headline free via SIA press release; detail members}
+  transform: [yoy]
+
+# ======================================================================================================
+# 11. Energy and travel
+# ======================================================================================================
+us_crude_inventories:
+  name: US commercial crude oil inventories (ex SPR)
+  layer: meso
+  themes: [energy, inventories]
+  geo: US
+  freq: W
+  unit: thousand barrels
+  cycle: coincident
+  industries: [oil_gas_extraction]
+  series:
+    - {source: eia, id: PET.WCESTUS1.W}
+  transform: [level, diff]
+us_rig_count:
+  name: Baker Hughes US oil and gas rig count
+  layer: meso
+  themes: [energy, capex]
+  geo: US
+  freq: W
+  unit: rigs
+  cycle: lagging
+  industries: [oil_gas_extraction]
+  series:
+    - {source: baker_hughes, id: rig-count}
+  transform: [level, diff]
+us_tsa_throughput:
+  name: TSA checkpoint travel numbers
+  layer: meso
+  themes: [travel, consumer_spending, services]
+  geo: US
+  freq: D
+  unit: travellers
+  cycle: coincident
+  industries: [airlines, hotels]
+  series:
+    - {source: tsa, id: checkpoint-travel-numbers}
+  transform: [yoy]
+uk_airport_passengers:
+  name: UK airport passenger and cargo statistics
+  layer: meso
+  themes: [travel, freight]
+  geo: UK
+  freq: M
+  unit: passengers, tonnes
+  cycle: coincident
+  industries: [airlines, air_freight]
+  series:
+    - {source: caa, id: airport-data}
+  transform: [yoy]
+uk_new_car_registrations:
+  name: New car registrations
+  layer: meso
+  themes: [durables, autos, consumer_spending]
+  geo: UK
+  freq: M
+  unit: units
+  cycle: leading
+  industries: [autos, auto_dealers]
+  series:
+    - {source: smmt, id: car-registrations}
+  transform: [yoy]
+
+# ======================================================================================================
+# 12. Global aggregates
+# ======================================================================================================
+global_gdp_growth:
+  name: Real GDP growth by country (WEO and national accounts)
+  layer: macro
+  themes: [output]
+  geo: GLOBAL
+  freq: A
+  unit: percent
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: imf, id: WEO NGDP_RPCH}
+    - {source: world_bank, id: NY.GDP.MKTP.KD.ZG}
+  transform: [level]
+global_household_consumption:
+  name: Household final consumption expenditure by country
+  layer: macro
+  themes: [consumer_spending]
+  geo: GLOBAL
+  freq: A
+  unit: constant USD, percent growth
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: world_bank, id: NE.CON.PRVT.KD.ZG}
+  transform: [level]
+ea_retail_trade:
+  name: Euro area retail trade volume
+  layer: macro
+  themes: [consumer_spending, retail]
+  geo: EA
+  freq: M
+  unit: index
+  cycle: coincident
+  industries: [retail]
+  series:
+    - {source: eurostat, id: sts_trtu_m}
+  transform: [yoy, mom]
+ea_household_saving:
+  name: Euro area household saving rate
+  layer: macro
+  themes: [saving]
+  geo: EA
+  freq: Q
+  unit: percent
+  cycle: coincident
+  industries: [economy]
+  series:
+    - {source: eurostat, id: nasq_10_ki}
+    - {source: ecb, id: QSA household saving ratio, note: unverified key}
+  transform: [level, diff]
+global_credit_gap:
+  name: Credit-to-GDP gaps and total credit to the private non-financial sector
+  layer: macro
+  themes: [credit, boom_bust]
+  geo: GLOBAL
+  freq: Q
+  unit: percentage points of GDP
+  cycle: leading
+  industries: [banks, economy]
+  series:
+    - {source: bis, id: WS_CREDIT_GAP}
+  transform: [level, diff]
+  note: Boom/bust gauge; large positive gaps preceded banking crises in BIS research.
+global_unemployment:
+  name: Unemployment rate by country (modelled estimates)
+  layer: macro
+  themes: [labour]
+  geo: GLOBAL
+  freq: A
+  unit: percent
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: ilostat, id: UNE_2EAP_SEX_AGE_RT}
+  transform: [level]
+global_metals:
+  name: LME base metal prices and warehouse stocks (copper, aluminium, nickel, zinc)
+  layer: macro
+  themes: [commodities, cycle]
+  geo: GLOBAL
+  freq: D
+  unit: USD per tonne, tonnes
+  cycle: leading
+  industries: [metals_mining, construction, manufacturing]
+  series:
+    - {source: lme, id: official-prices, note: paid licence}
+  transform: [log, yoy]
+oil_supply_demand:
+  name: Oil production, demand and stocks by country (JODI)
+  layer: macro
+  themes: [energy]
+  geo: GLOBAL
+  freq: M
+  unit: kb/d
+  cycle: coincident
+  industries: [oil_gas_extraction]
+  series:
+    - {source: jodi, id: jodi-oil-world}
+  transform: [yoy]
+gb_grocery_share:
+  name: GB grocery market share and grocery price inflation
+  layer: meso
+  themes: [consumer_spending, inflation, staples]
+  geo: UK
+  freq: M
+  unit: percent
+  cycle: coincident
+  industries: [retail_staples]
+  series:
+    - {source: kantar, id: grocery-market-share}
+    - {source: nielseniq, id: scantrack, note: paid}
+  transform: [level, diff]
+
+# ======================================================================================================
+# 13. Company fundamentals (the micro layer feeding unit economics)
+# ======================================================================================================
+company_financials_us:
+  name: US-listed company financial statement facts (XBRL), any line item, all filers
+  layer: micro
+  themes: [fundamentals]
+  geo: US
+  freq: Q
+  unit: as reported
+  cycle: lagging
+  industries: [economy]
+  series:
+    - {source: sec_edgar, id: "api/xbrl/frames and companyfacts"}
+  transform: [yoy]
+company_accounts_uk:
+  name: UK company accounts and filings (all registered companies, incl. private pallet networks and retailers)
+  layer: micro
+  themes: [fundamentals, private_companies]
+  geo: UK
+  freq: A
+  unit: as filed
+  cycle: lagging
+  industries: [economy, pallet_networks]
+  series:
+    - {source: companies_house, id: "company profile, filing history, accounts (iXBRL bulk)"}
+  transform: [yoy]

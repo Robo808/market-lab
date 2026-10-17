@@ -1,0 +1,483 @@
+# Industry tree: sector -> industry -> niche line. Each node carries its codes in every open system so a
+# walk can jump between US (NAICS), international (ISIC Rev.4 division) and UK (UK SIC 2007 class) data,
+# plus the consumer (COICOP) and goods-trade (HS) codes where the industry sells to households or ships goods.
+#
+#   parent        tree edge (child_of); null = top of a branch under the economy root
+#   naics         NAICS 2022 codes (2 to 6 digits)
+#   isic          ISIC Rev.4 divisions (2 digits) or sections (letter)
+#   uksic         UK SIC 2007 classes (NN.NN) or sections
+#   coicop / hs   see classifications.yaml
+#   cycle         sensitivity to the business cycle: deep | high | medium | low | defensive
+#   drivers       free-text demand / cost drivers; the typed links live in edges.yaml
+#
+# Node ids: ind:<key>. Codes are written from the classification manuals; check a 6-digit or 4-digit code
+# against the official file before relying on it in a filter (see classifications.yaml `docs`).
+
+economy:
+  name: Whole economy
+  parent: null
+  cycle: high
+
+# ---- primary ---------------------------------------------------------------------------------------
+agriculture:
+  name: Agriculture
+  parent: economy
+  naics: ["11"]
+  isic: [A]
+  uksic: [A]
+  cycle: low
+nursery_horticulture:
+  name: Nursery, greenhouse and floriculture production (garden plants)
+  parent: agriculture
+  naics: ["1114"]
+  isic: ["01"]
+  uksic: ["01.30"]
+  coicop: ["09.3.3"]
+  hs: ["0602"]
+  cycle: high
+  drivers: [spring weather, housing turnover, discretionary spending]
+energy:
+  name: Oil, gas and mining
+  parent: economy
+  naics: ["21"]
+  isic: [B]
+  uksic: [B]
+  cycle: high
+oil_gas_extraction:
+  name: Crude oil and natural gas extraction
+  parent: energy
+  naics: ["211120", "211130"]
+  isic: ["06"]
+  uksic: ["06.10", "06.20"]
+  hs: ["2709"]
+  cycle: high
+  drivers: [global demand, OPEC+ supply, inventories, USD]
+metals_mining:
+  name: Metal ore mining
+  parent: energy
+  naics: ["2122"]
+  isic: ["07"]
+  uksic: ["07"]
+  cycle: deep
+  drivers: [China construction, global industrial production]
+utilities:
+  name: Utilities (power, gas, water)
+  parent: economy
+  naics: ["22"]
+  isic: [D, E]
+  uksic: [D, E]
+  cycle: defensive
+  drivers: [regulated returns, rates, weather]
+
+# ---- construction and the home --------------------------------------------------------------------
+construction:
+  name: Construction
+  parent: economy
+  naics: ["23"]
+  isic: [F]
+  uksic: [F]
+  cycle: deep
+homebuilding:
+  name: New residential construction (housebuilders)
+  parent: construction
+  naics: ["2361", "236115"]
+  isic: ["41"]
+  uksic: ["41.20"]
+  cycle: deep
+  drivers: [mortgage rates, mortgage approvals, house prices, land supply, planning]
+home_rmi:
+  name: Home repair, maintenance and improvement (renovation)
+  parent: construction
+  naics: ["236118", "238"]
+  isic: ["43"]
+  uksic: ["43"]
+  coicop: ["04.3"]
+  cycle: high
+  drivers: [housing turnover, house price equity, real incomes, consumer credit]
+plumbing_contractors:
+  name: Plumbing, heating and bathroom installation
+  parent: home_rmi
+  naics: ["238220"]
+  isic: ["43"]
+  uksic: ["43.22"]
+  cycle: high
+tiling_flooring_contractors:
+  name: Tiling and floor covering contractors
+  parent: home_rmi
+  naics: ["238330", "238340"]
+  isic: ["43"]
+  uksic: ["43.33"]
+  cycle: high
+
+# ---- manufacturing ---------------------------------------------------------------------------------
+manufacturing:
+  name: Manufacturing
+  parent: economy
+  naics: ["31-33"]
+  isic: [C]
+  uksic: [C]
+  cycle: high
+building_products:
+  name: Building products manufacturing
+  parent: manufacturing
+  naics: ["327", "3323"]
+  isic: ["23"]
+  uksic: ["23"]
+  cycle: deep
+ceramic_tiles_mfg:
+  name: Ceramic wall and floor tile manufacturing
+  parent: building_products
+  naics: ["327120"]
+  isic: ["23"]
+  uksic: ["23.31"]
+  hs: ["6907"]
+  cycle: deep
+sanitaryware_mfg:
+  name: Bathroom sanitaryware, taps and plumbing fixture manufacturing
+  parent: building_products
+  naics: ["327110", "332913"]
+  isic: ["23", "28"]
+  uksic: ["23.42", "28.14"]
+  hs: ["6910", "7324", "8481"]
+  cycle: high
+plastics_products:
+  name: Plastics products manufacturing
+  parent: manufacturing
+  naics: ["3261"]
+  isic: ["22"]
+  uksic: ["22.29"]
+  cycle: medium
+garden_ornaments:
+  name: "Garden ornaments and statuettes (resin, ceramic, concrete): the garden gnome line"
+  parent: plastics_products
+  naics: ["326199", "327110", "327390"]
+  isic: ["22", "23"]
+  uksic: ["22.29", "23.41", "23.69"]
+  coicop: ["05.5", "09.3.3"]
+  hs: ["3926.40", "6913", "6810"]
+  cycle: high
+  drivers: [spring weather, house moves, discretionary spending, import prices, sterling]
+  note: >-
+    Almost entirely imported in the UK and US, so the cleanest volume read is customs data by HS code
+    (HMRC uktradeinfo, US Census trade API), then garden-centre and DIY retailer trading updates.
+garden_equipment_mfg:
+  name: Lawn and garden equipment manufacturing
+  parent: manufacturing
+  naics: ["333112"]
+  isic: ["28"]
+  uksic: ["28.30"]
+  hs: ["8433.11"]
+  cycle: high
+furniture_mfg:
+  name: Furniture and home furnishings manufacturing
+  parent: manufacturing
+  naics: ["337"]
+  isic: ["31"]
+  uksic: ["31"]
+  coicop: ["05.1"]
+  hs: ["9403", "9405"]
+  cycle: high
+semiconductors:
+  name: Semiconductors and semiconductor equipment
+  parent: manufacturing
+  naics: ["334413", "333242"]
+  isic: ["26", "28"]
+  uksic: ["26.11", "28.99"]
+  hs: ["8542"]
+  cycle: deep
+  drivers: [AI and data-centre capex, PC and phone units, inventory cycle]
+autos:
+  name: Motor vehicle manufacturing
+  parent: manufacturing
+  naics: ["3361"]
+  isic: ["29"]
+  uksic: ["29.10"]
+  coicop: ["07.1"]
+  hs: ["8703"]
+  cycle: deep
+  drivers: [auto loan rates, real incomes, used-car prices, tariffs]
+chemicals:
+  name: Chemicals
+  parent: manufacturing
+  naics: ["325"]
+  isic: ["20"]
+  uksic: ["20"]
+  cycle: high
+pharma:
+  name: Pharmaceuticals
+  parent: manufacturing
+  naics: ["3254"]
+  isic: ["21"]
+  uksic: ["21.20"]
+  cycle: defensive
+
+# ---- wholesale and retail ---------------------------------------------------------------------------
+wholesale:
+  name: Wholesale trade
+  parent: economy
+  naics: ["42"]
+  isic: ["46"]
+  uksic: ["46"]
+  cycle: high
+builders_merchants:
+  name: Builders' merchants (construction materials and sanitary wholesale)
+  parent: wholesale
+  naics: ["4233", "4237"]
+  isic: ["46"]
+  uksic: ["46.73", "46.74"]
+  cycle: deep
+  drivers: [RMI activity, new build, trade confidence]
+retail:
+  name: Retail trade
+  parent: economy
+  naics: ["44-45"]
+  isic: ["47"]
+  uksic: ["47"]
+  cycle: high
+retail_staples:
+  name: Grocery and staples retail
+  parent: retail
+  naics: ["445", "455"]
+  isic: ["47"]
+  uksic: ["47.11"]
+  coicop: ["01"]
+  cycle: defensive
+retail_home_improvement:
+  name: DIY, home centres and building-material retail
+  parent: retail
+  naics: ["444", "444110", "444140"]
+  isic: ["47"]
+  uksic: ["47.52"]
+  coicop: ["05.5", "04.3"]
+  cycle: high
+  drivers: [housing turnover, house price equity, weather, real incomes]
+retail_garden_centres:
+  name: Garden centres, nurseries and outdoor power equipment retail
+  parent: retail_home_improvement
+  naics: ["4442", "444240", "444230"]
+  isic: ["47"]
+  uksic: ["47.76"]
+  coicop: ["09.3.3", "05.5"]
+  cycle: high
+retail_tiles_flooring:
+  name: Tile, flooring and floor-covering retail
+  parent: retail_home_improvement
+  naics: ["449121"]
+  isic: ["47"]
+  uksic: ["47.53", "47.52"]
+  coicop: ["05.1"]
+  hs: ["6907"]
+  cycle: high
+retail_bathroom_online:
+  name: Online bathroom, plumbing and heating retail
+  parent: retail_home_improvement
+  naics: ["444180", "449"]
+  isic: ["47"]
+  uksic: ["47.91", "47.52"]
+  coicop: ["05.5", "04.3"]
+  hs: ["6910", "8481"]
+  cycle: high
+  note: Pure online sellers file under UK SIC 47.91 (retail via internet) even though the goods are bathroom kit.
+retail_furnishings:
+  name: Furniture, furnishings and electrical retail
+  parent: retail
+  naics: ["449"]
+  isic: ["47"]
+  uksic: ["47.59", "47.54"]
+  coicop: ["05.1"]
+  cycle: high
+retail_ecommerce:
+  name: Online retail (all categories)
+  parent: retail
+  naics: ["4541"]
+  isic: ["47"]
+  uksic: ["47.91"]
+  cycle: high
+  note: NAICS 2022 folded nonstore retail into product lines; Census still publishes an e-commerce series.
+auto_dealers:
+  name: Motor vehicle dealers
+  parent: retail
+  naics: ["441"]
+  isic: ["45"]
+  uksic: ["45.11"]
+  coicop: ["07.1"]
+  cycle: deep
+
+# ---- transport and logistics -----------------------------------------------------------------------
+transport_logistics:
+  name: Transport and logistics
+  parent: economy
+  naics: ["48-49"]
+  isic: [H]
+  uksic: [H]
+  cycle: high
+road_freight:
+  name: Road freight (truckload)
+  parent: transport_logistics
+  naics: ["484121"]
+  isic: ["49"]
+  uksic: ["49.41"]
+  cycle: high
+  drivers: [goods consumption, inventories, diesel, driver supply]
+ltl_freight:
+  name: Less-than-truckload freight
+  parent: road_freight
+  naics: ["484122"]
+  isic: ["49"]
+  uksic: ["49.41"]
+  cycle: high
+  note: Heaviest exposure to small business, retail replenishment and home-improvement goods.
+pallet_networks:
+  name: Pallet networks (hub-and-spoke palletised freight, e.g. UK pallet networks)
+  parent: road_freight
+  naics: ["484122"]
+  isic: ["49"]
+  uksic: ["49.41", "52.29"]
+  cycle: high
+  drivers: [SME goods flows, DIY and building-material replenishment, retail stock]
+  note: >-
+    UK pallet networks are mostly private; volumes surface in Companies House accounts and trade press,
+    not in a public series. Proxies: DfT road freight, LTL tonnage, builders' merchants sales.
+parcel_courier:
+  name: Parcel, courier and express
+  parent: transport_logistics
+  naics: ["492110"]
+  isic: ["53"]
+  uksic: ["53.20"]
+  cycle: medium
+  drivers: [online retail share, B2B small parcels]
+rail_freight:
+  name: Rail freight
+  parent: transport_logistics
+  naics: ["482111"]
+  isic: ["49"]
+  uksic: ["49.20"]
+  cycle: high
+ocean_shipping:
+  name: Ocean freight (container and dry bulk)
+  parent: transport_logistics
+  naics: ["483111"]
+  isic: ["50"]
+  uksic: ["50.20"]
+  cycle: deep
+air_freight:
+  name: Air freight
+  parent: transport_logistics
+  naics: ["481112"]
+  isic: ["51"]
+  uksic: ["51.21"]
+  cycle: high
+warehousing:
+  name: Warehousing and storage
+  parent: transport_logistics
+  naics: ["4931"]
+  isic: ["52"]
+  uksic: ["52.10"]
+  cycle: medium
+airlines:
+  name: Passenger airlines
+  parent: transport_logistics
+  naics: ["481111"]
+  isic: ["51"]
+  uksic: ["51.10"]
+  coicop: ["07"]
+  cycle: deep
+  drivers: [jet fuel, consumer travel spending, capacity]
+
+# ---- services ---------------------------------------------------------------------------------------
+information:
+  name: Information and communication
+  parent: economy
+  naics: ["51"]
+  isic: [J]
+  uksic: [J]
+  cycle: medium
+software_saas:
+  name: Software and SaaS
+  parent: information
+  naics: ["513210", "518210"]
+  isic: ["58", "63"]
+  uksic: ["58.29", "63.11"]
+  cycle: medium
+  drivers: [IT budgets, seat counts, rates (duration)]
+telecom:
+  name: Telecommunications
+  parent: information
+  naics: ["517"]
+  isic: ["61"]
+  uksic: ["61"]
+  coicop: ["08"]
+  cycle: defensive
+finance:
+  name: Finance and insurance
+  parent: economy
+  naics: ["52"]
+  isic: [K]
+  uksic: [K]
+  cycle: high
+banks:
+  name: Banks
+  parent: finance
+  naics: ["5221"]
+  isic: ["64"]
+  uksic: ["64.19"]
+  cycle: high
+  drivers: [yield curve, credit losses, loan demand, deposit costs]
+consumer_credit_lenders:
+  name: Consumer credit (cards, personal loans, BNPL, auto finance)
+  parent: finance
+  naics: ["5222", "522291"]
+  isic: ["64"]
+  uksic: ["64.92"]
+  cycle: deep
+insurance:
+  name: Insurance
+  parent: finance
+  naics: ["5241"]
+  isic: ["65"]
+  uksic: ["65.12"]
+  cycle: low
+real_estate:
+  name: Real estate
+  parent: economy
+  naics: ["53"]
+  isic: [L]
+  uksic: [L]
+  cycle: high
+housing_market:
+  name: Residential property market (transactions, estate agency, mortgages)
+  parent: real_estate
+  naics: ["531210"]
+  isic: ["68"]
+  uksic: ["68.31"]
+  cycle: deep
+hospitality:
+  name: Accommodation and food services
+  parent: economy
+  naics: ["72"]
+  isic: [I]
+  uksic: [I]
+  cycle: high
+hotels:
+  name: Hotels
+  parent: hospitality
+  naics: ["7211"]
+  isic: ["55"]
+  uksic: ["55.10"]
+  coicop: ["11"]
+  cycle: high
+restaurants:
+  name: Restaurants and bars
+  parent: hospitality
+  naics: ["7225"]
+  isic: ["56"]
+  uksic: ["56.10"]
+  coicop: ["11"]
+  cycle: high
+healthcare:
+  name: Health care
+  parent: economy
+  naics: ["62"]
+  isic: [Q]
+  uksic: [Q]
+  cycle: defensive
