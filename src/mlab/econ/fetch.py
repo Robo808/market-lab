@@ -9,11 +9,16 @@ import pandas as pd
 
 from ..net import session
 from ..providers.macro import fred
+from ..providers.publishers import bls, hmrc_trade
 from .graph import EconGraph
 
 ONS = "https://www.ons.gov.uk"
 ONS_SEARCH = "https://api.beta.ons.gov.uk/v1/search"
-FETCHABLE = {"fred", "ons"}
+FETCHABLE = {"fred", "ons", "hmrc_uktradeinfo", "bls"}
+# Months from the end of the reference period to publication, when an indicator sets no
+# release_lag_months. Conservative on purpose: a feature that arrives late costs a little freshness,
+# one that arrives early is look-ahead.
+DEFAULT_LAG = {"D": 0, "W": 0, "M": 2, "Q": 3, "A": 6}
 
 
 def is_cdid(sid: str) -> bool:
@@ -64,10 +69,17 @@ def fetch_series(spec: dict) -> pd.Series:
         return s
     if spec["source"] == "ons":
         return ons(spec["id"], spec.get("dataset"))
+    if spec["source"] == "hmrc_uktradeinfo":
+        df = hmrc_trade(spec["id"], spec.get("flow", "imports"))
+        s = df[spec.get("measure", "value")].rename(spec["id"])
+        s.attrs["source"] = df.attrs["source"]
+        return s
+    if spec["source"] == "bls":
+        return bls(spec["id"])
     raise NotImplementedError(f"no fetcher for source {spec['source']}")
 
 
-def check(g: EconGraph, sources=("fred", "ons"), log=print) -> pd.DataFrame:
+def check(g: EconGraph, sources=("fred", "ons", "hmrc_uktradeinfo"), log=print) -> pd.DataFrame:
     """Hit every FRED / ONS id once; report ok, last date and title, or the error."""
     rows = []
     for n in g.of_kind("sig"):
@@ -78,6 +90,13 @@ def check(g: EconGraph, sources=("fred", "ons"), log=print) -> pd.DataFrame:
             try:
                 if s["source"] == "ons" and not is_cdid(s["id"]):
                     row.update(ok=True, title="release, not a series id (not checked)")
+                elif s["source"] == "hmrc_uktradeinfo":
+                    from ..providers.publishers import hmrc_commodities
+                    com = hmrc_commodities([c.strip() for c in s["id"].split(",")])
+                    row.update(ok=len(com) > 0, title=f"{len(com)} CN8 codes: " + "; ".join(
+                        sorted(set(com["Hs6Description"].astype(str)))[:2]) if len(com) else None)
+                    if not len(com):
+                        row["error"] = "no commodity codes"
                 elif s["source"] == "ons":
                     hit = ons_lookup(s["id"], s.get("dataset"))
                     if not hit:
@@ -114,13 +133,30 @@ def _transform(s: pd.Series, how: str, freq: str) -> pd.Series:
     raise ValueError(how)
 
 
+def pick_series(g: EconGraph, d: dict) -> list[dict]:
+    """Fetchable series of an indicator in the order to try them: storable original publishers first,
+    mirrors (FRED) after, so a panel can be saved whenever the data allows it."""
+    def ok(s):
+        return s["source"] in FETCHABLE and (s["source"] != "ons" or is_cdid(s["id"]))
+
+    def storable(s):
+        src = g.nodes.get(f"src:{s['source']}")
+        return bool(src) and src.data.get("storage_allowed") == "yes"
+    cands = [s for s in d.get("series", []) if ok(s)]
+    return sorted(cands, key=lambda s: not storable(s))
+
+
 def panel(g: EconGraph, start: str, depth: int = 1, geo: str | None = None, since: str = "2000-01-01",
-          target: str | None = "sig:us_recession_nber", out: str | None = None, log=print):
+          target: str | None = "sig:us_recession_nber", out: str | None = None, realtime: bool = True,
+          log=print):
     """Monthly ML feature matrix for every fetchable indicator within `depth` of `start`: one column per
     indicator x transform, aligned at month end, plus the target label. Returns (frame, provenance).
 
     Rows are indexed by reference period, not release date: shift each column by its publication lag
-    before training, or the model sees numbers that were not yet published (look-ahead)."""
+    before training, or the model sees numbers that were not yet published (look-ahead). With
+    realtime=True (the default) the panel does that shift itself: each column moves forward by the
+    indicator's release_lag_months (or DEFAULT_LAG for its frequency), so row t holds only what was
+    published by the end of month t. The target label is never shifted."""
     ids = g.indicators_near(start, depth)
     if target:
         ids.append(g.resolve(target))
@@ -129,23 +165,28 @@ def panel(g: EconGraph, start: str, depth: int = 1, geo: str | None = None, sinc
         d = g.nodes[sid].data
         if geo and d.get("geo") != geo and sid != target:
             continue
-        spec = next((s for s in d.get("series", []) if s["source"] in FETCHABLE
-                     and (s["source"] != "ons" or is_cdid(s["id"]))), None)
-        if not spec:
-            continue
-        try:
-            s = fetch_series(spec)
-        except Exception as e:
-            log(f"skip {sid}: {type(e).__name__}: {str(e)[:60]}")
+        s = None
+        for spec in pick_series(g, d):
+            try:
+                s = fetch_series(spec)
+                break
+            except Exception as e:  # fall through to the next publisher
+                log(f"{sid}: {spec['source']} failed ({type(e).__name__}: {str(e)[:60]})")
+        if s is None or s.empty:
             continue
         s = s[s.index >= pd.Timestamp(since) - pd.DateOffset(years=6)]
         freq = d.get("freq", "M")
         m = s.resample("ME").last() if freq in ("D", "W", "M") else s.resample("QE").last().resample("ME").ffill()
-        mfreq = "M" if freq in ("D", "W", "M") else "M"
+        lag = 0 if sid == target or not realtime else int(d.get("release_lag_months", DEFAULT_LAG.get(freq, 2)))
         for how in (d.get("transform") or ["level"]) if sid != target else ["level"]:
-            cols[f"{g.nodes[sid].key}__{how}"] = _transform(m, how, mfreq)
+            col = _transform(m, how, "M")
+            if lag:  # run the index on to this month so the latest release lands where it was published
+                col = col.reindex(pd.date_range(col.index[0], pd.Timestamp.now() + pd.offsets.MonthEnd(0),
+                                                freq="ME").normalize()).shift(lag)
+            cols[f"{g.nodes[sid].key}__{how}"] = col
         src = g.nodes.get(f"src:{spec['source']}")
         prov.append({"indicator": sid, "source": spec["source"], "id": spec["id"], "last": s.index[-1].date(),
+                     "lag_months": lag,
                      "storage_allowed": src.data.get("storage_allowed") if src else None,
                      "origin": s.attrs.get("source")})
     df = pd.DataFrame(cols)

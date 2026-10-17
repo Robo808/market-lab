@@ -83,4 +83,5 @@ OPTIONAL_KEYS = {
     "FMP_API_KEY": "Financial Modeling Prep fundamentals",
     "MASSIVE_API_KEY": "Massive (Polygon) free key: live backup for US stocks and `mlab datasets crosscheck` (display-only, never stored)",
     "SEC_USER_AGENT": "Contact string SEC requires, e.g. 'Your Name you@example.com'",
+    "BLS_API_KEY": "BLS API v2 key: 500 queries/day instead of 25 for `mlab econ panel` (free registration)",
 }

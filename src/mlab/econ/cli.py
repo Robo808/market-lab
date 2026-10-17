@@ -7,7 +7,7 @@
     mlab econ sideways src:ons                 # alternative sources / sibling nodes of the same kind
     mlab econ path sig:uk_mortgage_approvals ind:retail_tiles_flooring
     mlab econ sources ind:retail_bathroom_online -d 2   # who publishes the numbers, access, licence
-    mlab econ check                            # live-check every FRED and ONS series id
+    mlab econ check                            # live-check every FRED, ONS and HMRC series id
     mlab econ panel ind:retail_home_improvement -d 2 --geo US   # ML feature matrix (in memory)
     mlab econ export --out DIR                 # nodes.csv + edges.csv for the influence-map network
     mlab econ docs --out docs/wiki/Econ-Dictionary.md
@@ -124,7 +124,7 @@ def cmd_econ(a):
     elif act == "panel":
         from .fetch import panel
         df, prov = panel(g, nid, a.depth, a.geo, a.since, None if a.no_target else a.target_label, a.out,
-                         log=(lambda *x: None) if a.json else print)
+                         realtime=not a.no_lag, log=(lambda *x: None) if a.json else print)
         show(prov, a.json, title="Columns and provenance")
         if not a.json:
             print(f"\nPanel: {df.shape[0]} months x {df.shape[1]} columns, {df.index.min():%Y-%m} to {df.index.max():%Y-%m}"
@@ -132,7 +132,9 @@ def cmd_econ(a):
             show(df.tail(a.tail).iloc[::-1], a.json, title=f"Last {a.tail} months")
         if a.out:
             print(f"\nwrote {a.out}")
-        print(f"\n_Fetched live {pd.Timestamp.now(tz='UTC'):%Y-%m-%d %H:%M} UTC; FRED data is never cached or stored._")
+        print(f"\n_Fetched live {pd.Timestamp.now(tz='UTC'):%Y-%m-%d %H:%M} UTC; "
+              f"{'columns shifted by publication lag' if not a.no_lag else 'indexed by reference period (no lag shift)'}; "
+              "FRED data is never cached or stored._")
 
 
 def register(add):
@@ -152,5 +154,6 @@ def register(add):
     q.add_argument("--since", default="2000-01-01")
     q.add_argument("--target-label", default="sig:us_recession_nber", help="panel: label column")
     q.add_argument("--no-target", action="store_true")
+    q.add_argument("--no-lag", action="store_true", help="panel: index by reference period, no publication-lag shift")
     q.add_argument("--tail", type=int, default=6)
     q.add_argument("--out", help="export: directory; docs/panel: file (panel refuses storage-restricted sources)")

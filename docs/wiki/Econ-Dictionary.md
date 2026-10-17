@@ -176,11 +176,11 @@ Kinds: `ind` industry, `sig` indicator, `kpi` unit-economics KPI, `src` source, 
 | `uk_consumption_gardens_plants` | Household consumption, COICOP 09.3.3 gardens, plants and flowers (Consumer Trends) | UK | Q | coincident | ons:AWUX | retail_garden_centres, nursery_horticulture, garden_ornaments |
 | `uk_consumption_house_garden_tools` | Household consumption, COICOP 05.5 tools and equipment for house and garden (Consumer Trends) | UK | Q | coincident | ons:XYJY | retail_home_improvement, garden_equipment_mfg |
 | `uk_cpi_house_garden_tools` | CPI annual rate, 05.5 tools and equipment for house and garden | UK | M | lagging | ons:D7GY | retail_home_improvement, retail_garden_centres |
-| `uk_imports_ceramic_tiles` | UK imports of ceramic tiles and flags (HS 6907) | UK | M | leading | hmrc_uktradeinfo:HS 6907 | ceramic_tiles_mfg, retail_tiles_flooring, tiling_flooring_contractors |
-| `uk_imports_garden_ornaments` | UK imports of statuettes and ornamental articles (HS 3926.40 plastics, 6913 ceramic, 6810 concrete) | UK | M | leading | hmrc_uktradeinfo:HS 392640 / 691390 / 6810 | garden_ornaments, retail_garden_centres |
-| `uk_imports_lawnmowers` | UK imports of powered rotary lawnmowers (HS 8433.11) | UK | M | leading | hmrc_uktradeinfo:HS 843311 | garden_equipment_mfg, retail_garden_centres |
-| `uk_imports_live_plants` | UK imports of live plants (HS 0602) | UK | M | leading | hmrc_uktradeinfo:HS 0602 | nursery_horticulture, retail_garden_centres |
-| `uk_imports_sanitaryware` | UK imports of ceramic sanitary fixtures, steel sanitary ware and taps (HS 6910, 7324, 8481) | UK | M | leading | hmrc_uktradeinfo:HS 6910 / 7324 / 8481 | sanitaryware_mfg, retail_bathroom_online, plumbing_contractors, builders_merchants |
+| `uk_imports_ceramic_tiles` | UK imports of ceramic tiles and flags (HS 6907) | UK | M | leading | hmrc_uktradeinfo:6907 | ceramic_tiles_mfg, retail_tiles_flooring, tiling_flooring_contractors |
+| `uk_imports_garden_ornaments` | UK imports of statuettes and ornamental articles (HS 3926.40 plastics, 6913 ceramic) | UK | M | leading | hmrc_uktradeinfo:392640,6913 | garden_ornaments, retail_garden_centres |
+| `uk_imports_lawnmowers` | UK imports of powered rotary lawnmowers (HS 8433.11) | UK | M | leading | hmrc_uktradeinfo:843311 | garden_equipment_mfg, retail_garden_centres |
+| `uk_imports_live_plants` | UK imports of live plants (HS 0602) | UK | M | leading | hmrc_uktradeinfo:0602 | nursery_horticulture, retail_garden_centres |
+| `uk_imports_sanitaryware` | UK imports of ceramic sanitary fixtures, steel sanitary ware and taps (HS 6910, 7324, 8481) | UK | M | leading | hmrc_uktradeinfo:6910,7324,8481 | sanitaryware_mfg, retail_bathroom_online, plumbing_contractors, builders_merchants |
 | `uk_new_car_registrations` | New car registrations | UK | M | leading | smmt:car-registrations | autos, auto_dealers |
 | `uk_property_transactions` | Residential property transactions (sales completions) and price-paid records | UK | M | leading | hmrc:uk-property-transactions; hmlr:price-paid-data | housing_market, home_rmi, retail_home_improvement, retail_garden_centres |
 | `uk_retail_sales_furniture` | Retail sales volume, furniture and lighting stores | UK | M | coincident | ons:JO5G | retail_furnishings |

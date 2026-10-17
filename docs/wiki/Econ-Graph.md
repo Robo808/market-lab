@@ -59,18 +59,22 @@ bash mlab econ panel ind:retail_home_improvement -d 2 --geo US        # FRED-bac
 bash mlab econ panel ind:retail_home_improvement -d 1 --geo UK --no-target --out uk.csv   # ONS (OGL), may be saved
 ```
 
-The panel takes every indicator within `--depth` of a node that has a fetchable series (FRED or ONS today),
-resamples it to month end, applies its `transform` list (yoy, mom, diff, log, z) and adds the target label
-(`sig:us_recession_nber` by default). Two rules:
+The panel takes every indicator within `--depth` of a node that has a fetchable series, resamples it to month
+end, applies its `transform` list (yoy, mom, diff, log, z) and adds the target label (`sig:us_recession_nber`
+by default). Fetchers: ONS, HMRC uktradeinfo (UK trade by HS code), BLS, FRED. Three rules:
 
+- **Original publisher first.** When an indicator lists several series, the panel tries the ones whose
+  licence allows storage first (BLS, ONS, HMRC) and falls back to FRED. Set `BLS_API_KEY` (free) for 500
+  BLS queries a day; without it a shared IP can hit the 25-query limit.
 - **Storage follows the licence.** `--out` refuses when any column comes from a source whose
   `storage_allowed` is not `yes`. FRED's terms forbid storing or caching its content, so FRED columns stay
-  in memory; freeze those numbers from the original publisher (BLS, BEA, Census, Fed Board: public domain)
-  instead.
-- **Reference period, not release date.** Rows are indexed by the period the number describes. Shift each
-  column by its publication lag before training, or the model sees data that was not yet out.
+  in memory.
+- **No look-ahead.** Each column is shifted forward by its publication lag (`release_lag_months` on the
+  indicator, else D/W 0, M 2, Q 3, A 6 months: conservative on purpose), so row t holds only what was
+  published by the end of month t. The target label is not shifted. `--no-lag` indexes by reference
+  period instead.
 
-`bash mlab econ check` hits every FRED and ONS series id once and reports any that fail; run it after editing
+`bash mlab econ check` hits every FRED, ONS and HMRC series id once and reports any that fail; run it after editing
 `indicators.yaml`. ONS ids were found with the ONS search API (`api.beta.ons.gov.uk/v1/search`).
 
 ## Influence map
