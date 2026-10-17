@@ -103,6 +103,7 @@ Symbols use Yahoo conventions (`AAPL`, `^GSPC`, `^FTSE`, `EURUSD=X`, `GC=F`, `VO
 | `algo paper` | Rebalance a paper book to today's target (`--book`, `--capital`) | `mlab algo paper rsi2 SPY QQQ --book rsi2-us` |
 | `algo paper-status` | Equity, drawdown, holdings and fills of one or all books | `mlab algo paper-status` |
 | `hypo new` | Pre-register a hypothesis (`--claim`, `--strategy`, `--symbols`, `--spec`, `--branch`) | `mlab hypo new ftse-rsi2 --claim "..." --branch` |
+| `hypo gate` | Run null stubs against the registered bars: OK, or REFUSED (exit 2) when a stub passes | `mlab hypo gate research/hypotheses/H-....md` |
 | `hypo test` | Grade a pre-registered file once: PASS or FAIL | `mlab hypo test research/hypotheses/H-....md` |
 | `hypo list` | All hypotheses and their verdicts | `mlab hypo list` |
 
