@@ -93,6 +93,8 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab datasets catalog ; ./mlab datasets build all ; ./mlab datasets list   # frozen offline snapshots
 ./mlab datasets crosscheck us-stocks-1m --days 5   # stored bars vs Massive live (Massive is never stored)
 ./mlab algo backtest tsmom UK100 US500 --dataset duka-1d --split train       # offline, fixed split
+./mlab econ walk ind:garden_ornaments -d 2 ; ./mlab econ sideways src:ons ; ./mlab econ sources ind:pallet_networks
+./mlab econ panel ind:retail_home_improvement -d 2 --geo US   # ML features from the indicator graph (wiki Econ-Graph)
 ```
 
 ## Quant research (`src/mlab/quant/`, wiki in `docs/wiki/`)

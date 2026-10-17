@@ -17,6 +17,7 @@ dependencies = [
   "openpyxl>=3.1.5",
   "defusedxml>=0.7.1",
   "xlrd>=2.0.1",
+  "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
@@ -32,6 +33,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+mlab = ["econ/data/*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -18,6 +18,8 @@
 
 - [[Data Sources]]
 - [[Datasets]]
+- [[Econ Graph]]
+- [[Econ Dictionary]]
 - [[Contributing]]
 - [[Tracking]]
 - [[Glossary]]

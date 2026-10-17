@@ -66,6 +66,22 @@ Symbols use Yahoo conventions (`AAPL`, `^GSPC`, `^FTSE`, `EURUSD=X`, `GC=F`, `VO
 | `cot-extremes` | Positioning extremes across mapped markets | `mlab cot-extremes` |
 | `lens soros` | Macro and reflexivity screen across assets | `mlab lens soros` |
 
+## Economic graph
+
+| Command | Does | Example |
+|---|---|---|
+| `econ summary` | Node and edge counts, validation problems | `mlab econ summary` |
+| `econ search` / `show` | Find nodes; one node with all its edges | `mlab econ show ind:pallet_networks` |
+| `econ walk` | Breadth-first neighbourhood (`--depth`, `--types`, `--direction`, `--kind`) | `mlab econ walk ind:garden_ornaments -d 2` |
+| `econ sideways` | Same-kind peers through shared links (alternative sources, sibling indicators) | `mlab econ sideways src:ons` |
+| `econ path` | Shortest link chain between two nodes | `mlab econ path sig:uk_mortgage_approvals ind:retail_tiles_flooring` |
+| `econ sources` | Publishers, access, cost and licence for the numbers near a node | `mlab econ sources ind:retail_bathroom_online -d 2` |
+| `econ check` | Live-check every FRED and ONS series id | `mlab econ check` |
+| `econ panel` | Monthly ML feature matrix (`--geo`, `--since`, `--out` only for storable sources) | `mlab econ panel ind:retail_home_improvement -d 1 --geo UK` |
+| `econ export` / `docs` | nodes.csv + edges.csv; regenerate [[Econ Dictionary]] | `mlab econ export --out graph/` |
+
+See [[Econ Graph]].
+
 ## Fundamentals
 
 | Command | Does | Example |
