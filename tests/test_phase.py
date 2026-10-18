@@ -222,3 +222,14 @@ def test_stress_ranges_are_ordered():
     st = P.stress(r, n_paths=200)
     assert st["sharpe_5_50_95"][0] < st["sharpe_5_50_95"][1] < st["sharpe_5_50_95"][2]
     assert st["max_dd_5_50_95"][2] <= 0
+
+
+def test_positions_hold_through_a_market_holiday(frames):
+    """A symbol with no bar on a date the panel has (its exchange shut) keeps its position: no phantom round trip."""
+    f = dict(frames)
+    hol = f["S1"].index[700]
+    f["S1"] = f["S1"].drop(index=hol)
+    S = E.prepare(f, "__test_hol__", min_train_years=3)
+    pred = pd.Series(1.0, index=S.cube.index)
+    w = E.positions(S, pred, h=1, long_only=False)
+    assert w.loc[hol, "S1"] > 0 and w.loc[hol, "S1"] == w["S1"].shift().loc[hol]

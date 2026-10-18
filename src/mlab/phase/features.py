@@ -87,6 +87,11 @@ def load(ref: str, symbols: list[str] | None = None, split: str = "train+validat
             k = df["adj_close"] / df["close"]
             df = df.assign(**{c: df[c] * k for c in ("open", "high", "low", "close")})
         df = df.dropna(subset=["open", "high", "low", "close"])
+        if len(df) > 2 and pd.Series(df.index).diff().median() >= pd.Timedelta(hours=20):
+            # daily bars carry exchange-local close times (05:00, 08:00 UTC...): key them by session date so
+            # instruments share one calendar
+            df = df.set_axis(df.index.normalize())
+            df = df[~df.index.duplicated(keep="last")]
         hi, lo = df[["open", "high", "close"]].max(axis=1), df[["open", "low", "close"]].min(axis=1)
         fixed = int(((hi != df["high"]) | (lo != df["low"])).sum())
         if fixed:   # snapshot bars with the close or open outside high-low (quote feeds do this): widen the range

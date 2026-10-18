@@ -282,12 +282,14 @@ def predict_fold(S: Setup, cache: FoldCache, cfg: dict, year: int, y: pd.Series)
 def positions(S: Setup, pred: pd.Series, h: int, long_only: bool, target_vol: float = 0.10,
               cap: float = 3.0) -> pd.DataFrame:
     """Signal -> weights: sign of the forecast, averaged over the last h signals, vol-targeted, 1/N of capital."""
-    sig = np.sign(pred).unstack("symbol").reindex(S.closes.index)
+    sig = np.sign(pred).unstack("symbol")
     if long_only:
         sig = sig.clip(lower=0)
-    sig = sig.rolling(h, min_periods=1).mean()
+    sig = sig.rolling(h, min_periods=1).mean()              # over the symbol's own bars
     lev = (target_vol / (S.rv * np.sqrt(252))).clip(upper=cap)
-    return (sig * lev / len(S.frames)).fillna(0.0)
+    # on the union calendar a symbol without a bar that day (its market shut) keeps yesterday's position
+    w = (sig.reindex(S.closes.index) * lev).ffill(limit=5)
+    return (w / len(S.frames)).fillna(0.0)
 
 
 def simulate(S: Setup, w: pd.DataFrame, delay: int = 0, funding_annual: float = 0.02, costs: bool = True) -> pd.Series:
@@ -314,7 +316,9 @@ def run_config(S: Setup, cache: FoldCache, cfg: dict, delay: int = 0, funding: f
     on = w.abs().gt(1e-12)
     entries = int((on & ~on.shift(fill_value=False)).sum().sum())
     pre = validation.sharpe(simulate(S, w, delay, 0.0, costs=False))
+    spread_only = validation.sharpe(simulate(S, w, delay, 0.0))     # futures/cash venues carry no funding line
     return {"returns": r, "weights": w, "pred": preds, "ic": ic, "hit": hit, "sharpe_pre_cost": pre,
+            "sharpe_no_funding": spread_only,
             "exposure": float(on.to_numpy().mean()), "hold": float(on.to_numpy().sum() / max(entries, 1)),
             "turnover_ann": float(w.diff().abs().sum(axis=1).mean() * 252)}
 
@@ -337,8 +341,8 @@ def null_stubs(S: Setup, shape: dict, seeds: int = 5, delay: int = 0, funding: f
     """Always long and seeded coin flips with the candidate's exposure and average hold, same sizing and costs."""
     first = pd.Timestamp(f"{S.years[0]}-01-01", tz="UTC")
     idx = S.closes.index[S.closes.index >= first]
-    lev = (0.10 / (S.rv * np.sqrt(252))).clip(upper=3.0).reindex(idx) / len(S.frames)
-    have = S.rv.reindex(idx).notna()
+    lev = (0.10 / (S.rv * np.sqrt(252))).clip(upper=3.0).reindex(idx).ffill(limit=5) / len(S.frames)
+    have = lev.notna()
     out = {"always_long": simulate(S, (lev * have).fillna(0.0), delay, funding)}
     hold = max(1, int(round(shape["hold"])))
     p = min(max(shape["exposure"], 0.05), 1.0)
@@ -373,14 +377,16 @@ def evaluate(S: Setup, grid: list[dict], embargo: int = 5, delay: int = 0, fundi
     # log every config first, so the trial count includes this whole run before anyone is graded
     for cid, (cfg, res) in runs.items():
         m = summarize(res["returns"], 1, None, lags=max(5, cfg["horizon"]))
-        m.update({k: res[k] for k in ("ic", "hit", "exposure", "hold", "turnover_ann", "sharpe_pre_cost")})
+        m.update({k: res[k] for k in ("ic", "hit", "exposure", "hold", "turnover_ann", "sharpe_pre_cost",
+                                               "sharpe_no_funding")})
         log_experiment(S.family, {**cfg, "embargo": embargo, "delay": delay, "funding": funding}, m, S.context)
     trials = trial_count(S.family)
     rows = []
     for cid, (cfg, res) in runs.items():
         m = summarize(res["returns"], trials, sr_var, lags=max(5, cfg["horizon"]))
         rows.append({"id": cid, **cfg, **{k: m[k] for k in ("sharpe", "t_nw", "dsr", "ann_return", "max_dd")},
-                     "sharpe_pre_cost": res["sharpe_pre_cost"], "ic": res["ic"], "hit": res["hit"],
+                     "sharpe_pre_cost": res["sharpe_pre_cost"], "sharpe_no_funding": res["sharpe_no_funding"],
+                     "ic": res["ic"], "hit": res["hit"],
                      "turnover": res["turnover_ann"]})
     table = pd.DataFrame(rows).sort_values("sharpe", ascending=False)
     best_id = table.iloc[0]["id"]
