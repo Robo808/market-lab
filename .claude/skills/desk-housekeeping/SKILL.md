@@ -16,7 +16,8 @@ Two jobs, one report. Nothing is deleted or closed without the owner's go; recom
    waiting on the owner, code work with no issue.
 4. **Threads** (`list_thread_sessions`): completed and idle > 48 h with nothing owed = resolve; several threads on
    one workstream = consolidate into the owner thread; blocked = say what it waits on.
-5. **Shared folder:** stray code copies, temp files, reports with no index entry.
+5. **Shared folder:** free space (it has a 10 GB cap), stray code copies, temp files, reports with no index entry.
+6. **Public repo:** grep open PR diffs for names, money, pension, positions and persona wording; flag any hit.
 
 ## 2. Lessons roll-up
 1. Read `$MLAB_DATA_DIR/LESSONS.md`, the project MEMORY.md, the team memory dir, and the last week of the
