@@ -93,6 +93,7 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab datasets catalog ; ./mlab datasets build all ; ./mlab datasets list   # frozen offline snapshots
 ./mlab datasets crosscheck us-stocks-1m --days 5   # stored bars vs Massive live (Massive is never stored)
 ./mlab algo backtest tsmom UK100 US500 --dataset duka-1d --split train       # offline, fixed split
+./mlab phase evaluate duka-1d --skill    # phase-space regimes: purged walk-forward, null stubs, DSR, PBO
 ```
 
 ## Quant research (`src/mlab/quant/`, wiki in `docs/wiki/`)

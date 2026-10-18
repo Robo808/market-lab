@@ -105,5 +105,10 @@ Symbols use Yahoo conventions (`AAPL`, `^GSPC`, `^FTSE`, `EURUSD=X`, `GC=F`, `VO
 | `hypo new` | Pre-register a hypothesis (`--claim`, `--strategy`, `--symbols`, `--spec`, `--branch`) | `mlab hypo new ftse-rsi2 --claim "..." --branch` |
 | `hypo test` | Grade a pre-registered file once: PASS or FAIL | `mlab hypo test research/hypotheses/H-....md` |
 | `hypo list` | All hypotheses and their verdicts | `mlab hypo list` |
+| `phase cube` | Feature cube on a frozen dataset; schema contract and look-ahead gate on every symbol | `mlab phase cube duka-1d` |
+| `phase regimes` | HMM regimes fitted on the train split, filtered forward; writes the 3D phase-space view (`--k`) | `mlab phase regimes duka-1d --k 4` |
+| `phase evaluate` | Purged walk-forward over a config grid, null stubs, DSR, PBO (`--grid`, `--block`, `--delay`, `--funding`, `--skill`) | `mlab phase evaluate duka-1d --skill` |
+| `phase physics` | Inertia vs restoring force per regime, entropy buckets, spectral check, Monte Carlo (`--worlds`) | `mlab phase physics duka-1d --worlds 10` |
+| `phase log` | Every configuration ever tried, per dataset | `mlab phase log duka-1d` |
 
 See [[Strategy Library]], [[Validation and Overfitting]], [[Hypothesis Testing]] and [[Paper Trading]].
