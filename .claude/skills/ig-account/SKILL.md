@@ -10,10 +10,11 @@ Commands (`--env DEMO|LIVE` overrides `IG_ACC_TYPE`):
 Rules:
 - Read-only by construction: the client blocks every non-GET call except session login/switch/logout and token refresh. Never add deal endpoints.
   Cezar places and manages orders himself; give him exact levels and stake per point.
-- Credentials: `IG_USERNAME`, `IG_PASSWORD`, `IG_ACC_TYPE`, optional `IG_ACC_NUMBER` in env vars; the API key as a
-  network secret on demo-api.ig.com / api.ig.com (header `X-IG-API-KEY`) or `IG_API_KEY`.
+- Credentials: `IG_ACC_TYPE`, optional `IG_ACC_NUMBER` in env vars; the API key as a network secret on
+  demo-api.ig.com / api.ig.com (header `X-IG-API-KEY`) or `IG_API_KEY`; username and password as a Body parameter
+  secret (path `/gateway/deal/session`, keys `identifier`, `password`) or `IG_USERNAME` / `IG_PASSWORD`.
   Login is /session v3 (OAuth, auto-refreshed), which works when the default account is share dealing/ISA;
-  `IG_SESSION_VERSION=2` falls back to CST tokens. Never print, write or ask for them. If missing, `./mlab doctor` says which; point Cezar to the environment settings.
+  `IG_SESSION_VERSION=2` falls back to CST tokens. Never print, write or ask for them. If missing, `./mlab doctor` says which; point the owner to the environment settings.
 - Price history is allowance-limited (10k points/week): use `./mlab price ig:EPIC` (cache-first, missing tail only).
   `ig prices` prints the remaining allowance.
 - Login fails: follow IG's FAQ (labs.ig.com/faq.html). First check the same login on the IG web platform, then in

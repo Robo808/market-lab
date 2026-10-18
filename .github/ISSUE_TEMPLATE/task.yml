@@ -1,0 +1,30 @@
+name: Task
+description: A concrete to-do small enough for one PR.
+labels: ["task"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What and why
+      description: What is wrong or missing today, with file paths where you know them.
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: Done when
+      description: Checkable outcomes. Each one should be provable by a test or a command.
+      value: |
+        - [ ] 
+    validations:
+      required: true
+  - type: input
+    id: epic
+    attributes:
+      label: Epic
+      description: The epic this belongs to (e.g. #17). It is added as a sub-issue there.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [ig, quant, data, repo]

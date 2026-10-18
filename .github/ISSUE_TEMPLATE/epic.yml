@@ -1,0 +1,17 @@
+name: Epic
+description: A goal that groups several tasks as sub-issues and owns one milestone.
+title: "[Epic] "
+labels: ["epic"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      description: What is true when this epic is closed.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope and open PRs
+      description: What is in and out. Mention related PRs by number so they link here.

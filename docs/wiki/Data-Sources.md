@@ -3,6 +3,8 @@
 `bash mlab doctor` shows which hosts are reachable from where you run it and which keys are present. Full host list
 for allowlisting: `docs/NETWORK.md`.
 
+For backtests use frozen snapshots, not live pulls: see [[Datasets]].
+
 ## Providers
 
 | Source | Powers | Key | Notes |

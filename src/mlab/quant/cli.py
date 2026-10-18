@@ -8,6 +8,9 @@ import pandas as pd
 
 
 def _frames(a):
+    if getattr(a, "dataset", None):  # frozen offline snapshot: no network, fixed split
+        from ..datasets import load
+        return load(a.dataset, a.symbols or None, a.split, allow_test=a.allow_test, note=f"algo {a.action} {a.strategy}")
     from ..data import get_prices
     return {s: get_prices(s, a.interval, a.start, None, a.period, refresh=getattr(a, "refresh", False)) for s in a.symbols}
 
@@ -107,6 +110,9 @@ def register(add):
     q.add_argument("--book"); q.add_argument("--capital", type=float, default=10_000.0)
     q.add_argument("--interval", "-i", default="1d"); q.add_argument("--period", "-p", default="max")
     q.add_argument("--start"); q.add_argument("--refresh", action="store_true")
+    q.add_argument("--dataset", help="run offline on a frozen snapshot, NAME[@VERSION] (mlab datasets list)")
+    q.add_argument("--split", default="train", help="train | validation | test | train+validation (with --dataset)")
+    q.add_argument("--allow-test", action="store_true", help="unlock the held-out test split (logged)")
 
     q = add("hypo", cmd_hypo, "pre-registered hypotheses: new SLUG --claim .. | test FILE | list")
     q.add_argument("action", choices=["new", "test", "list"]); q.add_argument("slug", nargs="?", help="slug (new) or file (test)")
