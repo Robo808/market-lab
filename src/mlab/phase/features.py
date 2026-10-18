@@ -73,7 +73,7 @@ def load(ref: str, symbols: list[str] | None = None, split: str = "train+validat
     from .. import datasets
     if "test" in split.split("+"):
         raise PermissionError("phase research runs on train/validation only; the test split is graded once, "
-                              "through `mlab hypo test`, on Cezar's word")
+                              "through a pre-registered `mlab hypo test`")
     name, ver, root = datasets.resolve(ref)
     man = datasets.manifest(ref)
     want = symbols or list(man["members"])
