@@ -148,7 +148,7 @@ def log_experiment(family: str, cfg: dict, metrics: dict, context: dict) -> str:
             old = json.loads(p.read_text())
             first, runs = old.get("first_at", old.get("at", now)), int(old.get("runs", 1))
         except (OSError, json.JSONDecodeError):
-            pass
+            pass                               # unreadable record: start its counters afresh
     rec = {"id": cid, "family": family, "first_at": first, "at": now, "runs": runs + 1, "git": _git(),
            "config": cfg, "metrics": metrics, **context}
     tmp = p.with_suffix(f".{np.random.default_rng().integers(1 << 30)}.tmp")
@@ -258,12 +258,13 @@ def predict_fold(S: Setup, cache: FoldCache, cfg: dict, year: int, y: pd.Series)
     test = (t >= start) & (t < end)
     tr = train_mask(idx, start, h + emb) & y.notna().to_numpy()
     model = cfg["model"]
+    P = None
     if model == "tsmom":                       # literature benchmark: sign of the trailing 63-bar return
         return np.sign(S.cube.loc[test, "ret_63"])
     if model in ("regime", "regime_ridge"):
         _, probs = cache.regimes(year, cfg["k"])
         P = probs[[f"p{j}" for j in range(cfg["k"])]].reindex(idx)
-    if model == "regime":
+    if model == "regime" and P is not None:
         ok = tr & P.notna().all(axis=1).to_numpy()
         w = P[ok].to_numpy()
         m = (w * y[ok].to_numpy()[:, None]).sum(0) / w.sum(0)     # regime-conditional mean, probability-weighted
@@ -274,7 +275,7 @@ def predict_fold(S: Setup, cache: FoldCache, cfg: dict, year: int, y: pd.Series)
         if S.extra is None:
             raise ValueError(f"model {model} needs the energy axis: prepare(..., extra=energy.load())")
         X = S.extra.copy() if model == "energy" else X.join(S.extra)
-    if model == "regime_ridge":
+    if model == "regime_ridge" and P is not None:
         X = X.join(P.iloc[:, 1:])              # drop one probability column (they sum to 1)
     ok = tr & X.notna().all(axis=1).to_numpy()
     mu, sd = X[ok].mean(), X[ok].std().replace(0, 1.0)
