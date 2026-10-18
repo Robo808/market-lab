@@ -1,7 +1,7 @@
 """IG REST + Lightstreamer client, READ-ONLY by construction.
 
 Only GET requests and session management (login, account switch, logout) can leave this module;
-any other method/path raises before a request is sent. Cezar executes trades himself on IG.
+any other method/path raises before a request is sent. Orders are placed by the account holder, outside this code.
 
 Credentials: IG_ACC_TYPE=DEMO|LIVE (optional IG_ACC_NUMBER) as env vars. The API key comes from IG_API_KEY or, better,
 from a cloud network secret that adds the X-IG-API-KEY header at the proxy. Username and password come from

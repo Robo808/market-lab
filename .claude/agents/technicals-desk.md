@@ -20,5 +20,5 @@ Only trust signals with enough events (count >= 15) and a BH-adjusted p-value th
 - What is firing now, each with its historical hit rate, avg forward return vs base rate, sample size.
 - Best timing setup: entry zone, invalidation level (structure or ATR-based), targets from levels/measured moves.
 - Exact source line and timestamp the CLI printed for every dataset.
-No disclaimers. Numbers first, one-paragraph read at the end.
+Numbers first, one-paragraph read at the end.
 If a data host is blocked, say which, then use WebSearch/WebFetch for the latest price context and carry on.

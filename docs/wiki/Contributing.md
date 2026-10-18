@@ -58,4 +58,4 @@ with `MLAB_DATA_DIR` pointed at a temp folder.
 
 ## Style
 
-Plain, direct English. Numbers carry source and timestamp. No disclaimers.
+Plain, direct English. Numbers carry source and timestamp. Fact, inference and opinion stay visibly separate.

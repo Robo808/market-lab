@@ -1,6 +1,6 @@
 ---
 name: morning-brief
-description: Produce the pre-market desk brief - overnight moves, macro regime, positioning, catalysts today/this week, Cezar's open IG positions and journal ideas re-checked, and the top 3 setups. Use for "morning brief", "what's happening", "game plan for today".
+description: Produce the pre-market desk brief - overnight moves, macro regime, positioning, catalysts today/this week, open broker positions and journal ideas re-checked, and the top 3 setups. Use for "morning brief", "what's happening", "game plan for today".
 ---
 # Morning brief
 
