@@ -192,7 +192,6 @@ def test_ig_body_secret_only_for_the_active_env(monkeypatch):
 
 
 def test_ig_logout_failure_is_not_fatal(monkeypatch):
-    from mlab.providers.ig import IGError
     ig, _ = _ig(monkeypatch, lambda m, u, k: _login_ok(m, u, k) or FakeResp(500, {"errorCode": "x"}))
     ig.login()
     ig.logout()
