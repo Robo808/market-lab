@@ -4,6 +4,7 @@
 - [[Getting Started]]
 - [[CLI Reference]]
 - [[Architecture]]
+- [[Design Standards]]
 - [[Desk Workflow]]
 
 **Quant**

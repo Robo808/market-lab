@@ -8,12 +8,13 @@ There is no execution path: this module never talks to a broker.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
 
 from ..config import DATA_DIR, env
+from ..storage import atomic_write_text, file_lock
 from . import engine
 
 PAPER_DIR = Path(env("MLAB_PAPER_DIR") or DATA_DIR / "paper")
@@ -29,18 +30,19 @@ def load(book: str) -> dict | None:
 
 
 def _save(state: dict):
-    PAPER_DIR.mkdir(parents=True, exist_ok=True)
-    p = _path(state["book"])
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps(state, indent=1, default=str))
-    tmp.replace(p)
+    atomic_write_text(_path(state["book"]), json.dumps(state, indent=1, default=str))
 
 
 def rebalance(book: str, strategy: str, frames: dict[str, pd.DataFrame], params: dict | None = None,
               overlays: dict | None = None, capital: float = 10_000.0, spread_bps: float = 5.0) -> dict:
+    with file_lock(_path(book)):  # one book has one writer: the lock stops a second run in this container
+        return _rebalance(book, strategy, frames, params, overlays, capital, spread_bps)
+
+
+def _rebalance(book, strategy, frames, params, overlays, capital, spread_bps) -> dict:
     state = load(book) or {"book": book, "strategy": strategy, "params": params or {}, "overlays": overlays or {},
                            "symbols": list(frames), "capital": capital, "cash": capital, "units": {},
-                           "created": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                           "created": datetime.now(UTC).isoformat(timespec="seconds"),
                            "history": [], "fills": []}
     if state["strategy"] != strategy:
         raise ValueError(f"book {book!r} runs {state['strategy']}; use another --book name")
@@ -63,7 +65,7 @@ def rebalance(book: str, strategy: str, frames: dict[str, pd.DataFrame], params:
                                    "target_weight": w})
         equity = state["cash"] + sum(units.get(s, 0.0) * px[s] for s in px)
     state["units"] = units
-    snap = {"bar": bar, "equity": equity, "marked_at": datetime.now(timezone.utc).isoformat(timespec="seconds")}
+    snap = {"bar": bar, "equity": equity, "marked_at": datetime.now(UTC).isoformat(timespec="seconds")}
     if already:
         state["history"][-1] = snap
     else:

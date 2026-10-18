@@ -10,6 +10,7 @@ Network access lives only in the fetch_* functions and the desk-level orchestrat
 from __future__ import annotations
 
 import html as _html
+import logging
 import math
 import re
 from collections import Counter
@@ -20,6 +21,8 @@ import pandas as pd
 
 from .config import DATA_DIR, env
 from .options import jsonable
+
+log = logging.getLogger(__name__)
 
 HOSTS = {  # all already in net.SOURCES
     "query2.finance.yahoo.com": "Yahoo earnings dates / EPS surprise (yfinance)",
@@ -272,7 +275,8 @@ def fetch_transcript_fmp(ticker: str, label: str, key: str | None = None) -> str
             js = r.json()
             if isinstance(js, list) and js and js[0].get("content"):
                 return js[0]["content"]
-        except Exception:
+        except Exception as e:  # optional input: carry on without it
+            log.debug("FMP transcript %s %s not found: %s", ticker, year, e)
             continue
     raise LookupError(f"FMP: no transcript for {ticker} {label}")
 
@@ -604,8 +608,8 @@ def history(ticker: str, quarters: int = 12, bench: str | None = "^GSPC", fiscal
     ev = normalize_earnings(fetch_earnings_dates(ticker, quarters + 6), fiscal_offset)
     try:
         ev = attach_revenue(ev, fetch_quarterly_revenue(ticker))
-    except Exception:
-        pass
+    except Exception as e:  # optional input: carry on without it
+        log.info("quarterly revenue unavailable for %s: %s", ticker, e)
     done = ev[ev["reported"]].tail(quarters)
     start = (done["date"].min() if len(done) else pd.Timestamp.now()) - pd.Timedelta(days=150)
     px = get_prices(ticker, start=start.strftime("%Y-%m-%d"), period=None)
@@ -668,8 +672,8 @@ def quarter_documents(ticker: str, events: pd.DataFrame, use_sec: bool = True, f
                 texts[lbl], src = get_transcript(ticker, lbl)
                 srcs[lbl] = f"transcript ({src})"
                 continue
-            except Exception:
-                pass
+            except Exception as e:  # optional input: carry on without it
+                log.info("transcript %s %s unavailable, trying SEC: %s", ticker, lbl, e)
         if use_sec:
             try:
                 if rel is None:

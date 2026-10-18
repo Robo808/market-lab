@@ -16,17 +16,21 @@ from __future__ import annotations
 import concurrent.futures as cf
 import hashlib
 import html
+import logging
 import math
 import re
 import time
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from email.utils import parsedate_to_datetime
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 from .config import env
+
+log = logging.getLogger(__name__)
 
 # host -> purpose, for `mlab doctor` style reachability checks.
 HOSTS: dict[str, str] = {
@@ -867,20 +871,43 @@ def sentiment_vs_price(symbol: str, days: int = 90, daily: pd.DataFrame | None =
 
 
 # =============================================================================== history store
+def _history_dir(key: str):
+    from .config import DATA_DIR
+    return Path(env("MLAB_NEWS_DIR") or DATA_DIR / "data" / "news_history") / re.sub(r"[^A-Za-z0-9._=-]+", "_", key)
+
+
 def _store(key: str, items: pd.DataFrame) -> pd.DataFrame:
-    """Append items to the parquet history (data/cache/news/items/<KEY>.parquet) so attention builds up."""
-    from . import cache
+    """Add this fetch to the news history so attention builds up; returns the full history.
+
+    Each fetch is its own write-once file (data/news_history/<KEY>/<time>-<id>.parquet), outside the
+    LRU-pruned price cache: the history cannot be fetched again, and threads never overwrite each other."""
+    from .storage import atomic_to_parquet, event_name
     if items.empty:
         return items
     keep = [c for c in COLUMNS + ["compound", "text_score", "events", "uid"] if c in items]
-    d = items[keep].dropna(subset=["time"]).set_index(["time", "uid"])
-    return cache.save("news", key, "items", d).reset_index()
+    d = items[keep].dropna(subset=["time"]).reset_index(drop=True)
+    atomic_to_parquet(d, _history_dir(key) / f"{event_name()}.parquet")
+    return history(key)
 
 
 def history(key: str) -> pd.DataFrame:
+    """Legacy history (data/cache/news/items/<KEY>.parquet) plus every stored fetch, de-duplicated by (time, uid)."""
     from . import cache
-    h = cache.load("news", key, "items")
-    return empty() if h is None else h.reset_index()
+    parts = []
+    legacy = cache.load("news", key, "items")
+    if legacy is not None:
+        parts.append(legacy.reset_index())
+    d = _history_dir(key)
+    for f in sorted(d.glob("*.parquet")) if d.exists() else []:
+        try:
+            parts.append(pd.read_parquet(f))
+        except (OSError, ValueError) as e:  # a file still syncing from another thread
+            log.warning("skipping unreadable news history file %s: %s", f.name, e)
+    if not parts:
+        return empty()
+    h = pd.concat(parts, ignore_index=True)
+    h = h.drop_duplicates([c for c in ("time", "uid") if c in h], keep="last")  # same key as the old cache index
+    return h.sort_values("time").reset_index(drop=True)
 
 
 def _merge_history(qc: Query, items: pd.DataFrame, store: bool) -> pd.DataFrame:
@@ -957,7 +984,7 @@ def brief(q: str, days: int = 7, sources=None, top: int = 12, store: bool = True
         "items": int(len(items)), "unique_headlines": int(len(news)),
         "sentiment_7d": _window_mean(daily, "sentiment", 7, now), "sentiment_30d": _window_mean(daily, "sentiment", 30, now),
         "gdelt_tone_7d": _window_mean(daily, "gdelt_tone", 7, now), "gdelt_tone_30d": _window_mean(daily, "gdelt_tone", 30, now),
-        "attention_z": last_z, "attention_spike": bool(last_z >= 2) if last_z == last_z else False,
+        "attention_z": last_z, "attention_spike": bool(last_z >= 2) if np.isfinite(last_z) else False,
         "social_posts": int(len(soc)), "social_bull_ratio": bulls / (bulls + bears) if bulls + bears else float("nan"),
         "headlines": heads[["time", "source", "compound", "events", "n_sources", "title", "url"]].assign(
             time=heads["time"].dt.strftime("%m-%d %H:%M")).set_index("time") if len(heads) else pd.DataFrame(),
@@ -976,8 +1003,8 @@ def _social(q: str, days: int = 7, store: bool = True) -> dict:
     if store:
         try:
             _store(qc.key, items)
-        except Exception:
-            pass
+        except Exception as e:  # optional input: carry on without it
+            log.warning("could not store social history for %s: %s", qc.key, e)
     rows = []
     for src, g in items.groupby("source"):
         lab = g["label"].fillna("").str.lower()

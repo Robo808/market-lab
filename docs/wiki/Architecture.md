@@ -20,7 +20,8 @@ bootstrap.sh, mlab   one-command setup and the self-bootstrapping CLI wrapper
 | `config` | Resolves `MLAB_DATA_DIR` and the per-item dirs, reads env vars |
 | `net` | HTTP session, retries, timeouts, proxy handling |
 | `data` | `get_prices(symbol, interval, period)`: routes `crypto:`, `ig:` and plain symbols to providers, with fallbacks |
-| `cache` | Parquet price cache in `data/cache/`, fetches only the missing tail, LRU-pruned at `MLAB_CACHE_MAX_MB` |
+| `cache` | Parquet price cache in `data/cache/`, fetches only the missing head and tail, LRU-pruned at `MLAB_CACHE_MAX_MB` |
+| `storage` | Atomic writes, in-container file locks, write-once event files for state shared across threads (see [[Design Standards]]) |
 | `providers/` | `yahoo`, `stooq`, `macro` (FRED, ECB FX), `sec` (EDGAR), `crypto` (Binance, Kraken, CoinGecko), `ig` (read-only) |
 | `universes` | Named symbol lists for scans (`indices`, `fx`, ...) |
 | `ta` | Indicator primitives (SMA, EMA, RSI, ATR, MACD, Bollinger, Keltner, ADX, Supertrend, ...) |
@@ -34,7 +35,7 @@ bootstrap.sh, mlab   one-command setup and the self-bootstrapping CLI wrapper
 | `news` | Google News, Yahoo, GDELT tone, SEC 8-K, StockTwits, Reddit, HN, sentiment index |
 | `cot` | CFTC Commitments of Traders, positioning extremes |
 | `lenses` | Soros, Buffett, Burry checklists and scoring |
-| `journal` | `trades.jsonl` and `JOURNAL.md`: log, update, review |
+| `journal` | Event-sourced trade journal: `events/` (one file per change) folded over legacy `trades.jsonl`, rendered to `JOURNAL.md` |
 | `charts` | Plotly HTML charts into `reports/` |
 | `cli` | Every `mlab` command |
 

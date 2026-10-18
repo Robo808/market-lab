@@ -13,7 +13,7 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) market-lab/0.1"
 def session(user_agent: str = UA) -> requests.Session:
     s = requests.Session()
     retry = Retry(total=3, backoff_factor=0.6, status_forcelist=(429, 500, 502, 503, 504),
-                  allowed_methods=frozenset(["GET", "POST", "PUT"]))
+                  allowed_methods=Retry.DEFAULT_ALLOWED_METHODS)  # never replay POST/PUT (e.g. a login)
     s.mount("https://", HTTPAdapter(max_retries=retry))
     s.headers["User-Agent"] = user_agent
     return s
