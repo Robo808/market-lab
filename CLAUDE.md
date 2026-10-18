@@ -117,7 +117,8 @@ signal_lab, stats, lenses, options, earnings, news, cot, risk, journal`.
 - API key from a network secret on demo-api.ig.com / api.ig.com (header `X-IG-API-KEY`) or `IG_API_KEY`; username and
   password from a Body parameter network secret (path `/gateway/deal/session`, keys `identifier`, `password`) or env
   vars `IG_USERNAME`, `IG_PASSWORD`; plus `IG_ACC_TYPE` (`DEMO`|`LIVE`), optional `IG_ACC_NUMBER`, or `IG_DEMO_*` /
-  `IG_LIVE_*` per environment.
+  `IG_LIVE_*` per environment. Login is /session v3 (OAuth) by default, which works even when the
+  default account is share dealing/ISA; `IG_SESSION_VERSION=2` for CST tokens.
   Never print, echo, log or write them anywhere. Never ask for them in chat.
 - Historical prices burn the weekly allowance (10k points/week): always go through `./mlab price ig:...`
   or `IG.prices()` (cache-first, fetches only the missing tail). Prefer Yahoo/Stooq for long history
