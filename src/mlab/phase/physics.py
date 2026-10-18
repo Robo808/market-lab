@@ -70,8 +70,11 @@ def forces_by_regime(frames: dict[str, pd.DataFrame], cube: pd.DataFrame, regime
                     row["ou_b"] = b
                 else:
                     row["null_b"] = b
-        row["force"] = ("inertia" if row.get("t_q21", 0) >= 2 else "restoring" if row.get("t_q21", 0) <= -2
-                        else "neither (|t|<2)")
+        tq = {q: row.get(f"t_q{q}", 0.0) for q in qs}
+        q_star = max(tq, key=lambda q: abs(np.nan_to_num(tq[q])))
+        t_star = tq[q_star]
+        row["force"] = (f"inertia at {q_star} bars (t {t_star:+.1f})" if t_star >= 3 else
+                        f"restoring at {q_star} bars (t {t_star:+.1f})" if t_star <= -3 else "neither (|t|<3)")
         rows.append(row)
     return pd.DataFrame(rows).set_index("regime")
 

@@ -45,3 +45,16 @@ Deflated Sharpe Ratio"; Bailey, Borwein, López de Prado & Zhu (2017) "The Proba
 Hamilton (1989); Ang & Timmermann (2012) "Regime Changes and Financial Markets"; Moskowitz, Ooi & Pedersen (2012);
 Jegadeesh & Titman (1993); Lo, Mamaysky & Wang (2000); Lo & MacKinlay (1988); Bandt & Pompe (2002); Politis &
 Romano (1994).
+
+## First results (October 2026, train + validation only)
+
+- 60 configurations across Dukascopy daily CFDs (out of sample 2008-2019) and 24 cross-asset markets (1980-2019):
+  none clears t ≥ 3 after costs or beats the null stubs by a margin. On the cross-asset set the best HMM model is
+  identical to always long.
+- Rank IC rises with horizon (tsmom +0.05 at 63 bars, interval excludes 0), which fits slow time-series momentum.
+- On synthetic markets with no structure, the pipeline yields IC 0.01-0.03 and t up to 3.1. Treat an IC below
+  about 0.03 on these universes as noise.
+- Regime forces: 1-day reversal in the volatile-downtrend regime (t −4.9) and 1-day continuation in quiet ranges
+  (t +4.3); nothing at 21 bars. OU half-lives match the shuffled-return null. Return spectra show no cycle after
+  a multiple-testing correction.
+- The energy axis (oil demand vs supply shocks) adds no out-of-sample skill to daily timing.
