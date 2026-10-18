@@ -187,17 +187,21 @@ class Setup:
     family: str
     context: dict = field(default_factory=dict)
     block: int = 1                 # years per test fold
+    extra: pd.DataFrame | None = None   # market-wide features aligned to the cube rows (the energy axis)
 
 
 def prepare(frames: dict[str, pd.DataFrame], family: str, min_train_years: int = 5, context: dict | None = None,
-            block: int = 1) -> Setup:
+            block: int = 1, extra: pd.DataFrame | None = None) -> Setup:
     cube = F.build(frames)
     closes = pd.DataFrame({s: df["close"] for s, df in frames.items()}).sort_index()
     rv = cube["rv_21"].unstack("symbol").reindex(closes.index)
     t = cube.index.get_level_values("time")
     y0, y1 = t.min().year, t.max().year
     years = list(range(y0 + min_train_years, y1 + 1, block))
-    return Setup(frames, cube, closes, rv, cost_bps(frames), years, family, context or {}, block)
+    if extra is not None:
+        from .energy import attach
+        extra = attach(cube, extra)
+    return Setup(frames, cube, closes, rv, cost_bps(frames), years, family, context or {}, block, extra)
 
 
 def forward_target(S: Setup, h: int) -> pd.Series:
@@ -266,6 +270,10 @@ def predict_fold(S: Setup, cache: FoldCache, cfg: dict, year: int, y: pd.Series)
         return pd.Series(P[test].to_numpy() @ m, index=idx[test])
     X = S.cube[RIDGE_FEATURES].copy()
     X["rv_21"] = np.log(X["rv_21"].clip(lower=1e-6))
+    if model in ("ridge_energy", "energy"):
+        if S.extra is None:
+            raise ValueError(f"model {model} needs the energy axis: prepare(..., extra=energy.load())")
+        X = S.extra.copy() if model == "energy" else X.join(S.extra)
     if model == "regime_ridge":
         X = X.join(P.iloc[:, 1:])              # drop one probability column (they sum to 1)
     ok = tr & X.notna().all(axis=1).to_numpy()
@@ -321,6 +329,12 @@ def run_config(S: Setup, cache: FoldCache, cfg: dict, delay: int = 0, funding: f
             "sharpe_no_funding": spread_only,
             "exposure": float(on.to_numpy().mean()), "hold": float(on.to_numpy().sum() / max(entries, 1)),
             "turnover_ann": float(w.diff().abs().sum(axis=1).mean() * 252)}
+
+
+def energy_grid() -> list[dict]:
+    """Slice 4: base ridge vs ridge + energy axis vs energy alone, same horizons and sides as the default grid."""
+    return [{"model": m, "horizon": h, "long_only": lo} for h in (5, 21) for lo in (False, True)
+            for m in ("ridge", "ridge_energy", "energy")]
 
 
 def default_grid(quick: bool = False) -> list[dict]:
@@ -379,7 +393,8 @@ def evaluate(S: Setup, grid: list[dict], embargo: int = 5, delay: int = 0, fundi
         m = summarize(res["returns"], 1, None, lags=max(5, cfg["horizon"]))
         m.update({k: res[k] for k in ("ic", "hit", "exposure", "hold", "turnover_ann", "sharpe_pre_cost",
                                                "sharpe_no_funding")})
-        log_experiment(S.family, {**cfg, "embargo": embargo, "delay": delay, "funding": funding}, m, S.context)
+        log_experiment(S.family, {**cfg, "embargo": embargo, "delay": delay, "funding": funding,
+                                  "folds": f"{S.years[0]}-{S.years[-1]}/{S.block}y"}, m, S.context)
     trials = trial_count(S.family)
     rows = []
     for cid, (cfg, res) in runs.items():

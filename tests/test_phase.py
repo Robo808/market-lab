@@ -233,3 +233,18 @@ def test_positions_hold_through_a_market_holiday(frames):
     pred = pd.Series(1.0, index=S.cube.index)
     w = E.positions(S, pred, h=1, long_only=False)
     assert w.loc[hol, "S1"] > 0 and w.loc[hol, "S1"] == w["S1"].shift().loc[hol]
+
+
+def test_energy_axis_is_point_in_time_and_lagged():
+    from mlab.phase import energy
+    a, b = synth_ohlcv(900, seed=21)["close"], synth_ohlcv(900, seed=22)["close"]
+    full = energy.features(a, b)
+    for k in (400, 899):
+        part = energy.features(a.iloc[:k], b.iloc[:k])
+        pd.testing.assert_frame_equal(part, full.iloc[:k])
+    # lagged one session: today's oil move is not in today's feature
+    bumped = a.copy()
+    bumped.iloc[600:] *= 1.5
+    f2 = energy.features(bumped, b)
+    assert f2["oil_ret_21"].iloc[600] == pytest.approx(full["oil_ret_21"].iloc[600])
+    assert f2["oil_ret_21"].iloc[601] != pytest.approx(full["oil_ret_21"].iloc[601])

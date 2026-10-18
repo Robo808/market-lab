@@ -78,13 +78,24 @@ def cmd_phase(a):
         return
 
     fam = a.family or a.dataset.split("@")[0]
+    extra = None
+    if a.energy:
+        from . import energy
+        extra = energy.load()
     S = E.prepare(frames, fam, context={"dataset": src, "split": a.split, "symbols": sorted(frames)},
-                  min_train_years=a.min_train, block=a.block)
+                  min_train_years=a.min_train, block=a.block, extra=extra)
     print(f"walk-forward test folds start {', '.join(map(str, S.years))} ({a.block}y each), one-side costs (bps): "
           + ", ".join(f"{k} {v:.1f}" for k, v in S.costs.items()) + f"; funding {a.funding:.1%}/yr on gross\n")
 
     if a.action == "evaluate":
-        grid = json.loads(a.grid) if a.grid and a.grid.startswith("[") else E.default_grid(quick=a.grid == "quick")
+        grid = (json.loads(a.grid) if a.grid and a.grid.startswith("[") else E.energy_grid() if a.energy
+                else E.default_grid(quick=a.grid == "quick"))
+        if a.energy:
+            from . import energy
+            eq = frames.get("^GSPC", frames.get("US500"))
+            if eq is not None:
+                show(energy.shock_table(S.extra.xs(next(iter(frames)), level="symbol"), eq["close"]), a.json,
+                     title="Next 21 sessions of the equity index by oil demand/supply quadrant (descriptive)")
         res = E.evaluate(S, grid, a.embargo, a.delay, a.funding,
                          bars={"t_min": a.t_min, "dsr_min": 0.95, "pbo_max": 0.5})
         tbl = res["table"].drop(columns="id")
@@ -147,6 +158,7 @@ def register(add):
     q.add_argument("--block", type=int, default=1, help="years per walk-forward test fold")
     q.add_argument("--min-train", type=int, default=5, help="years of history before the first test fold")
     q.add_argument("--t-min", type=float, default=3.0, help="pass bar on the Newey-West t-stat")
+    q.add_argument("--energy", action="store_true", help="evaluate: add the energy axis (slice 4) and its grid")
     q.add_argument("--skill", action="store_true", help="evaluate: also chart skill vs horizon")
     q.add_argument("--family", help="experiment-log family (default: dataset name)")
     q.add_argument("--config", help='physics: JSON config, default {"model":"ridge","horizon":21}')
