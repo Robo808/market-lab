@@ -1,5 +1,5 @@
 """Investor lenses as data: each returns the numbers that lens cares about plus a pass/fail checklist.
-The verdict and the trade are made by the analyst (Claude + Cezar) on top of these facts.
+The verdict and the trade are made by the analyst (the PM session and the user) on top of these facts.
 
   buffett(ticker)  quality compounder at a sensible price: ROIC, margins, FCF, debt, buybacks, owner-earnings yield, DCF
   burry(ticker)    contrarian deep value / balance-sheet: EV/EBIT, FCF yield, net cash, insiders, shorts, washout

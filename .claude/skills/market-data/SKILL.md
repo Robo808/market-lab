@@ -11,4 +11,4 @@ description: Pull live and historical market data (stocks, ETFs, indices, FX, fu
 - Cache: parquet in `data/cache/` (`./mlab cache stats|prune|clear`). Use `--refresh` for intraday freshness.
 - Universes: `./mlab universes` (indices, fx, commodities, rates, us_megacaps, sectors, uk_ftse, crypto, macro_board).
 - Blocked host? `./mlab doctor` lists it. Then: connected data connectors (Alpha Vantage, FMP, Financial Datasets,
-  Bigdata.com, CoinMarketCap) -> WebSearch/WebFetch -> run on Cezar's machine. Say which source you used.
+  Bigdata.com, CoinMarketCap) -> WebSearch/WebFetch -> run on a machine with open network. Say which source you used.

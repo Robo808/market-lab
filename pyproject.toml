@@ -1,7 +1,10 @@
 [project]
 name = "mlab"
 version = "0.1.0"
-description = "Market Lab: market data, technical analysis, due diligence and IG (read-only) toolkit for Claude Code"
+description = "Market Lab: an agent-driven market research toolkit (data, technicals, options, earnings, news, macro, fundamentals, quant validation) for Claude Code"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
   "pandas>=3.0.6",

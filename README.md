@@ -4,6 +4,7 @@
 [![Security](https://github.com/Robo808/market-lab/actions/workflows/security.yml/badge.svg)](https://github.com/Robo808/market-lab/actions/workflows/security.yml)
 [![CodeQL](https://github.com/Robo808/market-lab/actions/workflows/codeql.yml/badge.svg)](https://github.com/Robo808/market-lab/actions/workflows/codeql.yml)
 ![Python](https://img.shields.io/badge/python-3.11%2B-blue)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 **A market research desk in a box.** Market Lab is a Python toolkit (the `mlab` CLI) plus a set of
 [Claude Code](https://claude.com/claude-code) desk agents and playbooks. It pulls market data from free sources with
@@ -20,6 +21,7 @@ repo can place, amend or close an order.
 
 ## Contents
 
+- [Built with agents](#built-with-agents)
 - [What it does](#what-it-does)
 - [Quick start](#quick-start)
 - [Configuration](#configuration)
@@ -29,6 +31,45 @@ repo can place, amend or close an order.
 - [Project layout](#project-layout)
 - [Development](#development)
 - [Security](#security)
+- [License](#license)
+
+## Built with agents
+
+Market Lab was built by [Claude Code](https://claude.com/claude-code) agents working through pull requests, with a
+human reviewing and merging every one. Every non-merge commit on `main` (26 of 36; the rest are 9 reviewed PR merges and
+one Dependabot bump) was authored by an agent: about 9,500 lines of Python and 183 offline tests, built between 7 and
+10 October 2026. The same agents run the research: six desk agents and nine playbooks in [`.claude/`](.claude/), with
+[`CLAUDE.md`](CLAUDE.md) as their operating guide.
+
+Agent output is only useful if it can be checked, so the repo is built around gates that an agent cannot talk its way
+past:
+
+| Gate | What it enforces | Where |
+|---|---|---|
+| **Pre-registration** | The claim, data, costs, pass bars and kill criteria are written down and committed before any result is seen. The spec is frozen by a SHA-256 hash, and grading stops if the spec no longer matches it. | `mlab hypo new`, [`src/mlab/quant/hypothesis.py`](src/mlab/quant/hypothesis.py) |
+| **Graded once, PASS or FAIL** | No re-running with tweaked parameters: a new test is a new file. FAILs merge to `main` like PASSes. | `mlab hypo test`, [`research/hypotheses/`](research/hypotheses/) |
+| **Null-stub gate** | Before grading, the pass bars must reject buy-and-hold and seeded coin-flip strategies. Bars a null strategy can clear are refused. | `mlab hypo gate` ([PR #66](https://github.com/Robo808/market-lab/pull/66)) |
+| **Frozen data splits** | Versioned, checksummed dataset snapshots with fixed train (to 2014), validation (2015-19) and test (2020+) splits. Opening the test split needs an explicit flag and every look is logged. | `mlab datasets`, [`src/mlab/datasets.py`](src/mlab/datasets.py) |
+| **Overfitting statistics** | Out-of-sample and walk-forward results, probabilistic and deflated Sharpe (the trial count includes every failure), block bootstrap confidence intervals, permutation tests. | [`src/mlab/quant/validation.py`](src/mlab/quant/validation.py) |
+| **No look-ahead** | A decision at the close of bar *t* earns bar *t+1*; tests append bars and check earlier positions never change. | [`tests/test_quant.py`](tests/test_quant.py) |
+| **Read-only broker** | The IG client refuses every request except GETs and session login/logout before it leaves the process. No order endpoint exists. | [`src/mlab/providers/ig.py`](src/mlab/providers/ig.py) |
+| **CI and security** | pytest, CodeQL, pip-audit, bandit and a gitleaks scan of the full history on every PR; Dependabot; third-party actions pinned to a commit SHA. | [`.github/workflows/`](.github/workflows/) |
+
+### Honest failures, on the record
+
+Five hypotheses have been graded so far and all five failed. The repo keeps every one:
+
+- **News vs no-news extreme moves** ([H-20261010](research/hypotheses/H-20261010-news-vs-nonews-extremes.md)). The
+  published result (Boudoukh, Feldman, Kogan & Richardson) says moves with identified news continue and moves without
+  news revert. On 3,608 extreme days in 25 US mega caps, 2000-2019, the gap came out at -13.5 bp against a +50 bp bar
+  (t = -0.71, permutation p = 0.96): **FAIL**, test split left unopened. Three follow-up news and geopolitical-risk
+  tests ([PR #56](https://github.com/Robo808/market-lab/pull/56)) failed as well, and the line of research was closed
+  rather than tuned until it passed.
+- **Hawkes branching ratio as a volatility forecaster** ([PR #60](https://github.com/Robo808/market-lab/pull/60)). A
+  Bayesian (MCMC) Hawkes fit on the timing of extreme moves, tested against a realised-volatility baseline on crypto
+  hourly and index daily bars: **FAIL** on both legs.
+
+A recorded FAIL with its numbers is worth more than a backtest that was re-run until it looked good.
 
 ## What it does
 
@@ -229,3 +270,7 @@ on every push to `main`.
 No credentials, journal entries, reports, caches or paper books are ever committed; gitleaks scans the full history
 on every PR. Report vulnerabilities privately through **Security > Report a vulnerability**. Details in
 [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE).

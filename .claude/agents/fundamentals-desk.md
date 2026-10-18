@@ -17,4 +17,3 @@ a connected data connector, or the company's annual report via WebFetch.
 
 Report: quality (moat evidence in the numbers), valuation vs intrinsic range, balance-sheet risk, red flags,
 what the market is mispricing, and the catalyst that closes the gap. Cite source (SEC fiscal year, URL) and timestamp.
-No disclaimers.
