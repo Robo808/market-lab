@@ -4,6 +4,11 @@ Files live in the repo at research/hypotheses/H-<yyyymmdd>-<slug>.md, each on it
 `hypo/<yyyymmdd>-<slug>` branch. The JSON spec block is hashed at registration; `test` refuses to
 grade a spec that changed afterwards (a changed test is a new hypothesis). PASS and FAIL files are
 both merged to main: the failures are the trial count that keeps the deflated Sharpe honest.
+
+Before grading, `gate` runs null stubs (always long, and seeded coin flips matched to the candidate's
+exposure and holding period) through the same data, costs and pass bars. If a stub passes, the bars do
+not separate an edge from noise, so `test` refuses to grade until the hypothesis is re-registered with bars
+that do. The gate reads only the candidate's positions, never its returns, so it does not leak the result.
 """
 from __future__ import annotations
 
@@ -57,6 +62,9 @@ Any pass bar missed = FAIL. No re-running with new parameters on this file: a ne
 ```json
 {spec}
 ```
+
+## Gate
+_Filled by `bash mlab hypo gate {rel}`: null stubs must fail the pass bars before the test may run._
 
 ## Results
 _Filled by `bash mlab hypo test {rel}`. Do not edit by hand._
@@ -140,8 +148,74 @@ def _frames(spec: dict) -> dict[str, pd.DataFrame]:
             for s in spec["symbols"]}
 
 
+def _shape(spec: dict, frames: dict[str, pd.DataFrame]) -> dict:
+    """Exposure and average holding period of the candidate, from its positions alone (no returns)."""
+    from . import engine
+    w = engine.build_weights(spec["strategy"], frames, spec.get("params"), spec.get("overlays")).fillna(0.0)
+    on = w.abs().gt(0)
+    live = on.any(axis=1)
+    if not live.any():
+        return {"exposure": 0.0, "hold": 1, "short": False}
+    start = live.idxmax()
+    shorts = bool(w.loc[start:].lt(0).any().any())
+    on = w.loc[start:].gt(0) if shorts else on.loc[start:]
+    entries = int((on & ~on.shift(fill_value=False)).sum().sum())
+    return {"exposure": float(on.mean().mean()), "hold": max(1, round(int(on.sum().sum()) / max(entries, 1))),
+            "short": shorts}
+
+
+def gate(path: Path, frames: dict[str, pd.DataFrame] | None = None, seeds: int = 5, n_perm: int = 200,
+         n_boot: int = 100) -> dict:
+    """Run null stubs against the pre-registered bars. Verdict OK when every stub fails them, else REFUSED."""
+    path = Path(path)
+    h = parse(path)
+    if h["sha"] and _sha(h["spec_text"]) != h["sha"]:
+        raise ValueError("spec changed after registration: register a new hypothesis")
+    if h["verdict"] != "PENDING":
+        raise ValueError(f"already graded {h['verdict']}; the gate runs before grading")
+    spec = h["spec"]
+    frames = frames or _frames(spec)
+    costs = spec.get("costs", {})
+    bars = spec.get("pass", {})
+    shape = _shape(spec, frames)
+    stubs = [("always_long", {})] + [("coin_flip", {"p": round(max(shape["exposure"], 0.05), 3),
+                                                     "hold": shape["hold"], "seed": s,
+                                                     "short": shape["short"]}) for s in range(seeds)]
+    rows = []
+    for name, params in stubs:
+        rep = validation.report(name, frames, params, None, trials=int(spec.get("trials", 1)),
+                                oos_start=spec.get("oos_start"), n_perm=n_perm, n_boot=n_boot,
+                                spread_bps=costs.get("spread_bps", 0.0), funding_annual=costs.get("funding_annual", 0.0))
+        v, checks = grade(_metrics(rep), bars)
+        rows.append({"stub": name + (f" seed={params['seed']}" if "seed" in params else ""), "verdict": v,
+                     "bars_passed": sum(bool(c["pass"]) for c in checks), "bars": len(checks)})
+    passed = [r["stub"] for r in rows if r["verdict"] == "PASS"]
+    verdict = "REFUSED" if passed or not bars else "OK"
+    tbl = pd.DataFrame(rows).to_markdown(index=False)
+    note = ("no pass bars registered" if not bars else
+            f"stubs passing the bars: {', '.join(passed)}" if passed else "every stub fails the bars")
+    body = (f"\nGate {date.today()} · **{verdict}** · {note} · candidate {'long share' if shape['short'] else 'exposure'} "
+            f"{shape['exposure']:.0%}, "
+            f"average hold {shape['hold']} bars\n\n{tbl}\n")
+    t = h["text"]
+    if "## Gate" not in t:
+        t = t.replace("## Results", "## Gate\n\n## Results", 1)
+    head, rest = t.split("## Gate", 1)
+    section, _, tail = rest.partition("## Results")
+    lines = [ln for ln in section.splitlines() if not ln.startswith("Gate verdict:")]
+    section = "\n".join(lines).rstrip() + "\n" + body + f"\nGate verdict: {verdict}\n\n"
+    path.write_text(head + "## Gate" + section + "## Results" + tail)
+    return {"verdict": verdict, "stubs": pd.DataFrame(rows), "shape": shape, "path": str(path)}
+
+
+def _metrics(rep: dict) -> dict:
+    return {"sharpe": rep["sharpe"], "oos_sharpe": rep["split"]["out_of_sample"]["sharpe"], "dsr": rep["dsr"],
+            "psr": rep["psr_vs_0"], "perm_p": rep["permutation"]["perm_p"], "max_dd": rep["max_dd"],
+            "trades": rep["trades"]}
+
+
 def test(path: Path, frames: dict[str, pd.DataFrame] | None = None, force: bool = False,
-         n_perm: int = 500, n_boot: int = 500) -> dict:
+         n_perm: int = 500, n_boot: int = 500, skip_gate: bool = False) -> dict:
     path = Path(path)
     h = parse(path)
     if h["sha"] and _sha(h["spec_text"]) != h["sha"] and not force:
@@ -149,6 +223,11 @@ def test(path: Path, frames: dict[str, pd.DataFrame] | None = None, force: bool 
                          "which is recorded in the results)")
     if h["verdict"] != "PENDING" and not force:
         raise ValueError(f"already graded {h['verdict']}; a re-test is a new hypothesis")
+    g = re.findall(r"^Gate verdict: (\w+)", h["text"], re.M)
+    if not skip_gate and (not g or g[-1] != "OK"):
+        raise ValueError("gate not passed: run `bash mlab hypo gate FILE` first; if it says REFUSED, a null stub "
+                         "clears your bars, so register a new hypothesis with bars that separate edge from noise "
+                         "(or --skip-gate, which is recorded in the results)")
     spec = h["spec"]
     frames = frames or _frames(spec)
     costs = spec.get("costs", {})
@@ -156,16 +235,14 @@ def test(path: Path, frames: dict[str, pd.DataFrame] | None = None, force: bool 
                             trials=int(spec.get("trials", 1)), oos_start=spec.get("oos_start"), n_perm=n_perm,
                             n_boot=n_boot, spread_bps=costs.get("spread_bps", 0.0),
                             funding_annual=costs.get("funding_annual", 0.0))
-    metrics = {"sharpe": rep["sharpe"], "oos_sharpe": rep["split"]["out_of_sample"]["sharpe"], "dsr": rep["dsr"],
-               "psr": rep["psr_vs_0"], "perm_p": rep["permutation"]["perm_p"], "max_dd": rep["max_dd"],
-               "trades": rep["trades"]}
-    verdict, rows = grade(metrics, spec.get("pass", {}))
+    verdict, rows = grade(_metrics(rep), spec.get("pass", {}))
     sources = {s: f"{df.attrs.get('source', '?')} {str(df.index[0])[:10]}..{str(df.index[-1])[:10]}"
                for s, df in frames.items()}
     tbl = pd.DataFrame(rows).to_markdown(index=False)
     b = rep["bootstrap"]
     body = (f"\nGraded {date.today()} · verdict **{verdict}**" + (" · spec changed after registration (forced)"
-                                                                   if force else "") + "\n\n"
+                                                                   if force else "")
+            + (" · gate skipped" if skip_gate else "") + "\n\n"
             f"{tbl}\n\n"
             f"- Sharpe {rep['sharpe']:.2f} (90% bootstrap CI {b['ci_low']:.2f} to {b['ci_high']:.2f}), "
             f"PSR vs 0 {rep['psr_vs_0']:.3f}, DSR {rep['dsr']:.3f} over {rep['trials']} trial(s)\n"
