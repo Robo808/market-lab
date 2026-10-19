@@ -207,3 +207,39 @@ def test_crosscheck_compares_without_storing(ds, monkeypatch):
 def test_listing_ignores_staging(ds):
     (ds.DATASETS_DIR / ".staging" / "duka-stocks-1m").mkdir(parents=True)
     assert ds.listing().empty
+
+
+def test_duka_hourly_stages_complete_months(ds, monkeypatch):
+    calls = []
+    rec = struct.pack(">I4if", 0, 745520, 745191, 744888, 746179, 0.3)
+
+    def fake_get(s, url, log=print):
+        calls.append(url)
+        return lzma.compress(rec)
+    monkeypatch.setattr(ds, "_duka_get", fake_get)
+    spec = ds.CATALOG["duka-stocks-1h"]
+    m = spec.members[0]
+    monkeypatch.setattr(ds, "start_ts", lambda sp: pd.Timestamp.now(tz="UTC").normalize() - pd.Timedelta(days=70))
+    first = ds.fetch_dukascopy(m, spec, log=lambda *a: None)
+    n = len(calls)
+    second = ds.fetch_dukascopy(m, spec, log=lambda *a: None)
+    assert len(first) == len(second) and len(calls) - n == 2  # only the current, incomplete month is refetched
+
+
+def test_uncertainty_fetcher_reads_published_layouts(monkeypatch):
+    import io
+    from mlab import datasets as ds
+    csv = b"day,month,year,daily_policy_index\n1,1,1985,103.8\n2,1,1985,296.4\n"
+
+    class R:
+        content = csv
+
+        def raise_for_status(self):
+            pass
+    monkeypatch.setattr("mlab.net.session", lambda *a, **k: type("S", (), {"get": lambda self, u, timeout=None: R()})())
+    ds._UNCERTAINTY_CACHE.clear()
+    spec = ds.CATALOG["policy-daily"]
+    m = next(x for x in spec.members if x.symbol == "EPU_US")
+    df = ds.fetch_uncertainty(m, spec)
+    assert list(df["value"]) == [103.8, 296.4] and str(df.index[1].date()) == "1985-01-02" and df.index.tz is not None
+    ds._UNCERTAINTY_CACHE.clear()
