@@ -1,0 +1,78 @@
+# Tradable proxies: where an industry node meets a price. Each instrument creates a `proxies` edge to
+# the industries it is exposed to, and `discloses` edges to the unit-economics KPIs its results usually
+# carry (check the latest filing: disclosure sets change). Tickers are Yahoo symbols (London listings end
+# in .L and are quoted in pence); all of them returned prices from Yahoo on 2026-10-16.
+#
+# Node ids: mkt:<key>. The same listed share can be held through a broker, an ISA, or a spread bet / CFD
+# venue; the venue choice belongs to the trade, not to this file.
+
+# ---- sector ETFs (US listed) ------------------------------------------------------------------------
+xhb: {name: SPDR S&P Homebuilders ETF (builders, building products, home retail), ticker: XHB, kind: etf, industries: [homebuilding, building_products, retail_home_improvement]}
+itb: {name: iShares US Home Construction ETF, ticker: ITB, kind: etf, industries: [homebuilding, building_products]}
+xrt: {name: SPDR S&P Retail ETF (equal weight), ticker: XRT, kind: etf, industries: [retail]}
+xly: {name: Consumer Discretionary Select Sector SPDR, ticker: XLY, kind: etf, industries: [retail, autos, hospitality, retail_ecommerce]}
+xlp: {name: Consumer Staples Select Sector SPDR, ticker: XLP, kind: etf, industries: [retail_staples]}
+iyt: {name: iShares US Transportation ETF, ticker: IYT, kind: etf, industries: [transport_logistics, road_freight, rail_freight, parcel_courier, airlines]}
+jets: {name: US Global Jets ETF, ticker: JETS, kind: etf, industries: [airlines]}
+soxx: {name: iShares Semiconductor ETF, ticker: SOXX, kind: etf, industries: [semiconductors]}
+smh: {name: VanEck Semiconductor ETF, ticker: SMH, kind: etf, industries: [semiconductors]}
+kre: {name: SPDR S&P Regional Banking ETF, ticker: KRE, kind: etf, industries: [banks]}
+xlf: {name: Financial Select Sector SPDR, ticker: XLF, kind: etf, industries: [finance, banks, insurance]}
+xlu: {name: Utilities Select Sector SPDR, ticker: XLU, kind: etf, industries: [utilities]}
+xop: {name: SPDR S&P Oil and Gas Exploration and Production ETF, ticker: XOP, kind: etf, industries: [oil_gas_extraction]}
+xle: {name: Energy Select Sector SPDR, ticker: XLE, kind: etf, industries: [energy, oil_gas_extraction]}
+vnq: {name: Vanguard Real Estate ETF, ticker: VNQ, kind: etf, industries: [real_estate]}
+xli: {name: Industrial Select Sector SPDR, ticker: XLI, kind: etf, industries: [manufacturing, transport_logistics]}
+ftse250: {name: FTSE 250 index (UK domestic economy), ticker: ^FTMC, kind: index, industries: [economy]}
+
+# ---- home improvement, renovation and garden (US) --------------------------------------------------
+hd: {name: Home Depot, ticker: HD, kind: equity, industries: [retail_home_improvement, builders_merchants], discloses: [comparable_sales, transactions, average_ticket, sales_per_sq_ft]}
+low: {name: "Lowe's", ticker: LOW, kind: equity, industries: [retail_home_improvement], discloses: [comparable_sales, transactions, average_ticket, sales_per_sq_ft]}
+fnd: {name: Floor and Decor, ticker: FND, kind: equity, industries: [retail_tiles_flooring], discloses: [comparable_sales, transactions, average_ticket, store_count]}
+tsco_us: {name: Tractor Supply, ticker: TSCO, kind: equity, industries: [retail_garden_centres], discloses: [comparable_sales, transactions, average_ticket]}
+smg: {name: Scotts Miracle-Gro, ticker: SMG, kind: equity, industries: [retail_garden_centres, chemicals], discloses: [gross_margin]}
+cent: {name: Central Garden and Pet, ticker: CENT, kind: equity, industries: [retail_garden_centres, garden_ornaments], discloses: [gross_margin]}
+pool: {name: Pool Corporation, ticker: POOL, kind: equity, industries: [builders_merchants, home_rmi], discloses: [gross_margin]}
+mas: {name: Masco (plumbing fixtures, paint), ticker: MAS, kind: equity, industries: [sanitaryware_mfg, building_products], discloses: [gross_margin]}
+fbin: {name: Fortune Brands Innovations (water, outdoors, security), ticker: FBIN, kind: equity, industries: [sanitaryware_mfg, building_products], discloses: [gross_margin]}
+mhk: {name: Mohawk Industries (tiles, flooring), ticker: MHK, kind: equity, industries: [ceramic_tiles_mfg, retail_tiles_flooring], discloses: [gross_margin]}
+wsm: {name: Williams-Sonoma, ticker: WSM, kind: equity, industries: [retail_furnishings, retail_ecommerce], discloses: [comparable_sales, gross_margin]}
+rh: {name: RH, ticker: RH, kind: equity, industries: [retail_furnishings], discloses: [gross_margin]}
+
+# ---- home improvement, renovation and garden (UK) --------------------------------------------------
+kgf: {name: Kingfisher (B&Q, Screwfix), ticker: KGF.L, kind: equity, industries: [retail_home_improvement, retail_garden_centres], discloses: [like_for_like_sales, gross_margin, ecommerce_share]}
+tpk: {name: Travis Perkins (builders' merchant, Toolstation), ticker: TPK.L, kind: equity, industries: [builders_merchants], discloses: [like_for_like_sales, gross_margin]}
+wix: {name: Wickes, ticker: WIX.L, kind: equity, industries: [retail_home_improvement, home_rmi], discloses: [like_for_like_sales, order_book]}
+hwdn: {name: Howden Joinery (trade kitchens), ticker: HWDN.L, kind: equity, industries: [builders_merchants, home_rmi], discloses: [like_for_like_sales, gross_margin]}
+mslh: {name: Marshalls (landscaping, paving, garden products), ticker: MSLH.L, kind: equity, industries: [building_products, garden_ornaments, home_rmi], discloses: [order_book, gross_margin]}
+tpt: {name: Topps Tiles, ticker: TPT.L, kind: equity, industries: [retail_tiles_flooring], discloses: [like_for_like_sales, gross_margin, store_count]}
+vic: {name: Victorian Plumbing (online bathrooms), ticker: VIC.L, kind: equity, industries: [retail_bathroom_online, retail_ecommerce], discloses: [active_customers, orders, average_order_value, marketing_pct_sales, gross_margin, contribution_margin]}
+dfs: {name: DFS Furniture, ticker: DFS.L, kind: equity, industries: [retail_furnishings], discloses: [order_intake, gross_margin]}
+dnlm: {name: Dunelm, ticker: DNLM.L, kind: equity, industries: [retail_furnishings, retail_ecommerce], discloses: [like_for_like_sales, ecommerce_share, active_customers]}
+ibst: {name: Ibstock (bricks), ticker: IBST.L, kind: equity, industries: [building_products], discloses: [volume, gross_margin]}
+
+# ---- UK housebuilders ------------------------------------------------------------------------------
+bkg: {name: Berkeley Group, ticker: BKG.L, kind: equity, industries: [homebuilding], discloses: [order_book, reservations_rate]}
+psn: {name: Persimmon, ticker: PSN.L, kind: equity, industries: [homebuilding], discloses: [completions, reservations_rate, order_book, average_selling_price]}
+tw: {name: Taylor Wimpey, ticker: TW.L, kind: equity, industries: [homebuilding], discloses: [completions, reservations_rate, order_book, average_selling_price]}
+
+# ---- freight and logistics -------------------------------------------------------------------------
+odfl: {name: Old Dominion Freight Line (LTL), ticker: ODFL, kind: equity, industries: [ltl_freight], discloses: [tons_per_day, shipments_per_day, revenue_per_hundredweight, operating_ratio]}
+saia: {name: Saia (LTL), ticker: SAIA, kind: equity, industries: [ltl_freight], discloses: [tons_per_day, shipments_per_day, revenue_per_hundredweight, operating_ratio]}
+xpo: {name: XPO (LTL), ticker: XPO, kind: equity, industries: [ltl_freight], discloses: [tons_per_day, shipments_per_day, operating_ratio]}
+jbht: {name: J.B. Hunt (intermodal, truckload), ticker: JBHT, kind: equity, industries: [road_freight, rail_freight], discloses: [loads, revenue_per_load, operating_ratio]}
+knx: {name: Knight-Swift (truckload, LTL), ticker: KNX, kind: equity, industries: [road_freight, ltl_freight], discloses: [revenue_per_loaded_mile, operating_ratio]}
+fdx: {name: FedEx, ticker: FDX, kind: equity, industries: [parcel_courier, air_freight, ltl_freight], discloses: [average_daily_volume, revenue_per_package]}
+ups: {name: UPS, ticker: UPS, kind: equity, industries: [parcel_courier], discloses: [average_daily_volume, revenue_per_package]}
+gxo: {name: GXO Logistics (contract logistics, warehousing), ticker: GXO, kind: equity, industries: [warehousing], discloses: [organic_growth]}
+csx: {name: CSX (rail), ticker: CSX, kind: equity, industries: [rail_freight], discloses: [volume, operating_ratio]}
+unp: {name: Union Pacific (rail), ticker: UNP, kind: equity, industries: [rail_freight], discloses: [volume, operating_ratio]}
+
+# ---- consumer bellwethers --------------------------------------------------------------------------
+amzn: {name: Amazon, ticker: AMZN, kind: equity, industries: [retail_ecommerce, software_saas, parcel_courier], discloses: [gross_merchandise_volume]}
+wmt: {name: Walmart, ticker: WMT, kind: equity, industries: [retail_staples, retail_ecommerce], discloses: [comparable_sales, transactions, average_ticket]}
+tsco_uk: {name: Tesco, ticker: TSCO.L, kind: equity, industries: [retail_staples], discloses: [like_for_like_sales]}
+sbry: {name: Sainsbury's, ticker: SBRY.L, kind: equity, industries: [retail_staples], discloses: [like_for_like_sales]}
+ezj: {name: easyJet, ticker: EZJ.L, kind: equity, industries: [airlines], discloses: [load_factor, passengers, revenue_per_seat]}
+iag: {name: International Airlines Group, ticker: IAG.L, kind: equity, industries: [airlines], discloses: [load_factor, rask, cask]}
+aal: {name: American Airlines, ticker: AAL, kind: equity, industries: [airlines], discloses: [load_factor, rask, cask]}

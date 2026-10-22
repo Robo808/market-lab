@@ -1,0 +1,89 @@
+# Micro layer: unit-economics KPIs, the numbers companies report about their own customers, units and
+# networks. They sit under industries (applies_to) and are disclosed by instruments (instruments.yaml
+# `discloses`). Aggregated across the companies of one industry they become meso indicators, and they
+# usually move before the official industry statistics because trading updates come out first.
+#
+#   formula     definition as a formula of reported items
+#   unit        as usually reported
+#   better      up | down (the healthy direction)
+#   applies_to  ind:<key> nodes
+#   quality     what to check before trusting the number (revenue-quality lens)
+#
+# Node ids: kpi:<key>. The SaaS block follows standard PE unit-economics practice (ARR bridge, cohort
+# retention, CAC / LTV, payback); the retail, freight and network blocks apply the same logic
+# (volume x yield - cost to serve) to physical goods.
+
+# ---- recurring revenue (software, subscriptions) ---------------------------------------------------
+arr: {name: Annual recurring revenue, formula: "sum of annualised contracted recurring revenue at period end", unit: currency, better: up, applies_to: [software_saas, telecom], quality: "Excludes one-off services and usage overage; bridge = opening + new + expansion - contraction - churn"}
+net_revenue_retention: {name: Net revenue retention (NRR / NDR), formula: "(starting cohort ARR + expansion - contraction - churn) / starting cohort ARR, trailing 12m", unit: percent, better: up, applies_to: [software_saas], quality: "Cohort definition and whether price rises are counted; >120% best in class, <100% shrinking base"}
+gross_revenue_retention: {name: Gross revenue retention, formula: "(starting ARR - contraction - churn) / starting ARR", unit: percent, better: up, applies_to: [software_saas, telecom], quality: "Capped at 100%; the purest stickiness read"}
+logo_churn: {name: Customer (logo) churn rate, formula: "customers lost in period / customers at start", unit: percent, better: down, applies_to: [software_saas, telecom], quality: "Annual vs monthly basis; small-customer churn hides inside revenue retention"}
+cohort_retention: {name: Cohort revenue retention curve, formula: "revenue of acquisition cohort c in period t / revenue of c in its first period", unit: percent by age, better: up, applies_to: [software_saas, retail_ecommerce, retail_bathroom_online], quality: "Flattening curve = durable base; compare recent cohorts against older ones"}
+arpu: {name: Average revenue per user / account, formula: "revenue / average active users or accounts", unit: currency per period, better: up, applies_to: [software_saas, telecom, retail_ecommerce]}
+cac: {name: Customer acquisition cost, formula: "(sales + marketing spend) / new customers acquired", unit: currency, better: down, applies_to: [software_saas, retail_ecommerce, retail_bathroom_online], quality: "Blended vs paid CAC; capitalised commissions"}
+ltv: {name: Customer lifetime value, formula: "ARPU x gross margin / churn rate (or discounted contribution over the cohort curve)", unit: currency, better: up, applies_to: [software_saas, retail_ecommerce, retail_bathroom_online], quality: "Sensitive to the churn assumption; prefer observed cohort curves"}
+ltv_to_cac: {name: LTV to CAC ratio, formula: "LTV / CAC", unit: ratio, better: up, applies_to: [software_saas, retail_ecommerce, retail_bathroom_online], quality: ">3x healthy; >5x may mean under-investing in growth"}
+cac_payback: {name: CAC payback period, formula: "CAC / (monthly ARPU x gross margin)", unit: months, better: down, applies_to: [software_saas, retail_ecommerce]}
+magic_number: {name: Sales efficiency (magic number), formula: "(net new ARR in quarter x 4) / prior-quarter S&M spend", unit: ratio, better: up, applies_to: [software_saas]}
+burn_multiple: {name: Burn multiple, formula: "net cash burn / net new ARR", unit: ratio, better: down, applies_to: [software_saas]}
+rule_of_40: {name: Rule of 40, formula: "revenue growth % + free cash flow (or EBITDA) margin %", unit: percent, better: up, applies_to: [software_saas]}
+
+# ---- retail and e-commerce -------------------------------------------------------------------------
+comparable_sales: {name: Comparable (same-store) sales growth, formula: "sales growth of stores / channels open >= 12 months", unit: percent y/y, better: up, applies_to: [retail, retail_home_improvement, retail_tiles_flooring, retail_garden_centres, restaurants], quality: "Calendar shifts, store-base definition, inflation (split into traffic x ticket)"}
+like_for_like_sales: {name: Like-for-like sales growth (UK term for comparable sales), formula: "as comparable_sales", unit: percent y/y, better: up, applies_to: [retail, retail_home_improvement, retail_tiles_flooring, builders_merchants, retail_staples, retail_furnishings]}
+transactions: {name: Customer transactions / traffic, formula: "count of tickets or visits", unit: count, percent y/y, better: up, applies_to: [retail, retail_home_improvement, restaurants], quality: "Volume half of comps: falling traffic with rising ticket = inflation masking weak demand"}
+average_ticket: {name: Average ticket / check, formula: "sales / transactions", unit: currency, better: up, applies_to: [retail, retail_home_improvement, restaurants]}
+average_order_value: {name: Average order value, formula: "online revenue / orders", unit: currency, better: up, applies_to: [retail_ecommerce, retail_bathroom_online]}
+orders: {name: Orders, formula: "count of orders in period", unit: count, better: up, applies_to: [retail_ecommerce, retail_bathroom_online]}
+active_customers: {name: Active customers, formula: "unique customers with >= 1 order in trailing 12 months", unit: count, better: up, applies_to: [retail_ecommerce, retail_bathroom_online, retail_furnishings]}
+marketing_pct_sales: {name: Marketing as % of sales, formula: "marketing spend / revenue", unit: percent, better: down, applies_to: [retail_ecommerce, retail_bathroom_online], quality: "Rising % with flat orders = paying more for the same demand (bad sign for the category)"}
+ecommerce_share: {name: Online share of sales, formula: "online sales / total sales", unit: percent, better: up, applies_to: [retail, retail_home_improvement, retail_furnishings]}
+sales_per_sq_ft: {name: Sales per square foot, formula: "sales / average selling space", unit: currency per sq ft, better: up, applies_to: [retail, retail_home_improvement]}
+store_count: {name: Store count, formula: "stores at period end", unit: count, better: up, applies_to: [retail, retail_tiles_flooring, restaurants]}
+gross_margin: {name: Gross margin, formula: "(revenue - cost of goods sold) / revenue", unit: percent, better: up, applies_to: [retail, manufacturing, software_saas, building_products, sanitaryware_mfg], quality: "Freight and FX pass-through; promotional intensity"}
+contribution_margin: {name: Contribution margin, formula: "(revenue - COGS - variable fulfilment, payment and marketing costs) / revenue", unit: percent, better: up, applies_to: [retail_ecommerce, retail_bathroom_online, parcel_courier]}
+gross_merchandise_volume: {name: Gross merchandise volume, formula: "value of goods sold through the platform incl. third-party sellers", unit: currency, better: up, applies_to: [retail_ecommerce]}
+inventory_turns: {name: Inventory turnover, formula: "COGS / average inventory", unit: x per year, better: up, applies_to: [retail, wholesale, builders_merchants], quality: "Falling turns ahead of markdowns: a bust tell"}
+
+# ---- order-driven businesses (housebuilders, merchants, furniture) ----------------------------------
+order_book: {name: Order book / backlog, formula: "value of contracted orders not yet delivered", unit: currency, better: up, applies_to: [homebuilding, building_products, home_rmi, retail_furnishings]}
+order_intake: {name: Order intake, formula: "value of new orders in period", unit: currency, percent y/y, better: up, applies_to: [retail_furnishings, building_products]}
+reservations_rate: {name: Net private reservation rate per outlet per week, formula: "net reservations / (sales outlets x weeks)", unit: count, better: up, applies_to: [homebuilding], quality: "Cancellation rate and bulk / PRS deals inflate it"}
+completions: {name: Home completions, formula: "homes legally completed in period", unit: count, better: up, applies_to: [homebuilding]}
+average_selling_price: {name: Average selling price, formula: "revenue / units", unit: currency, better: up, applies_to: [homebuilding, autos]}
+volume: {name: Volume sold or carried, formula: "units, tonnes or carloads", unit: count, better: up, applies_to: [building_products, rail_freight, manufacturing]}
+organic_growth: {name: Organic revenue growth, formula: "growth ex acquisitions, disposals and FX", unit: percent, better: up, applies_to: [warehousing, economy]}
+book_to_bill: {name: Book-to-bill ratio, formula: "orders booked / revenue billed", unit: ratio, better: up, applies_to: [semiconductors, manufacturing], quality: ">1 = demand ahead of shipments; watch double ordering in shortages"}
+
+# ---- freight, parcel and pallet networks -----------------------------------------------------------
+tons_per_day: {name: LTL tons per day, formula: "tonnage hauled / working days", unit: tons, percent y/y, better: up, applies_to: [ltl_freight, pallet_networks], quality: "Published monthly by several LTL carriers: earliest hard read on goods demand"}
+shipments_per_day: {name: Shipments per day, formula: "shipments / working days", unit: count, better: up, applies_to: [ltl_freight, pallet_networks]}
+revenue_per_hundredweight: {name: Revenue per hundredweight (yield), formula: "revenue / (tons x 20)", unit: USD per cwt, better: up, applies_to: [ltl_freight]}
+operating_ratio: {name: Operating ratio, formula: "operating expenses / revenue", unit: percent, better: down, applies_to: [ltl_freight, road_freight, rail_freight]}
+loads: {name: Loads hauled, formula: "count of loads", unit: count, better: up, applies_to: [road_freight, rail_freight]}
+revenue_per_load: {name: Revenue per load, formula: "revenue / loads", unit: currency, better: up, applies_to: [road_freight, rail_freight]}
+revenue_per_loaded_mile: {name: Revenue per loaded mile, formula: "revenue ex fuel surcharge / loaded miles", unit: USD, better: up, applies_to: [road_freight]}
+empty_miles: {name: Empty running (deadhead) share, formula: "empty miles / total miles", unit: percent, better: down, applies_to: [road_freight, pallet_networks]}
+average_daily_volume: {name: Average daily package volume, formula: "packages / operating days", unit: count, better: up, applies_to: [parcel_courier]}
+revenue_per_package: {name: Revenue per package, formula: "revenue / packages", unit: currency, better: up, applies_to: [parcel_courier]}
+pallets_per_night: {name: Pallets through the network per night, formula: "pallets trunked via hubs / operating nights", unit: count, better: up, applies_to: [pallet_networks], quality: "Rarely published as a series; appears in accounts, press and trade media"}
+revenue_per_pallet: {name: Revenue per pallet, formula: "network revenue / pallets", unit: currency, better: up, applies_to: [pallet_networks]}
+member_depots: {name: Member depots in the network, formula: "count of member hauliers / depots", unit: count, better: up, applies_to: [pallet_networks], quality: "Member exits cluster in downturns (small hauliers fail first)"}
+
+# ---- travel and hospitality ------------------------------------------------------------------------
+load_factor: {name: Load factor, formula: "RPK / ASK (passengers) or FTK / AFTK (cargo)", unit: percent, better: up, applies_to: [airlines, air_freight]}
+passengers: {name: Passengers carried, formula: "count", unit: count, better: up, applies_to: [airlines]}
+revenue_per_seat: {name: Revenue per seat, formula: "revenue / seats flown", unit: currency, better: up, applies_to: [airlines]}
+rask: {name: Revenue per available seat km (RASK / RASM), formula: "revenue / ASK", unit: pence or cents, better: up, applies_to: [airlines]}
+cask: {name: Cost per available seat km ex fuel (CASK / CASM ex fuel), formula: "operating cost ex fuel / ASK", unit: pence or cents, better: down, applies_to: [airlines]}
+occupancy: {name: Hotel occupancy, formula: "rooms sold / rooms available", unit: percent, better: up, applies_to: [hotels]}
+adr: {name: Average daily rate, formula: "room revenue / rooms sold", unit: currency, better: up, applies_to: [hotels]}
+revpar: {name: Revenue per available room, formula: "occupancy x ADR", unit: currency, better: up, applies_to: [hotels]}
+
+# ---- lenders and insurers --------------------------------------------------------------------------
+net_interest_margin: {name: Net interest margin, formula: "net interest income / average interest-earning assets", unit: percent, better: up, applies_to: [banks, consumer_credit_lenders]}
+loan_growth: {name: Loan growth, formula: "loans y/y", unit: percent, better: up, applies_to: [banks, consumer_credit_lenders]}
+npl_ratio: {name: Non-performing loan ratio, formula: "non-performing loans / gross loans", unit: percent, better: down, applies_to: [banks, consumer_credit_lenders]}
+cost_of_risk: {name: Cost of risk, formula: "impairment charge / average loans", unit: percent, better: down, applies_to: [banks, consumer_credit_lenders], quality: "Rises before unemployment: lenders provision on forecasts"}
+cet1_ratio: {name: CET1 capital ratio, formula: "common equity tier 1 / risk-weighted assets", unit: percent, better: up, applies_to: [banks]}
+combined_ratio: {name: Combined ratio, formula: "(claims + expenses) / earned premiums", unit: percent, better: down, applies_to: [insurance]}
