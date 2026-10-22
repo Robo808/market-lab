@@ -215,7 +215,6 @@ def nw_t(y: np.ndarray, x: np.ndarray, lags: int) -> tuple[float, float]:
     X = np.column_stack([np.ones_like(x), x])
     beta = np.linalg.lstsq(X, y, rcond=None)[0]
     e = y - X @ beta
-    n = len(y)
     S = (X * e[:, None]).T @ (X * e[:, None])
     for L in range(1, lags + 1):
         w = 1 - L / (lags + 1)

@@ -32,7 +32,8 @@ def cmd_econ(a):
     from ..cli import show
     act = a.action
     if act in ("supply-demand", "sd-study"):
-        return _supply_demand(a)
+        _supply_demand(a)
+        return
     g = load()
     if act == "summary":
         s = g.summary()
