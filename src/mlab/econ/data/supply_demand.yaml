@@ -1,0 +1,194 @@
+# Supply and demand map: for each product category, what measures supply (US industrial production and capacity
+# utilisation, Federal Reserve G.17), what measures consumer demand (US monthly retail sales by kind of business,
+# Census MRTS) and which listed industry earns from it (Ken French 49 industry portfolios for history, a US ETF
+# for live tracking). `mlab econ supply-demand` prints it; `mlab econ sd-study` lines the series up against
+# industry returns.
+#
+# Fields
+#   side        both (supply and demand series) | supply (no consumer-demand series) | demand (services: no
+#               production index)
+#   supply      G.17 industrial production series code (ip_sa.txt); `util` = same-code capacity utilisation
+#               (utl_sa.txt) when the Board publishes one
+#   demand      MRTS kind-of-business code (NAICS) or row label for the totals; several codes are summed
+#   industry    Ken French 49-industry column (value weighted); `mkt` = the CRSP value-weighted market
+#   etf         US-listed ETF that tracks the same industry today (live tracking only, not used in the study)
+#   indicators  matching `sig:` nodes in indicators.yaml, so the map joins the industry graph
+#   note        why the pairing makes sense, and its weak spots
+#
+# Licences: Federal Reserve Board data are public domain (cite the Board); Census MRTS files are US federal works;
+# Ken French library returns are free for research with citation. All three may be cached.
+#
+# Units: G.17 is a real volume index (2017 = 100); MRTS is nominal dollars, so demand growth includes price.
+# A demand-minus-supply gap is therefore partly inflation: that is the point, since demand outrunning volume is
+# what lifts prices and margins.
+
+meta:
+  sources:
+    supply: https://www.federalreserve.gov/releases/g17/Current/ipdisk/ip_sa.txt
+    util: https://www.federalreserve.gov/releases/g17/Current/ipdisk/utl_sa.txt
+    demand: https://www.census.gov/retail/mrts/www/mrtssales92-present.xlsx
+    industry: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/49_Industry_Portfolios_CSV.zip
+    market: https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_CSV.zip
+  publication_lag_months: 1   # G.17 and the advance MRTS both land in the middle of the following month
+  revisions: latest vintage   # no point-in-time vintages here: revisions flatter in-sample fits
+
+categories:
+  semiconductors:
+    side: both
+    supply: G3344
+    util: G3344
+    demand: ["443"]
+    industry: Chips
+    etf: SMH
+    note: Chip output vs electronics and appliance store sales. Consumer electronics is only part of chip demand
+      (data centres and autos are not in retail), so read the demand leg as the consumer slice.
+  computers:
+    side: both
+    supply: G3341
+    demand: ["443"]
+    industry: Hardw
+    etf: XLK
+    note: Computer and peripheral output vs electronics store sales.
+  autos:
+    side: both
+    supply: G3361T3
+    util: G3361T3
+    demand: ["441"]
+    industry: Autos
+    etf: CARZ
+    note: Vehicle and parts output vs motor vehicle and parts dealer sales. The cleanest consumer pairing.
+  furniture_home:
+    side: both
+    supply: G337
+    util: G337
+    demand: ["442"]
+    industry: Hshld
+    etf: XHB
+    indicators: [us_retail_sales_furnishings]
+    note: Furniture output vs furniture and home furnishing store sales.
+  building_materials:
+    side: both
+    supply: B54100
+    demand: ["444"]
+    industry: BldMt
+    etf: ITB
+    indicators: [us_retail_sales_building_garden]
+    note: Construction supplies output vs building material and garden dealers (DIY, renovation, tiles).
+  apparel:
+    side: both
+    supply: G315A6
+    demand: ["448"]
+    industry: Clths
+    etf: XRT
+    note: Apparel and leather output vs clothing store sales. US apparel output is small and mostly imported
+      goods are sold, so the supply leg is weak.
+  food_grocery:
+    side: both
+    supply: G311A2
+    demand: ["445"]
+    industry: Food
+    etf: XLP
+    note: Food, beverage and tobacco output vs food and beverage store sales. Staples, low cyclicality.
+  pharma_health:
+    side: both
+    supply: G3254
+    demand: ["446"]
+    industry: Drugs
+    etf: XPH
+    note: Pharmaceutical output vs health and personal care store sales.
+  fuel_energy:
+    side: both
+    supply: G211
+    demand: ["447"]
+    industry: Oil
+    etf: XLE
+    note: Oil and gas extraction volume vs gasoline station sales (nominal, so mostly the pump price).
+  refining:
+    side: both
+    supply: G324
+    demand: ["447"]
+    industry: Oil
+    etf: CRAK
+    note: Refinery output vs gasoline station sales; the refining margin proxy.
+  general_retail:
+    side: both
+    supply: B51000
+    demand: ["452", "454"]
+    industry: Rtail
+    etf: XRT
+    indicators: [us_retail_sales_general_merch, us_retail_sales_nonstore]
+    note: All consumer goods output vs general merchandise plus online sales (the retailer channel).
+  restaurants:
+    side: demand
+    demand: ["722"]
+    industry: Meals
+    etf: EATZ
+    note: Food services and drinking places; services have no production index.
+  leisure_goods:
+    side: demand
+    demand: ["451"]
+    industry: Toys
+    etf: XRT
+    note: Sporting goods, hobby, toy, music and book stores.
+  paper_packaging:
+    side: supply
+    supply: G322
+    util: G322
+    industry: Boxes
+    etf: XLB
+    note: Paper output (boxes ship every physical good, so it is a goods-demand proxy as well).
+  chemicals:
+    side: supply
+    supply: G325
+    util: G325
+    industry: Chems
+    etf: XLB
+    note: Chemical output and utilisation.
+  machinery:
+    side: supply
+    supply: G333
+    util: G333
+    industry: Mach
+    etf: XLI
+    note: Machinery output, the business capex cycle.
+  business_equipment:
+    side: supply
+    supply: B52100
+    industry: ElcEq
+    etf: XLI
+    note: Business equipment output (capex goods) vs electrical equipment makers.
+  aerospace:
+    side: supply
+    supply: G3364T9
+    industry: Aero
+    etf: ITA
+    note: Aerospace and other transport equipment output.
+  steel_metals:
+    side: supply
+    supply: G331
+    util: G331
+    industry: Steel
+    etf: SLX
+    note: Primary metals output and utilisation.
+  mining:
+    side: supply
+    supply: G212
+    industry: Mines
+    etf: XME
+    note: Non-energy mining output.
+  utilities:
+    side: supply
+    supply: G2211A2
+    industry: Util
+    etf: XLU
+    note: Electricity and gas utility output (weather and data-centre load).
+  economy:
+    side: both
+    supply: B50001
+    util: B50001
+    demand: ["Retail and food services sales, total"]
+    industry: mkt
+    etf: SPY
+    indicators: [us_industrial_production, us_capacity_utilisation, us_retail_sales_total]
+    note: Total industrial production vs total retail and food services sales against the whole market.
+      The study measures every other category in excess of this one.
