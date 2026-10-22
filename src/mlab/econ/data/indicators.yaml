@@ -292,6 +292,7 @@ us_industrial_production:
   unit: index 2017=100
   cycle: coincident
   industries: [manufacturing, utilities, energy]
+  release_lag_months: 1
   series:
     - {source: frb, id: G17-IP-B50001}
     - {source: fred, id: INDPRO, via: frb}
@@ -317,7 +318,9 @@ us_capacity_utilisation:
   unit: percent
   cycle: coincident
   industries: [manufacturing]
+  release_lag_months: 1
   series:
+    - {source: frb, id: G17-CU-B50001}
     - {source: fred, id: TCU, via: frb}
   transform: [level, diff]
 us_real_disposable_income:
@@ -513,7 +516,9 @@ us_retail_sales_total:
   unit: USD mn SA
   cycle: coincident
   industries: [retail]
+  release_lag_months: 1
   series:
+    - {source: census_mrts, id: "Retail and food services sales, total"}
     - {source: census, id: "MARTS 44X72"}
     - {source: fred, id: RSAFS, via: census}
   transform: [yoy, mom]
@@ -538,7 +543,9 @@ us_retail_sales_building_garden:
   unit: USD mn SA
   cycle: coincident
   industries: [retail_home_improvement, retail_garden_centres]
+  release_lag_months: 1
   series:
+    - {source: census_mrts, id: "444"}
     - {source: census, id: "MARTS 444"}
     - {source: fred, id: RSBMGESD, via: census}
   transform: [yoy, mom]
@@ -563,7 +570,9 @@ us_retail_sales_furnishings:
   unit: USD mn SA
   cycle: coincident
   industries: [retail_furnishings]
+  release_lag_months: 1
   series:
+    - {source: census_mrts, id: "442"}
     - {source: fred, id: RSFHFS, via: census}
   transform: [yoy, mom]
 us_retail_sales_nonstore:
@@ -575,7 +584,9 @@ us_retail_sales_nonstore:
   unit: USD mn SA
   cycle: coincident
   industries: [retail_ecommerce, parcel_courier]
+  release_lag_months: 1
   series:
+    - {source: census_mrts, id: "454"}
     - {source: fred, id: RSNSR, via: census}
   transform: [yoy, mom]
 us_retail_sales_general_merch:
@@ -587,7 +598,9 @@ us_retail_sales_general_merch:
   unit: USD mn SA
   cycle: coincident
   industries: [retail_staples]
+  release_lag_months: 1
   series:
+    - {source: census_mrts, id: "452"}
     - {source: fred, id: RSGMS, via: census}
   transform: [yoy, mom]
 us_ecommerce_share:
@@ -1901,4 +1914,450 @@ company_accounts_uk:
   industries: [economy, pallet_networks]
   series:
     - {source: companies_house, id: "company profile, filing history, accounts (iXBRL bulk)"}
+  transform: [yoy]
+
+# ======================================================================================================
+# Supply and demand categories (supply_demand.yaml): G.17 output/utilisation and Census MRTS by kind of business
+# ======================================================================================================
+us_ip_semiconductors:
+  name: Industrial production, semiconductors (G.17 G3344)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [semiconductors]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G3344}
+  transform: [yoy]
+us_cu_semiconductors:
+  name: Capacity utilisation, semiconductors (G.17 G3344)
+  layer: meso
+  themes: [supply, capacity]
+  geo: US
+  freq: M
+  unit: percent of capacity
+  cycle: coincident
+  industries: [semiconductors]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-CU-G3344}
+  transform: [diff]
+us_retail_sales_electronics:
+  name: Retail sales, semiconductors (MRTS NAICS 443)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [retail]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "443"}
+  transform: [yoy]
+us_ip_computers:
+  name: Industrial production, computers (G.17 G3341)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G3341}
+  transform: [yoy]
+us_ip_autos:
+  name: Industrial production, autos (G.17 G3361T3)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [autos]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G3361T3}
+  transform: [yoy]
+us_cu_autos:
+  name: Capacity utilisation, autos (G.17 G3361T3)
+  layer: meso
+  themes: [supply, capacity]
+  geo: US
+  freq: M
+  unit: percent of capacity
+  cycle: coincident
+  industries: [autos]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-CU-G3361T3}
+  transform: [diff]
+us_retail_sales_autos:
+  name: Retail sales, autos (MRTS NAICS 441)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [auto_dealers]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "441"}
+  transform: [yoy]
+us_ip_furniture_home:
+  name: Industrial production, furniture home (G.17 G337)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [furniture_mfg]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G337}
+  transform: [yoy]
+us_cu_furniture_home:
+  name: Capacity utilisation, furniture home (G.17 G337)
+  layer: meso
+  themes: [supply, capacity]
+  geo: US
+  freq: M
+  unit: percent of capacity
+  cycle: coincident
+  industries: [furniture_mfg]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-CU-G337}
+  transform: [diff]
+us_ip_building_materials:
+  name: Industrial production, building materials (G.17 B54100)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [building_products]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-B54100}
+  transform: [yoy]
+us_ip_apparel:
+  name: Industrial production, apparel (G.17 G315A6)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G315A6}
+  transform: [yoy]
+us_retail_sales_apparel:
+  name: Retail sales, apparel (MRTS NAICS 448)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [retail]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "448"}
+  transform: [yoy]
+us_ip_food_grocery:
+  name: Industrial production, food grocery (G.17 G311A2)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G311A2}
+  transform: [yoy]
+us_retail_sales_food_grocery:
+  name: Retail sales, food grocery (MRTS NAICS 445)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [retail_staples]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "445"}
+  transform: [yoy]
+us_ip_pharma_health:
+  name: Industrial production, pharma health (G.17 G3254)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [pharma]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G3254}
+  transform: [yoy]
+us_retail_sales_pharma_health:
+  name: Retail sales, pharma health (MRTS NAICS 446)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [retail]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "446"}
+  transform: [yoy]
+us_ip_fuel_energy:
+  name: Industrial production, fuel energy (G.17 G211)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [oil_gas_extraction]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G211}
+  transform: [yoy]
+us_retail_sales_gasoline:
+  name: Retail sales, fuel energy (MRTS NAICS 447)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [retail]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "447"}
+  transform: [yoy]
+us_ip_refining:
+  name: Industrial production, refining (G.17 G324)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [energy]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G324}
+  transform: [yoy]
+us_ip_general_retail:
+  name: Industrial production, general retail (G.17 B51000)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-B51000}
+  transform: [yoy]
+us_retail_sales_restaurants:
+  name: Retail sales, restaurants (MRTS NAICS 722)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [restaurants]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "722"}
+  transform: [yoy]
+us_retail_sales_leisure_goods:
+  name: Retail sales, leisure goods (MRTS NAICS 451)
+  layer: meso
+  themes: [demand, consumer, retail]
+  geo: US
+  freq: M
+  unit: USD millions, SA
+  cycle: coincident
+  industries: [retail]
+  release_lag_months: 1
+  series:
+    - {source: census_mrts, id: "451"}
+  transform: [yoy]
+us_ip_paper_packaging:
+  name: Industrial production, paper packaging (G.17 G322)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G322}
+  transform: [yoy]
+us_cu_paper_packaging:
+  name: Capacity utilisation, paper packaging (G.17 G322)
+  layer: meso
+  themes: [supply, capacity]
+  geo: US
+  freq: M
+  unit: percent of capacity
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-CU-G322}
+  transform: [diff]
+us_ip_chemicals:
+  name: Industrial production, chemicals (G.17 G325)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [chemicals]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G325}
+  transform: [yoy]
+us_cu_chemicals:
+  name: Capacity utilisation, chemicals (G.17 G325)
+  layer: meso
+  themes: [supply, capacity]
+  geo: US
+  freq: M
+  unit: percent of capacity
+  cycle: coincident
+  industries: [chemicals]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-CU-G325}
+  transform: [diff]
+us_ip_machinery:
+  name: Industrial production, machinery (G.17 G333)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G333}
+  transform: [yoy]
+us_cu_machinery:
+  name: Capacity utilisation, machinery (G.17 G333)
+  layer: meso
+  themes: [supply, capacity]
+  geo: US
+  freq: M
+  unit: percent of capacity
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-CU-G333}
+  transform: [diff]
+us_ip_business_equipment:
+  name: Industrial production, business equipment (G.17 B52100)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-B52100}
+  transform: [yoy]
+us_ip_aerospace:
+  name: Industrial production, aerospace (G.17 G3364T9)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [manufacturing]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G3364T9}
+  transform: [yoy]
+us_ip_steel_metals:
+  name: Industrial production, steel metals (G.17 G331)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [metals_mining]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G331}
+  transform: [yoy]
+us_cu_steel_metals:
+  name: Capacity utilisation, steel metals (G.17 G331)
+  layer: meso
+  themes: [supply, capacity]
+  geo: US
+  freq: M
+  unit: percent of capacity
+  cycle: coincident
+  industries: [metals_mining]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-CU-G331}
+  transform: [diff]
+us_ip_mining:
+  name: Industrial production, mining (G.17 G212)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [metals_mining]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G212}
+  transform: [yoy]
+us_ip_utilities:
+  name: Industrial production, utilities (G.17 G2211A2)
+  layer: meso
+  themes: [supply, output]
+  geo: US
+  freq: M
+  unit: index 2017=100
+  cycle: coincident
+  industries: [utilities]
+  release_lag_months: 1
+  series:
+    - {source: frb, id: G17-IP-G2211A2}
   transform: [yoy]

@@ -20,6 +20,7 @@
 - [[Datasets]]
 - [[Econ Graph]]
 - [[Econ Dictionary]]
+- [[Econ Supply Demand]]
 - [[Contributing]]
 - [[Tracking]]
 - [[Glossary]]

@@ -11,6 +11,8 @@
     mlab econ panel ind:retail_home_improvement -d 2 --geo US   # ML feature matrix (in memory)
     mlab econ export --out DIR                 # nodes.csv + edges.csv for the influence-map network
     mlab econ docs --out docs/wiki/Econ-Dictionary.md
+    mlab econ supply-demand                    # supply/demand category map and where each stands now
+    mlab econ sd-study --split train           # categories vs industry returns: explain, predict, rotation
 """
 from __future__ import annotations
 
@@ -28,8 +30,11 @@ def _edge_row(g, e, other, how):
 
 def cmd_econ(a):
     from ..cli import show
-    g = load()
     act = a.action
+    if act in ("supply-demand", "sd-study"):
+        _supply_demand(a)
+        return
+    g = load()
     if act == "summary":
         s = g.summary()
         show(pd.DataFrame({"count": s["nodes"]}), a.json, title="Nodes by kind")
@@ -137,11 +142,33 @@ def cmd_econ(a):
               "FRED data is never cached or stored._")
 
 
+def _supply_demand(a):
+    from ..cli import show
+    from . import supply_demand as sd
+    m = sd.load_map()
+    raw = sd.fetch(m, refresh=a.refresh, log=(lambda *x: None) if a.json else print)
+    if a.action == "supply-demand":
+        show(sd.map_frame(m), a.json, title=f"{len(m['categories'])} supply/demand categories")
+        show(sd.latest(raw, m), a.json, title="Latest published month: yoy growth % (s = supply volume, d = nominal "
+                                                "demand, gap = d - s, acc = change over 3 months)")
+    else:
+        res = sd.study(raw, a.split, m, allow_test=a.allow_test)
+        P = res["predict"]
+        show(res["explain"].sort_values("t", key=abs, ascending=False).round(2).set_index(["category", "feature"]),
+             a.json, title=f"Explain ({a.split}): 12m excess return vs same-window growth, and price leading growth")
+        show(P[P["t"].abs() >= 3].round(3).set_index(["category", "feature", "h"]), a.json,
+             title=f"Predict ({a.split}): {int((P['t'].abs() >= 3).sum())} of {len(P)} tests with |t| >= 3 "
+                   f"(null shifts clear t >= 3 {100 * P['null_t3'].mean():.1f}% of the time)")
+        show(res["xs"].round(3).set_index("feature"), a.json, title="Rotation: long top third / short bottom third, "
+                                                                      "1 month, vs random rankings")
+    print(f"\n_Sources: Federal Reserve G.17, Census MRTS, Ken French 49 industries; fetched {raw.asof or 'from cache'}_")
+
+
 def register(add):
     q = add("econ", cmd_econ, "indicator dictionary + industry graph: summary | list | search | show | walk | sideways | "
                               "path | sources | check | panel | export | docs")
     q.add_argument("action", choices=["summary", "list", "search", "show", "walk", "sideways", "path", "sources", "check",
-                                      "panel", "export", "docs"])
+                                      "panel", "export", "docs", "supply-demand", "sd-study"])
     q.add_argument("node", nargs="?", help="node id (ind:/sig:/kpi:/src:/mkt:/cls:), bare key, or search text")
     q.add_argument("target", nargs="?", help="second node for `path`")
     q.add_argument("--depth", "-d", type=int, default=1)
@@ -157,3 +184,6 @@ def register(add):
     q.add_argument("--no-lag", action="store_true", help="panel: index by reference period, no publication-lag shift")
     q.add_argument("--tail", type=int, default=6)
     q.add_argument("--out", help="export: directory; docs/panel: file (panel refuses storage-restricted sources)")
+    q.add_argument("--split", choices=["train", "validation", "test"], default="train", help="sd-study window")
+    q.add_argument("--allow-test", action="store_true", help="sd-study: open the locked 2020+ test split")
+    q.add_argument("--refresh", action="store_true", help="supply-demand / sd-study: refetch instead of the cache")
