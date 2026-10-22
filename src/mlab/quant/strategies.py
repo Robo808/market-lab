@@ -254,6 +254,21 @@ def pairs(panel, n=60, entry=2.0, exit=0.5):
 
 
 # ---- overlays -----------------------------------------------------------------------
+# ---- null stubs (hypothesis gate) ---------------------------------------------------
+def always_long(df):
+    return _ser(np.ones(len(df)), df)
+
+
+def coin_flip(df, p=0.5, hold=1, seed=0, short=False):
+    """Long or flat (short when `short`) at random in blocks of `hold` bars, long with probability `p`.
+    Each block's draw is a hash of (block number, seed), so truncating the data never changes a past bar."""
+    block = np.arange(len(df), dtype=np.uint64) // np.uint64(max(int(hold), 1))
+    x = (block + np.uint64((int(seed) * 0x9E3779B97F4A7C15) & 0xFFFFFFFFFFFFFFFF)) * np.uint64(0xBF58476D1CE4E5B9)
+    x ^= x >> np.uint64(31)
+    u = (x % np.uint64(1_000_003)).astype(float) / 1_000_003
+    return _ser(np.where(u < p, 1.0, -1.0 if short else 0.0), df)
+
+
 def vol_target(position: pd.Series, df: pd.DataFrame, target=0.15, n=20, cap=2.0, periods=252) -> pd.Series:
     """Scale a position so the instrument's recent realised vol maps to `target` annualised."""
     rv = df["close"].pct_change().rolling(n).std() * np.sqrt(periods)
@@ -305,6 +320,8 @@ REGISTRY: dict[str, Strategy] = {s.name: s for s in [
     _s(inverse_vol, "portfolio", "allocation", "weights proportional to 1/vol, monthly"),
     _s(risk_parity, "portfolio", "allocation", "equal risk contribution, monthly"),
     _s(pairs, "portfolio", "stat-arb", "rolling hedge ratio, trade spread z-score"),
+    _s(always_long, "single", "null", "stub: always long (buy and hold)"),
+    _s(coin_flip, "single", "null", "stub: random long/flat (or long/short) blocks, seeded"),
 ]}
 
 OVERLAYS = {"vol_target": vol_target, "regime_filter": regime_filter}

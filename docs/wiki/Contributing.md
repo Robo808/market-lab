@@ -50,6 +50,19 @@ with `MLAB_DATA_DIR` pointed at a temp folder.
 - Every strategy gets a no-look-ahead test: appending bars must not change earlier positions.
 - Run locally: `~/.venvs/market-lab/bin/pytest -q`.
 
+## Gated work (status before done)
+
+An agent drafts, code checks, a person signs off.
+
+- **Reuse first.** Search `src/mlab` and the strategy library before writing a new loader, indicator or strategy.
+- **Start from the real thing.** A new data source gets one real response saved as a test fixture; never
+  hand-write or edit a sample. Write the plan first: key, time field, fields kept, licence (may it be stored?).
+- **Gate with code.** Schema or column checks, dates parse, rows load, a negative case in the tests. For research,
+  the null-stub gate (`mlab hypo gate`).
+- **Status before done.** A multi-item job (fetchers, dataset builds, sweeps) ends with a status table, one row
+  per item: `ok`, `plan_mismatch`, `failed` or `needs_sample`, each non-ok row with the exact next request. No
+  "done" without it.
+
 ## Never commit
 
 - Credentials of any kind (`.env`, IG keys, API keys, account numbers).
