@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from mlab.econ import supply_demand as sd
+from mlab.providers import publishers as pub
 
 FIX = Path(__file__).parent / "fixtures" / "econ_sd"
 
@@ -35,24 +36,53 @@ def test_map_indicators_join_the_graph():
             assert f"sig:{i}" in g.nodes, (k, i)
 
 
+def test_map_codes_are_registered_on_the_linked_sig_nodes():
+    from mlab.econ.graph import build
+    g = build()
+    for k, c in sd.load_map()["categories"].items():
+        ids = {(s["source"], s["id"]) for i in c.get("indicators", []) for s in g.nodes[f"sig:{i}"].data["series"]}
+        if c.get("supply"):
+            assert ("frb", f"G17-IP-{c['supply']}") in ids, k
+        if c.get("util"):
+            assert ("frb", f"G17-CU-{c['util']}") in ids, k
+        for d in c.get("demand", []):
+            assert ("census_mrts", d) in ids, k
+        assert sd.release_lags()[k] == 1, k
+
+
+def test_fetch_series_routes_g17_and_mrts(monkeypatch):
+    from mlab.econ import fetch
+    ip = pub.parse_g17((FIX / "ip_sa_excerpt.txt").read_text())
+    rs = pub.parse_mrts_sheet(pd.read_csv(FIX / "mrts_2026_sheet.csv", header=None))
+    monkeypatch.setattr(pub, "g17_table", lambda table="ip_sa": ip)
+    monkeypatch.setattr(pub, "mrts_table", lambda: rs)
+    s = fetch.fetch_series({"source": "frb", "id": "G17-IP-G3344"})
+    assert s.loc["2026-09-01"] == 198.6335 and s.name == "G17-IP-G3344"
+    assert fetch.fetch_series({"source": "census_mrts", "id": "444"}).loc["2026-08-01"] == 44323
+    assert fetch.fetchable({"source": "frb", "id": "G17-IP-B50001"})
+    assert not fetch.fetchable({"source": "frb", "id": "G19"})  # DDP release, not a G.17 series
+    with pytest.raises(ValueError):
+        pub.fed_g17("G17-XX-G3344")
+
+
 def test_parse_g17_real_excerpt():
-    df = sd.parse_g17((FIX / "ip_sa_excerpt.txt").read_text())
+    df = pub.parse_g17((FIX / "ip_sa_excerpt.txt").read_text())
     assert set(df.columns) == {"B50001", "G3344"}
     assert df.loc["2026-09-01", "G3344"] == 198.6335
     assert df.loc["2024-01-01", "B50001"] == 99.2223
     assert df.index.max() == pd.Timestamp("2026-09-01")  # Oct-Dec 2026 not yet published: no rows, no zeros
     assert len(df) == 33 and df.notna().all().all()
-    assert sd.parse_g17((FIX / "ip_sa_excerpt.txt").read_text(), {"G3344"}).columns.tolist() == ["G3344"]
+    assert pub.parse_g17((FIX / "ip_sa_excerpt.txt").read_text(), {"G3344"}).columns.tolist() == ["G3344"]
 
 
 def test_yoy_is_log_percent():
-    s = sd.parse_g17((FIX / "ip_sa_excerpt.txt").read_text())["G3344"]
+    s = pub.parse_g17((FIX / "ip_sa_excerpt.txt").read_text())["G3344"]
     assert sd.yoy(s).loc["2026-09-01"] == pytest.approx(18.148166865, abs=1e-6)
 
 
 def test_parse_mrts_sheet_reads_the_adjusted_block_including_preliminary_month():
     sheet = pd.read_csv(FIX / "mrts_2026_sheet.csv", header=None)
-    df = sd.parse_mrts_sheet(sheet)
+    df = pub.parse_mrts_sheet(sheet)
     assert df.index.min() == pd.Timestamp("2026-01-01") and df.index.max() == pd.Timestamp("2026-08-01")
     assert df.loc["2026-01-01", "444"] == 43235  # adjusted, not the not-adjusted block
     assert df.loc["2026-08-01", "444"] == 44323  # "Aug. 2026(p)"
@@ -88,6 +118,15 @@ def test_nw_t_with_no_lags_is_the_hc0_t():
     assert b == pytest.approx(beta[1]) and t == pytest.approx(beta[1] / np.sqrt(V[1, 1]))
 
 
+def test_nonoverlap_t_uses_every_hth_point():
+    x = np.arange(24, dtype=float)
+    y = np.where(np.arange(24) % 2 == 0, 1.0, -1.0) + 0.1 * x
+    t3 = sd.nonoverlap_t(y, x, 3)
+    ts = [sd.nw_t(y[o::3], x[o::3], 0)[1] for o in range(3)]
+    assert t3 == pytest.approx(np.median(ts))
+    assert sd.nonoverlap_t(y, x, 1) == pytest.approx(sd.nw_t(y, x, 0)[1])
+
+
 def test_bh_adjusts_exactly():
     q = sd.bh(np.array([0.01, 0.04, 0.03, 0.5]))
     assert q == pytest.approx([0.04, 0.04 * 4 / 3, 0.04 * 4 / 3, 0.5])
@@ -120,6 +159,8 @@ def test_study_on_structureless_data_rarely_clears_the_bar():
     P = res["predict"]
     assert len(P) > 200
     assert (P["t"].abs() >= 3).mean() < 0.06  # coin-flip data: a few false positives at most
+    assert (P["q_bh"] >= P["p_norm"] - 1e-12).all() and (P.loc[P["t"].abs() >= 3, "q_bh"] > 0.05).mean() > 0.5
+    assert {"t_nonoverlap", "n_indep"} <= set(P.columns)
     assert set(res["xs"]["feature"]) >= {"gap", "s_yoy"} and (res["xs"]["t"].abs() < 3).all()
 
 

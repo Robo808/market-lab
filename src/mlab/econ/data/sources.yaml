@@ -288,6 +288,24 @@ census:
     monthly, Jan 2010-present (HS digit levels not confirmed).'
   verified: true
   verified_on: '2026-10-17'
+census_mrts:
+  access: free
+  api_docs: null
+  commercial_use: unverified
+  cost: null
+  homepage: https://www.census.gov/retail/sales.html
+  licence: US federal government work (17 U.S.C. 105, no copyright); cite the Census Bureau as the source - unverified
+    on a census.gov licence page
+  licence_url: https://www.census.gov/about/policies/citation.html
+  name: Census Monthly Retail Trade Survey, retail and food services sales by kind of business (mrtssales92-present.xlsx)
+  publisher: US Census Bureau
+  rate_limit: null
+  region: US
+  storage_allowed: unverified
+  storage_note: One workbook, a sheet per year from 1992, not adjusted and seasonally adjusted blocks; no API key (the
+    Census Data API now requires one). The citation page asks for attribution and says nothing on reuse.
+  verified: false
+  verified_on: '2026-10-22'
 census_naics:
   access: free
   api_docs: null

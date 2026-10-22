@@ -9,16 +9,25 @@ import pandas as pd
 
 from ..net import session
 from ..providers.macro import fred
-from ..providers.publishers import bls, hmrc_trade
+from ..providers.publishers import bls, census_mrts, fed_g17, hmrc_trade
 from .graph import EconGraph
 
 ONS = "https://www.ons.gov.uk"
 ONS_SEARCH = "https://api.beta.ons.gov.uk/v1/search"
-FETCHABLE = {"fred", "ons", "hmrc_uktradeinfo", "bls"}
+FETCHABLE = {"fred", "ons", "hmrc_uktradeinfo", "bls", "frb", "census_mrts"}
 # Months from the end of the reference period to publication, when an indicator sets no
 # release_lag_months. Conservative on purpose: a feature that arrives late costs a little freshness,
 # one that arrives early is look-ahead.
 DEFAULT_LAG = {"D": 0, "W": 0, "M": 2, "Q": 3, "A": 6}
+
+
+def fetchable(s: dict) -> bool:
+    """A series spec this module can fetch: ONS needs a CDID, the Board's DDP only through G.17 ids."""
+    if s["source"] not in FETCHABLE:
+        return False
+    if s["source"] == "ons":
+        return is_cdid(s["id"])
+    return s["source"] != "frb" or s["id"].startswith("G17-")
 
 
 def is_cdid(sid: str) -> bool:
@@ -76,15 +85,19 @@ def fetch_series(spec: dict) -> pd.Series:
         return s
     if spec["source"] == "bls":
         return bls(spec["id"])
+    if spec["source"] == "frb" and spec["id"].startswith("G17-"):
+        return fed_g17(spec["id"])
+    if spec["source"] == "census_mrts":
+        return census_mrts(spec["id"])
     raise NotImplementedError(f"no fetcher for source {spec['source']}")
 
 
-def check(g: EconGraph, sources=("fred", "ons", "hmrc_uktradeinfo"), log=print) -> pd.DataFrame:
+def check(g: EconGraph, sources=("fred", "ons", "hmrc_uktradeinfo", "frb", "census_mrts"), log=print) -> pd.DataFrame:
     """Hit every FRED / ONS id once; report ok, last date and title, or the error."""
     rows = []
     for n in g.of_kind("sig"):
         for s in n.data.get("series", []):
-            if s["source"] not in sources:
+            if s["source"] not in sources or (s["source"] == "frb" and not fetchable(s)):
                 continue
             row = {"indicator": n.id, "source": s["source"], "id": s["id"], "dataset": s.get("dataset")}
             try:
@@ -137,7 +150,7 @@ def pick_series(g: EconGraph, d: dict) -> list[dict]:
     """Fetchable series of an indicator in the order to try them: storable original publishers first,
     mirrors (FRED) after, so a panel can be saved whenever the data allows it."""
     def ok(s):
-        return s["source"] in FETCHABLE and (s["source"] != "ons" or is_cdid(s["id"]))
+        return fetchable(s)
 
     def storable(s):
         src = g.nodes.get(f"src:{s['source']}")

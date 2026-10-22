@@ -40,6 +40,7 @@ categories:
     demand: ["443"]
     industry: Chips
     etf: SMH
+    indicators: [us_ip_semiconductors, us_cu_semiconductors, us_retail_sales_electronics]
     note: Chip output vs electronics and appliance store sales. Consumer electronics is only part of chip demand
       (data centres and autos are not in retail), so read the demand leg as the consumer slice.
   computers:
@@ -48,6 +49,7 @@ categories:
     demand: ["443"]
     industry: Hardw
     etf: XLK
+    indicators: [us_ip_computers, us_retail_sales_electronics]
     note: Computer and peripheral output vs electronics store sales.
   autos:
     side: both
@@ -56,6 +58,7 @@ categories:
     demand: ["441"]
     industry: Autos
     etf: CARZ
+    indicators: [us_ip_autos, us_cu_autos, us_retail_sales_autos]
     note: Vehicle and parts output vs motor vehicle and parts dealer sales. The cleanest consumer pairing.
   furniture_home:
     side: both
@@ -64,7 +67,7 @@ categories:
     demand: ["442"]
     industry: Hshld
     etf: XHB
-    indicators: [us_retail_sales_furnishings]
+    indicators: [us_ip_furniture_home, us_cu_furniture_home, us_retail_sales_furnishings]
     note: Furniture output vs furniture and home furnishing store sales.
   building_materials:
     side: both
@@ -72,7 +75,7 @@ categories:
     demand: ["444"]
     industry: BldMt
     etf: ITB
-    indicators: [us_retail_sales_building_garden]
+    indicators: [us_ip_building_materials, us_retail_sales_building_garden]
     note: Construction supplies output vs building material and garden dealers (DIY, renovation, tiles).
   apparel:
     side: both
@@ -80,6 +83,7 @@ categories:
     demand: ["448"]
     industry: Clths
     etf: XRT
+    indicators: [us_ip_apparel, us_retail_sales_apparel]
     note: Apparel and leather output vs clothing store sales. US apparel output is small and mostly imported
       goods are sold, so the supply leg is weak.
   food_grocery:
@@ -88,6 +92,7 @@ categories:
     demand: ["445"]
     industry: Food
     etf: XLP
+    indicators: [us_ip_food_grocery, us_retail_sales_food_grocery]
     note: Food, beverage and tobacco output vs food and beverage store sales. Staples, low cyclicality.
   pharma_health:
     side: both
@@ -95,6 +100,7 @@ categories:
     demand: ["446"]
     industry: Drugs
     etf: XPH
+    indicators: [us_ip_pharma_health, us_retail_sales_pharma_health]
     note: Pharmaceutical output vs health and personal care store sales.
   fuel_energy:
     side: both
@@ -102,6 +108,7 @@ categories:
     demand: ["447"]
     industry: Oil
     etf: XLE
+    indicators: [us_ip_fuel_energy, us_retail_sales_gasoline]
     note: Oil and gas extraction volume vs gasoline station sales (nominal, so mostly the pump price).
   refining:
     side: both
@@ -109,6 +116,7 @@ categories:
     demand: ["447"]
     industry: Oil
     etf: CRAK
+    indicators: [us_ip_refining, us_retail_sales_gasoline]
     note: Refinery output vs gasoline station sales; the refining margin proxy.
   general_retail:
     side: both
@@ -116,19 +124,21 @@ categories:
     demand: ["452", "454"]
     industry: Rtail
     etf: XRT
-    indicators: [us_retail_sales_general_merch, us_retail_sales_nonstore]
+    indicators: [us_ip_general_retail, us_retail_sales_general_merch, us_retail_sales_nonstore]
     note: All consumer goods output vs general merchandise plus online sales (the retailer channel).
   restaurants:
     side: demand
     demand: ["722"]
     industry: Meals
     etf: EATZ
+    indicators: [us_retail_sales_restaurants]
     note: Food services and drinking places; services have no production index.
   leisure_goods:
     side: demand
     demand: ["451"]
     industry: Toys
     etf: XRT
+    indicators: [us_retail_sales_leisure_goods]
     note: Sporting goods, hobby, toy, music and book stores.
   paper_packaging:
     side: supply
@@ -136,6 +146,7 @@ categories:
     util: G322
     industry: Boxes
     etf: XLB
+    indicators: [us_ip_paper_packaging, us_cu_paper_packaging]
     note: Paper output (boxes ship every physical good, so it is a goods-demand proxy as well).
   chemicals:
     side: supply
@@ -143,6 +154,7 @@ categories:
     util: G325
     industry: Chems
     etf: XLB
+    indicators: [us_ip_chemicals, us_cu_chemicals]
     note: Chemical output and utilisation.
   machinery:
     side: supply
@@ -150,18 +162,21 @@ categories:
     util: G333
     industry: Mach
     etf: XLI
+    indicators: [us_ip_machinery, us_cu_machinery]
     note: Machinery output, the business capex cycle.
   business_equipment:
     side: supply
     supply: B52100
     industry: ElcEq
     etf: XLI
+    indicators: [us_ip_business_equipment]
     note: Business equipment output (capex goods) vs electrical equipment makers.
   aerospace:
     side: supply
     supply: G3364T9
     industry: Aero
     etf: ITA
+    indicators: [us_ip_aerospace]
     note: Aerospace and other transport equipment output.
   steel_metals:
     side: supply
@@ -169,18 +184,21 @@ categories:
     util: G331
     industry: Steel
     etf: SLX
+    indicators: [us_ip_steel_metals, us_cu_steel_metals]
     note: Primary metals output and utilisation.
   mining:
     side: supply
     supply: G212
     industry: Mines
     etf: XME
+    indicators: [us_ip_mining]
     note: Non-energy mining output.
   utilities:
     side: supply
     supply: G2211A2
     industry: Util
     etf: XLU
+    indicators: [us_ip_utilities]
     note: Electricity and gas utility output (weather and data-centre load).
   economy:
     side: both

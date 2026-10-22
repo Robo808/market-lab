@@ -14,7 +14,6 @@ keeps each series' own persistence. A bar that the shifted features clear as oft
 from __future__ import annotations
 
 import io
-import re
 import zipfile
 from dataclasses import dataclass
 from pathlib import Path
@@ -25,10 +24,9 @@ import yaml
 
 from ..config import DATA_DIR
 from ..net import session
+from ..providers.publishers import g17_table, mrts_table
 
 HERE = Path(__file__).parent / "data"
-G17 = "https://www.federalreserve.gov/releases/g17/Current/ipdisk/{}.txt"
-MRTS = "https://www.census.gov/retail/mrts/www/mrtssales92-present.xlsx"
 FRENCH = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/{}_CSV.zip"
 SPLITS = {"train": ("1993-01-01", "2014-12-31"), "validation": ("2015-01-01", "2019-12-31"),
           "test": ("2020-01-01", "2100-01-01")}
@@ -48,50 +46,7 @@ def map_frame(m: dict | None = None) -> pd.DataFrame:
     return pd.DataFrame(rows).set_index("category")
 
 
-# ---- parsers (pure: text or frames in, Series out) -------------------------------------------------------------
-def parse_g17(text: str, codes: set[str] | None = None) -> pd.DataFrame:
-    """G.17 ip_sa.txt / utl_sa.txt: rows `"CODE"  YEAR  v1 .. v12`, blank cells where not yet published."""
-    rows = {}
-    for ln in text.splitlines():
-        mt = re.match(r'^"([A-Z0-9.]+)"\s+(\d{4})\s+(.*)$', ln)
-        if not mt or (codes and mt.group(1) not in codes):
-            continue
-        code, year = mt.group(1), int(mt.group(2))
-        for i, v in enumerate(mt.group(3).split()[:12]):
-            rows.setdefault(code, {})[pd.Timestamp(year, i + 1, 1)] = float(v)
-    return pd.DataFrame({c: pd.Series(v) for c, v in rows.items()}).sort_index()
-
-
-def _mrts_key(code, label) -> str:
-    code = "" if pd.isna(code) else str(code).strip()
-    return code if code and code[0].isdigit() else str(label).strip()
-
-
-def parse_mrts_sheet(sheet: pd.DataFrame) -> pd.DataFrame:
-    """One year sheet of mrtssales92-present.xlsx (header=None) -> seasonally adjusted sales, one column per code."""
-    lab = sheet[1].map(lambda v: "" if pd.isna(v) else str(v).strip())
-    month = re.compile(r"^([A-Z][a-z]{2})\.? (\d{4})(\(p\))?$")  # "Jan. 2026", "May 2026", "Aug. 2026(p)"
-    hdr = next(i for i in sheet.index if month.match(str(sheet.iat[i, 2])))
-    months = {j: pd.to_datetime(" ".join(mt.group(1, 2)), format="%b %Y")
-              for j in range(2, sheet.shape[1]) if (mt := month.match(str(sheet.iat[hdr, j]).strip()))}
-    start = next(i for i in sheet.index if lab[i].startswith("ADJUSTED"))
-    out = {}
-    for i in sheet.index[sheet.index > start]:
-        if not lab[i]:
-            if out:
-                break  # the adjusted block ends at the first blank row
-            continue
-        key = _mrts_key(sheet.iat[i, 0], lab[i])
-        out[key] = {d: pd.to_numeric(sheet.iat[i, j], errors="coerce") for j, d in months.items()}
-    return pd.DataFrame(out).sort_index()
-
-
-def parse_mrts(book: dict[str, pd.DataFrame]) -> pd.DataFrame:
-    frames = [parse_mrts_sheet(s) for name, s in book.items() if name.strip().isdigit()]
-    df = pd.concat(frames).sort_index()
-    return df[~df.index.duplicated(keep="last")]
-
-
+# ---- parsers ----------------------------------------------------------------------------------------------------
 def parse_french_monthly(text: str) -> pd.DataFrame:
     """First monthly block of a Ken French CSV (value-weighted for industry files), percent -> decimal."""
     lines = text.splitlines()
@@ -140,10 +95,10 @@ def fetch(m: dict | None = None, refresh: bool = False, log=print) -> Raw:
         log(f"[sd] cache {path}")
         return _split(df)
     log("[sd] G.17 industrial production + utilisation (federalreserve.gov)")
-    ip = parse_g17(_get(G17.format("ip_sa")), codes)
-    util = parse_g17(_get(G17.format("utl_sa")), codes)
+    ip = g17_table("ip_sa")[sorted(c for c in codes if c in g17_table("ip_sa"))]
+    util = g17_table("utl_sa")[sorted(c for c in codes if c in g17_table("utl_sa"))]
     log("[sd] Census MRTS retail sales by kind of business")
-    sales = parse_mrts(pd.read_excel(io.BytesIO(_get(MRTS, binary=True)), sheet_name=None, header=None))
+    sales = mrts_table()
     log("[sd] Ken French 49 industries + market")
     ind = parse_french_monthly(_unzip(_get(FRENCH.format("49_Industry_Portfolios"), binary=True)))
     ff = parse_french_monthly(_unzip(_get(FRENCH.format("F-F_Research_Data_Factors"), binary=True)))
@@ -234,20 +189,47 @@ def shift_null(y: np.ndarray, x: np.ndarray, lags: int, n: int, rng: np.random.G
     return np.array([abs(nw_t(y, np.roll(x, o), lags)[1]) for o in offs])
 
 
+def release_lags(m: dict | None = None) -> dict[str, int]:
+    """Months to publication per category: the longest release_lag_months of its linked `sig:` nodes, else the
+    map's default. A category is usable at month end only once all of its inputs are out."""
+    from .graph import load
+    m = m or load_map()
+    g = load()
+    default = int(m.get("meta", {}).get("publication_lag_months", 1))
+    out = {}
+    for k, c in m["categories"].items():
+        lags = [g.nodes[f"sig:{i}"].data.get("release_lag_months") for i in c.get("indicators", [])
+                if f"sig:{i}" in g.nodes]
+        out[k] = max([int(x) for x in lags if x is not None], default=default)
+    return out
+
+
+def nonoverlap_t(y: np.ndarray, x: np.ndarray, h: int) -> float:
+    """Median over the h phase offsets of the OLS (HC0) t on every h-th observation: h-month forward sums that
+    do not overlap, so no long-run variance correction is needed (and none can inflate t)."""
+    if h <= 1:
+        return nw_t(y, x, 0)[1]
+    ts = [nw_t(y[o::h], x[o::h], 0)[1] for o in range(h) if len(y[o::h]) >= 4]
+    return float(np.median(ts)) if ts else float("nan")
+
+
 def study(raw: Raw, split: str = "train", m: dict | None = None, n_null: int = 300, seed: int = 7,
-          allow_test: bool = False) -> dict[str, pd.DataFrame]:
+          allow_test: bool = False, n_null_fine: int = 3000) -> dict[str, pd.DataFrame]:
+    """Predict rows carry: Newey-West t, `t_nonoverlap` (non-overlapping steps), `p_null` from circular shifts
+    (refined with `n_null_fine` shifts where |t| >= 3, so the floor 1/(n+1) does not bind), `p_norm` (normal,
+    two-sided) and `q_bh` = Benjamini-Hochberg over `p_norm` across every predict test of the split."""
     if split == "test" and not allow_test:
         raise PermissionError("test split is locked: pass allow_test=True (and log the look)")
     m = m or load_map()
     lo, hi = SPLITS[split]
-    lag = int(m.get("meta", {}).get("publication_lag_months", 1))
+    lags = release_lags(m)
     feats, ret = features(raw, m), excess_returns(raw, m)
     rng = np.random.default_rng(seed)
     pred, expl = [], []
     for k, F in feats.items():
         r = ret[k]
         for f in F:
-            x_pub = F[f].shift(lag)  # known at the end of month t
+            x_pub = F[f].shift(lags[k])  # known at the end of month t
             for h in HORIZONS:
                 y = fwd_sum(r, h)
                 d = pd.concat([x_pub, y], axis=1, keys=["x", "y"]).loc[lo:hi].dropna()
@@ -255,7 +237,10 @@ def study(raw: Raw, split: str = "train", m: dict | None = None, n_null: int = 3
                     continue
                 b, t = nw_t(d.y.values, d.x.values, max(h, 3))
                 null = shift_null(d.y.values, d.x.values, max(h, 3), n_null, rng)
+                if abs(t) >= 3 and n_null_fine > n_null:
+                    null = np.concatenate([null, shift_null(d.y.values, d.x.values, max(h, 3), n_null_fine - n_null, rng)])
                 pred.append({"category": k, "feature": f, "h": h, "n": len(d), "beta_pp": 100 * b, "t": t,
+                             "t_nonoverlap": nonoverlap_t(d.y.values, d.x.values, h), "n_indep": len(d) // h,
                              "p_null": float(((null >= abs(t)).sum() + 1) / (len(null) + 1)) if len(null) else np.nan,
                              "null_t3": float((null >= 3).mean()) if len(null) else np.nan})
             # explain: same-window 12m excess return vs same-window yoy
@@ -273,7 +258,10 @@ def study(raw: Raw, split: str = "train", m: dict | None = None, n_null: int = 3
                                  "price_leads_t": tl})
     P = pd.DataFrame(pred)
     if len(P):
-        P["q_bh"] = bh(P["p_null"].fillna(1).values)
+        from scipy.stats import norm
+        P["p_norm"] = 2 * norm.sf(P["t"].abs())
+        P["q_bh"] = bh(P["p_norm"].fillna(1).values)
+    lag = max(lags.values())
     return {"predict": P, "explain": pd.DataFrame(expl), "xs": cross_section(feats, ret, lo, hi, lag, rng)}
 
 
