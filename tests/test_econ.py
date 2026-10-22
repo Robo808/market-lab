@@ -153,3 +153,68 @@ def test_build_reports_bad_references(tmp_path):
     with open(tmp_path / "edges.yaml", "a") as f:
         f.write("  - {from: sig:us_saving_rate, to: ind:nowhere, type: drives, sign: '+', lag: '0-1', evidence: prior}\n")
     assert any("ind:nowhere" in p for p in build(tmp_path).problems)
+
+
+def test_pick_series_prefers_storable_publishers(g):
+    from mlab.econ.fetch import pick_series
+    order = [s["source"] for s in pick_series(g, g.nodes["sig:us_payrolls"].data)]
+    assert order == ["bls", "fred"]  # BLS is public domain; FRED may not be stored
+    assert [s["source"] for s in pick_series(g, g.nodes["sig:uk_imports_garden_ornaments"].data)] == ["hmrc_uktradeinfo"]
+
+
+def test_panel_shifts_by_publication_lag(g, monkeypatch):
+    from mlab.econ import fetch
+    monkeypatch.setattr(fetch, "fetch_series", _fake_series)
+    live, prov = fetch.panel(g, "sig:uk_imports_garden_ornaments", depth=0, target=None, log=lambda *a: None)
+    ref, _ = fetch.panel(g, "sig:uk_imports_garden_ornaments", depth=0, target=None, realtime=False,
+                         log=lambda *a: None)
+    assert prov["lag_months"].iloc[0] == 2
+    col = "uk_imports_garden_ornaments__yoy"
+    assert live[col].loc["2010-03-31"] == pytest.approx(ref[col].loc["2010-01-31"])
+    assert live.index.max() > ref.index.max()  # the last releases land after the reference period
+
+
+class _Resp:
+    def __init__(self, j):
+        self._j = j
+
+    def raise_for_status(self):
+        pass
+
+    def json(self):
+        return self._j
+
+
+class _Session:
+    def __init__(self, pages):
+        self.pages, self.calls = pages, []
+
+    def get(self, url, params=None, timeout=None):
+        self.calls.append((url, params))
+        return _Resp(self.pages.pop(0))
+
+
+def test_hmrc_trade_sums_flows_and_codes(monkeypatch):
+    from mlab.providers import publishers as pub
+    sess = _Session([
+        {"value": [{"CommodityId": 39264000, "Cn8Code": "39264000", "Hs6Code": "392640", "Hs6Description": "x"}]},
+        {"value": [{"MonthId": 202401, "Value": 10.0, "NetMass": 2.0}], "@odata.nextLink": "https://next"},
+        {"value": [{"MonthId": 202402, "Value": 5.0, "NetMass": 1.0}]},
+    ])
+    monkeypatch.setattr(pub, "session", lambda *a, **k: sess)
+    monkeypatch.setattr(pub, "_last_call", [0.0])
+    monkeypatch.setattr(pub.time, "sleep", lambda s: None)
+    df = pub.hmrc_trade("3926.40", "imports", "2024-01")
+    assert list(df["value"]) == [10.0, 5.0] and df.index[0] == pd.Timestamp("2024-01-01")
+    apply = sess.calls[1][1]["$apply"]
+    assert "CommodityId eq 39264000" in apply and "FlowTypeId eq 1 or FlowTypeId eq 3" in apply
+    assert " in (" not in apply  # the API rejects the OData `in` operator
+    assert sess.calls[2] == ("https://next", None)
+
+
+def test_bls_parsing_drops_annual_rows():
+    from mlab.providers.publishers import _bls_series
+    s = _bls_series("X", [{"year": "2024", "period": "M02", "value": "2.5"},
+                          {"year": "2024", "period": "M01", "value": "1.5"},
+                          {"year": "2024", "period": "M13", "value": "9"}])
+    assert list(s) == [1.5, 2.5] and s.index[0] == pd.Timestamp("2024-01-01")

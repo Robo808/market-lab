@@ -13,6 +13,8 @@
 #   series     where to get it: {source, id, dataset?, via?, note?}; `via: fred` means FRED mirrors the
 #              original publisher (fetch from FRED, freeze from the publisher: FRED's terms forbid storage)
 #   transform  ML feature hints: level, yoy, mom, diff, log, z
+#   release_lag_months  optional: months between the end of the reference period and publication; the
+#              panel shifts by it (defaults by freq: D/W 0, M 2, Q 3, A 6, conservative on purpose)
 #
 # Series ids are checked live with `mlab econ check` (FRED, ONS, Trade Tariff); the result is not stored
 # here. A `note: unverified` means the id is written from the publisher's catalogue and has not passed a
@@ -1292,7 +1294,7 @@ uk_bmbi:
 # 8. Goods trade by HS code (where the garden gnomes, tiles and basins show up first)
 # ======================================================================================================
 uk_imports_garden_ornaments:
-  name: UK imports of statuettes and ornamental articles (HS 3926.40 plastics, 6913 ceramic, 6810 concrete)
+  name: UK imports of statuettes and ornamental articles (HS 3926.40 plastics, 6913 ceramic)
   layer: meso
   themes: [trade, garden, discretionary]
   geo: UK
@@ -1301,7 +1303,7 @@ uk_imports_garden_ornaments:
   cycle: leading
   industries: [garden_ornaments, retail_garden_centres]
   series:
-    - {source: hmrc_uktradeinfo, id: "HS 392640 / 691390 / 6810", note: OData by commodity code and partner country}
+    - {source: hmrc_uktradeinfo, id: "392640,6913", flow: imports, note: "HS codes summed over CN8; 6810 concrete articles left out (mostly building blocks)"}
   transform: [yoy, log]
 us_imports_garden_ornaments:
   name: US imports of statuettes and ornamental articles (HS 3926.40, 6913)
@@ -1325,7 +1327,7 @@ uk_imports_ceramic_tiles:
   cycle: leading
   industries: [ceramic_tiles_mfg, retail_tiles_flooring, tiling_flooring_contractors]
   series:
-    - {source: hmrc_uktradeinfo, id: "HS 6907"}
+    - {source: hmrc_uktradeinfo, id: "6907", flow: imports}
   transform: [yoy, log]
 us_imports_ceramic_tiles:
   name: US imports of ceramic tiles (HS 6907)
@@ -1349,7 +1351,7 @@ uk_imports_sanitaryware:
   cycle: leading
   industries: [sanitaryware_mfg, retail_bathroom_online, plumbing_contractors, builders_merchants]
   series:
-    - {source: hmrc_uktradeinfo, id: "HS 6910 / 7324 / 8481"}
+    - {source: hmrc_uktradeinfo, id: "6910,7324,8481", flow: imports}
   transform: [yoy, log]
 uk_imports_live_plants:
   name: UK imports of live plants (HS 0602)
@@ -1361,7 +1363,7 @@ uk_imports_live_plants:
   cycle: leading
   industries: [nursery_horticulture, retail_garden_centres]
   series:
-    - {source: hmrc_uktradeinfo, id: "HS 0602"}
+    - {source: hmrc_uktradeinfo, id: "0602", flow: imports}
   transform: [yoy]
 uk_imports_lawnmowers:
   name: UK imports of powered rotary lawnmowers (HS 8433.11)
@@ -1373,7 +1375,7 @@ uk_imports_lawnmowers:
   cycle: leading
   industries: [garden_equipment_mfg, retail_garden_centres]
   series:
-    - {source: hmrc_uktradeinfo, id: "HS 843311"}
+    - {source: hmrc_uktradeinfo, id: "843311", flow: imports}
   transform: [yoy]
 global_trade_volume:
   name: World trade volume (CPB World Trade Monitor)

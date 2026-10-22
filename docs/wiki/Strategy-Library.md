@@ -273,6 +273,21 @@ Overlays wrap any strategy's position or weights.
 
 ---
 
+## Null stubs
+
+Registered with family `null`. They are not strategies to trade: `mlab hypo gate` runs them against a hypothesis's
+pass bars, and any bar set they can clear is refused.
+
+### always_long
+
+Long every bar (buy and hold through the engine, so costs and funding apply).
+
+### coin_flip
+
+Long or flat (long or short with `short=true`) at random in blocks of `hold` bars, long with probability `p`.
+Each block's draw is a hash of its block number and `seed`, so the stub passes the no-look-ahead test like any
+other strategy. Defaults: `p=0.5, hold=1, seed=0, short=false`.
+
 ## How to add a strategy
 
 1. **Open a `[strategy]` issue** with the Strategy template: family, exact rules, params, references, expected regime.

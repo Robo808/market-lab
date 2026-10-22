@@ -3,7 +3,7 @@
 The research loop: write the claim and the pass bars down, commit them, then test. Every test counts, pass or fail.
 
 ```
-issue [H] -> branch hypo/<date>-<slug> -> mlab hypo new (commit) -> mlab hypo test -> verdict
+issue [H] -> branch hypo/<date>-<slug> -> mlab hypo new -> mlab hypo gate (commit) -> mlab hypo test -> verdict
    PASS -> PR to main -> paper book (3 months / 20 trades) -> can inform trade cards
    FAIL -> PR the FAIL file to main -> delete branch -> close issue with verdict:fail
 ```
@@ -68,7 +68,25 @@ graded plus one, so the deflated-Sharpe bar rises as the search widens. The spec
 
 Field names follow the template that `hypo new` writes; use that file as the reference.
 
-## 4. Test
+## 4. Gate the bars
+
+```bash
+bash mlab hypo gate research/hypotheses/H-20261007-ftse-rsi2.md
+```
+
+Bars that a coin can clear prove nothing. The gate runs null stubs through the same data, costs and pass bars:
+`always_long` (buy and hold) and five seeded `coin_flip` runs matched to the candidate's exposure, average holding
+period and long/short shape. It reads only the candidate's positions, never its returns, so it does not leak the
+result. It appends a **Gate** section to the file:
+
+- **OK**: every stub fails the bars. Commit, then test.
+- **REFUSED** (exit 2): a stub passes, so the bars do not separate edge from noise. The file was never graded and is
+  not a trial: delete it and register a new hypothesis with bars that do (usually a `perm_p_max`, `dsr_min` or
+  `oos_sharpe_min` bar is missing or too loose).
+
+`hypo test` refuses a file without `Gate verdict: OK`. `--skip-gate` overrides it and says so in the results.
+
+## 5. Test
 
 ```bash
 bash mlab hypo test research/hypotheses/H-20261007-ftse-rsi2.md
@@ -82,7 +100,7 @@ count), bootstrap CI, permutation test. It appends a **Results** section with ev
 bash mlab hypo list      # every hypothesis with its date, strategy and verdict
 ```
 
-## 5. Merge or kill
+## 6. Merge or kill
 
 **PASS**
 
@@ -103,4 +121,5 @@ bash mlab hypo list      # every hypothesis with its date, strategy and verdict
 - Count every variant. If you planned 12 and ran 30, the trial count is 30.
 - Costs are IG costs: the spread in points for the exact instrument (DFB or CFD) plus overnight funding for anything held past the close.
 - Report the out-of-sample number, not the best in-sample number.
+- Bars must fail the null stubs (`hypo gate`) before the test runs.
 - "No edge" is a valid result and goes in the graveyard like any other.
