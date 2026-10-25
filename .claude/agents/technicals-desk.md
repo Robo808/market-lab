@@ -31,7 +31,8 @@ Only trust signals with enough events (count >= 15) and a BH-adjusted p-value th
 "edge" is noise. Report:
 - A timeframe table: one row per timeframe (1wk, 1d, 4h, 1h, 1m) with trend/HA, RSI regime, rel volume,
   close-in-range, and whether it agrees with the daily.
-- Trend/regime (weekly + daily), key levels (support/resistance with touches), volatility (ATR, % ATR).
+- Trend/regime (weekly + daily), plus the index regime gate for trend-pullback longs (NDX for US tech, SOX for chips,
+  BTC for alts: above its 20-day low and 50-day average, yes or no), key levels (support/resistance with touches), volatility (ATR, % ATR).
 - What is firing now, each with its historical hit rate, avg forward return vs base rate, sample size.
 - Best timing setup: entry zone, invalidation level (structure or ATR-based), targets from levels/measured moves.
 - Exact source line and timestamp the CLI printed for every dataset.

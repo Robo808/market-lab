@@ -22,7 +22,19 @@ Read `$MLAB_DATA_DIR/LESSONS.md` first: it carries the desk's standing correctio
 5. **Trade card** (always last):
    `./mlab card "<name>" --bias <long|short> --entry <lo> <hi> --stop <x> --targets <t1> <t2> --risk <pct> --horizon "<h>" --conviction <1-5> --catalyst "<event date>" --kills "<invalidation>" --epic <EPIC> --lens <Soros|Buffett|Burry|TA> --thesis "<one line>" --source "<src+time>" [--equity <acct> --point-size <p>] --journal`
    - Stop at structure (S/R cluster, swing) or 1.5-2.5x ATR; targets at levels/measured moves; R:R >= 2 or say why not.
-   - Risk %: 0.5% conviction 1-2, 1% conviction 3, 1.5-2% conviction 4-5 unless Cezar sets otherwise.
+   - Risk %: 0.5% conviction 1-2, 0.75% conviction 3, 1% conviction 4-5 (the cap) unless the owner sets otherwise.
    - Point size: 1 for indices/shares, 0.0001 for most FX, 0.01 for JPY pairs; confirm via `./mlab ig market EPIC`.
+   - Costs in R next to R:R (spread, FX conversion, funding, commission), and R:R net of costs. Above 0.2R, use a
+     cheaper expression of the same view or pass.
+   - Scheduled binary events (earnings, central banks, budgets): no fresh entry in the two sessions before unless the
+     event is the trade; then size to the gap. Cancel or halve resting entries ahead of the event.
+   - Entries: keep a confirmation trigger on counter-trend and breakout ideas. On conviction 3+ quality longs in a
+     multi-timeframe uptrend, split the entry: half about 0.5 ATR below last, half at the deep limit.
+   - Trend-pullback longs need the index regime on side: NDX for US tech, SOX for chips, BTC for alts, above its
+     20-day low and 50-day average; otherwise wait or halve. Oversold-quality cards at support are exempt.
+   - Size on risk, capped at 1% of the account; on instruments that gap, budget 1.3R of loss. Move the stop only after
+     T1 fills, and to breakeven at the earliest.
+   - Tag the setup on every card (oversold-quality, breakout, trend-pullback, event, macro FX). A card is paper until
+     the owner places it; read the journal back after every `--journal` write (`./mlab journal list`).
 6. **Output shape:** call in one line, the timeframes and inputs the read used, the 3-6 numbers that drive it (each with source + UTC time), the lens read in a
    short paragraph, the trade card, then what to watch. No disclaimers.
