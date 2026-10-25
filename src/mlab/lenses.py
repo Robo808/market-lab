@@ -7,8 +7,12 @@ The verdict and the trade are made by the analyst (Claude + Cezar) on top of the
 """
 from __future__ import annotations
 
+import logging
+
 import numpy as np
 import pandas as pd
+
+log = logging.getLogger(__name__)
 
 
 def _mcap(ticker: str, fin: pd.DataFrame | None = None) -> dict:
@@ -16,8 +20,8 @@ def _mcap(ticker: str, fin: pd.DataFrame | None = None) -> dict:
     info = {}
     try:
         info = yahoo.info(ticker)
-    except Exception:
-        pass
+    except Exception as e:  # optional input: carry on without it
+        log.info("Yahoo info unavailable for %s, market cap from filings: %s", ticker, e)
     px = info.get("currentPrice") or info.get("regularMarketPrice")
     mc = info.get("marketCap")
     if mc is None and fin is not None and "diluted_shares" in fin and px:
@@ -101,8 +105,8 @@ def burry(ticker: str) -> dict:
     ins = pd.DataFrame()
     try:
         ins = sec.insider_filings(ticker, 100)
-    except Exception:
-        pass
+    except Exception as e:  # optional input: carry on without it
+        log.info("insider filings unavailable for %s: %s", ticker, e)
     ins_90 = int((pd.to_datetime(ins["filingDate"]) >= pd.Timestamp.now() - pd.Timedelta(days=90)).sum()) if len(ins) else None
     tang_bv = last.get("equity", np.nan) - last.get("goodwill", 0) if pd.notna(last.get("equity", np.nan)) else np.nan
     metrics = {

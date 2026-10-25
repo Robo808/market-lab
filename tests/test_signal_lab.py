@@ -4,8 +4,8 @@ import time
 import numpy as np
 import pandas as pd
 import pytest
-
 from conftest import from_path, synth_ohlcv
+
 from mlab import signal_lab as sl
 from mlab import ta_catalog as tc
 

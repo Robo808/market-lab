@@ -2,8 +2,8 @@
 import numpy as np
 import pandas as pd
 import pytest
-
 from conftest import from_path, synth_ohlcv
+
 from mlab import ta
 from mlab import ta_catalog as tc
 
@@ -187,7 +187,7 @@ def test_catalog_complete(df):
     for name in ("rsi", "macd", "adx_dmi", "ichimoku", "parabolic_sar", "williams_r", "market_profile", "dow_theory", "double_top", "hammer"):
         assert name in tc.CATALOG
     small = df.tail(400)
-    for name, e in tc.CATALOG.items():
+    for e in tc.CATALOG.values():
         e["fn"](small)  # every entry runs
 
 

@@ -5,6 +5,7 @@ Cached history is what makes IG's weekly data allowance go a long way.
 """
 from __future__ import annotations
 
+import logging
 import os
 import re
 import time
@@ -13,6 +14,11 @@ from pathlib import Path
 import pandas as pd
 
 from .config import CACHE_DIR, CACHE_MAX_MB
+from .storage import atomic_to_parquet, file_lock
+
+log = logging.getLogger(__name__)
+# Providers whose files cannot be re-fetched: never pruned (legacy news history lives here).
+UNPRUNABLE = {"news"}
 
 
 def _safe(s: str) -> str:
@@ -29,26 +35,31 @@ def load(provider: str, symbol: str, interval: str) -> pd.DataFrame | None:
         return None
     try:
         df = pd.read_parquet(p)
-        os.utime(p)  # mark as recently used for pruning
-        return df
-    except Exception:
+    except (OSError, ValueError) as e:  # corrupt or half-synced file: treat as a miss, but say so
+        log.warning("cache file unreadable, refetching: %s (%s)", p, e)
         return None
+    try:
+        os.utime(p)  # mark as recently used for pruning
+    except OSError as e:  # read-only mount: the data is still good, only LRU order is stale
+        log.debug("could not touch %s: %s", p, e)
+    return df
 
 
 def save(provider: str, symbol: str, interval: str, df: pd.DataFrame) -> pd.DataFrame:
-    """Merge df into the cached frame (new rows win) and write it back."""
+    """Merge df into the cached frame (new rows win) and write it back atomically.
+
+    The lock serialises writers in this container; across containers the last writer wins, which is
+    acceptable for a cache because every row in it can be fetched again."""
     if df is None or df.empty:
         return df
-    old = load(provider, symbol, interval)
-    if old is not None and not old.empty:
-        df = pd.concat([old, df])
-        df = df[~df.index.duplicated(keep="last")]
-    df = df.sort_index()
     p = path_for(provider, symbol, interval)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    tmp = p.with_suffix(".tmp")
-    df.to_parquet(tmp)
-    tmp.replace(p)
+    with file_lock(p):
+        old = load(provider, symbol, interval)
+        if old is not None and not old.empty:
+            df = pd.concat([old, df])
+            df = df[~df.index.duplicated(keep="last")]
+        df = df.sort_index()
+        atomic_to_parquet(df, p)
     prune()
     return df
 
@@ -76,7 +87,8 @@ def prune(max_mb: int = CACHE_MAX_MB) -> int:
     """Delete least-recently-used files until the cache is under max_mb. Returns files removed."""
     if not CACHE_DIR.exists():
         return 0
-    files = sorted(CACHE_DIR.rglob("*.parquet"), key=lambda f: f.stat().st_mtime)
+    files = sorted((f for f in CACHE_DIR.rglob("*.parquet") if f.relative_to(CACHE_DIR).parts[0] not in UNPRUNABLE),
+                   key=lambda f: f.stat().st_mtime)
     total = sum(f.stat().st_size for f in files)
     removed = 0
     while files and total > max_mb * 1e6:

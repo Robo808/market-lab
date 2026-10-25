@@ -162,11 +162,16 @@ The to-do list is the issue tree under the Roadmap epic (#16): five epics, one p
 - PR body starts with `Closes #N` or `Part of #N`. Follow-ups found during a PR become new issues, not TODO comments.
 - The repo is public: issues carry code work only, never trade ideas, positions, journal entries or personal details.
 
+## Code standards
+
+Read `docs/wiki/Design-Standards.md` before changing code. `ruff check src tests` and `pytest -q` stay green, and
+every fix ships with a regression test.
+
 ## Files
 
 - In the repo: `src/mlab/` code · `tests/` pytest (`~/.venvs/market-lab/bin/pytest -q`) · `.claude/` agents and skills
 - In the data dir (`$MLAB_DATA_DIR`, shared folder by default):
   `data/cache/` parquet price cache (LRU-pruned at `MLAB_CACHE_MAX_MB`, default 750) ·
   `data/transcripts/` earnings call texts · `data/iv_history/` ·
-  `reports/` charts and notes · `journal/trades.jsonl` + `journal/JOURNAL.md` trade journal
+  `reports/` charts and notes · `journal/events/` (one file per change) over legacy `journal/trades.jsonl`, rendered to `journal/JOURNAL.md`
 - `docs/` network, skills map, proposed project instructions

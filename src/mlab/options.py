@@ -8,6 +8,7 @@ Network access lives only in fetch_chain / fetch_spot / risk_free_rate / desk.
 """
 from __future__ import annotations
 
+import logging
 import math
 import re
 from dataclasses import dataclass, field
@@ -19,6 +20,8 @@ from scipy.optimize import brentq
 from scipy.stats import norm
 
 from .config import DATA_DIR, env
+
+log = logging.getLogger(__name__)
 
 HOSTS = {  # all already in net.SOURCES; listed so `mlab doctor` users see what this desk needs
     "query1.finance.yahoo.com": "Yahoo spot/history (options desk RV)",
@@ -137,8 +140,8 @@ def fetch_spot(ticker: str) -> float:
         px = float(t.fast_info["last_price"])
         if px > 0:
             return px
-    except Exception:
-        pass
+    except Exception as e:  # optional input: carry on without it
+        log.debug("fast_info spot failed for %s, using history: %s", ticker, e)
     h = t.history(period="5d")
     if h is None or h.empty:
         raise LookupError(f"no spot for {ticker}")
@@ -385,13 +388,14 @@ def _iv_path(ticker: str) -> Path:
 def record_atm_iv(ticker: str, atm_iv30: float, spot: float, asof=None) -> pd.DataFrame:
     """Upsert today's 30d ATM IV snapshot into data/iv_history/<TICKER>.csv; returns the full history."""
     day = _naive_day(asof if asof is not None else pd.Timestamp.now(tz="UTC"))
-    hist = load_iv_history(ticker)
-    if np.isfinite(atm_iv30):
-        hist.loc[day, ["atm_iv30", "spot"]] = [float(atm_iv30), float(spot)]
-        hist = hist.sort_index()
-        p = _iv_path(ticker)
-        p.parent.mkdir(parents=True, exist_ok=True)
-        hist.to_csv(p, index_label="date")
+    from .storage import atomic_write, file_lock
+    p = _iv_path(ticker)
+    with file_lock(p):
+        hist = load_iv_history(ticker)
+        if np.isfinite(atm_iv30):
+            hist.loc[day, ["atm_iv30", "spot"]] = [float(atm_iv30), float(spot)]
+            hist = hist.sort_index()
+            atomic_write(p, lambda t: hist.to_csv(t, index_label="date"))
     return hist
 
 

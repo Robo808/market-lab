@@ -8,7 +8,6 @@ import zipfile
 import numpy as np
 import pandas as pd
 import pytest
-
 from conftest import synth_ohlcv
 
 

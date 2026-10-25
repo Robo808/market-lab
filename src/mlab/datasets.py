@@ -20,6 +20,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import logging
 import lzma
 import os
 import re
@@ -35,6 +36,8 @@ import numpy as np
 import pandas as pd
 
 from .config import DATA_DIR
+
+log = logging.getLogger(__name__)
 
 DATASETS_DIR = Path(os.environ.get("MLAB_DATASETS_DIR", DATA_DIR / "data" / "datasets"))
 BAR_COLS = ["open", "high", "low", "close", "volume", "adj_close", "spread"]
@@ -586,7 +589,7 @@ def quality(df: pd.DataFrame, kind: str, interval: str) -> dict:
         r = np.log(s[s > 0]).diff().abs()
         thr = 0.25 if interval == "1d" else 0.10
         jumps = r[r > thr]
-        q["jumps_over_%d%%" % int(thr * 100)] = int(len(jumps))
+        q[f"jumps_over_{int(thr * 100)}%"] = int(len(jumps))
         q["largest_jumps"] = {str(k)[:19]: round(float(v), 4) for k, v in jumps.nlargest(5).items()}
         if "spread" in df and df["spread"].notna().any():
             q["median_spread"] = float(df["spread"].median())
@@ -853,7 +856,8 @@ def listing() -> pd.DataFrame:
         for v in versions(name):
             try:
                 m = json.loads((DATASETS_DIR / name / v / "manifest.json").read_text())
-            except Exception:
+            except Exception as e:
+                log.warning("datasets listing: skipping %s@%s, manifest unreadable: %s", name, v, e)
                 continue
             q = [x["qc"] for x in m["members"].values()]
             rows.append({"dataset": f"{name}@{v}", "source": m["source"], "interval": m["interval"],
