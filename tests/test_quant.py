@@ -135,13 +135,40 @@ def test_hypothesis_lifecycle(frames, tmp_path):
                         "pass": {"min_trades": 1, "perm_p_max": 1.0}}, directory=tmp_path)
     assert hypothesis.listing(tmp_path).iloc[0]["verdict"] == "PENDING"
     sub = {k: frames[k] for k in list(frames)[:2]}
-    res = hypothesis.test(p, frames=sub, n_perm=50, n_boot=50)
+    with pytest.raises(ValueError, match="gate not passed"):
+        hypothesis.test(p, frames=sub, n_perm=50, n_boot=50)
+    res = hypothesis.test(p, frames=sub, n_perm=50, n_boot=50, skip_gate=True)
     assert res["verdict"] == "PASS"
     txt = p.read_text()
     assert "Verdict: PASS" in txt and "## Results" in txt and "Graded" in txt
     with pytest.raises(ValueError, match="already graded"):
         hypothesis.test(p, frames=sub)
     assert hypothesis.trial_count(tmp_path) == 1
+
+
+def test_gate_refuses_bars_a_stub_can_pass(frames, tmp_path):
+    sub = {k: frames[k] for k in list(frames)[:2]}
+    loose = hypothesis.new("loose", "x", {"strategy": "tsmom", "symbols": list(sub),
+                                          "pass": {"min_trades": 1, "max_dd_max": 1.0}}, directory=tmp_path)
+    g = hypothesis.gate(loose, frames=sub, seeds=2, n_perm=20, n_boot=20)
+    assert g["verdict"] == "REFUSED" and "Gate verdict: REFUSED" in loose.read_text()
+    with pytest.raises(ValueError, match="gate not passed"):
+        hypothesis.test(loose, frames=sub)
+    tight = hypothesis.new("tight", "x", {"strategy": "tsmom", "symbols": list(sub),
+                                          "pass": {"sharpe_min": 5.0, "min_trades": 1}}, directory=tmp_path)
+    g = hypothesis.gate(tight, frames=sub, seeds=2, n_perm=20, n_boot=20)
+    assert g["verdict"] == "OK" and 0 < g["shape"]["exposure"] <= 1 and g["shape"]["hold"] >= 1
+    hypothesis.gate(tight, frames=sub, seeds=2, n_perm=20, n_boot=20)  # re-run keeps one verdict line
+    assert tight.read_text().count("Gate verdict:") == 1
+    res = hypothesis.test(tight, frames=sub, n_perm=20, n_boot=20)
+    assert res["verdict"] == "FAIL" and "## Gate" in tight.read_text()
+
+
+def test_coin_flip_matches_requested_exposure():
+    df = synth_ohlcv(2000, seed=1)
+    pos = strategies.coin_flip(df, p=0.3, hold=5, seed=4)
+    assert abs(pos.mean() - 0.3) < 0.06
+    assert (pos.diff().fillna(0) != 0).sum() <= 2000 / 5
 
 
 def test_hypothesis_refuses_spec_edited_after_registration(frames, tmp_path):

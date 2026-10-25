@@ -91,9 +91,13 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 ./mlab algo backtest xs_momentum SPY EFA EEM GLD TLT -p 10y --params '{"top":2}'
 ./mlab algo validate tsmom ^GSPC --grid '{"lookback":[126,252]}'   # OOS, PSR/DSR, bootstrap, permutation
 ./mlab algo signal dual_momentum SPY EFA BIL ; ./mlab algo paper rsi2 SPY QQQ --book rsi2-us
-./mlab hypo new <slug> --claim "..." ; ./mlab hypo test research/hypotheses/H-....md ; ./mlab hypo list
+./mlab hypo new <slug> --claim "..." ; ./mlab hypo gate research/hypotheses/H-....md   # null stubs must fail the bars
+./mlab hypo test research/hypotheses/H-....md ; ./mlab hypo list
 ./mlab datasets catalog ; ./mlab datasets build all ; ./mlab datasets list   # frozen offline snapshots
 ./mlab datasets crosscheck us-stocks-1m --days 5   # stored bars vs Massive live (Massive is never stored)
+./mlab newsstore gdelt --since 3d ; ./mlab newsstore show AMZN   # GDELT GKG raw files -> point-in-time news store
+./mlab newsstore events --since 3d      # GDELT CAMEO political events (country pairs, conflict/cooperation)
+./mlab newsstore themes --since 3d      # GDELT theme x country intensity (tariffs, sanctions, elections, war, energy)
 ./mlab algo backtest tsmom UK100 US500 --dataset duka-1d --split train       # offline, fixed split
 ```
 
@@ -107,6 +111,11 @@ writes the call + trade card. Skills in `.claude/skills/` hold the playbooks (`t
 - Modes: backtest, signal (today's target), paper (books in `$MLAB_DATA_DIR/paper/`). No live execution.
 - Hypotheses are pre-registered on `hypo/<yyyymmdd>-<slug>` branches in `research/hypotheses/`, graded once
   against bars set in advance, and merged to main whether PASS or FAIL. Follow the `quant-research` skill.
+- `hypo gate` runs null stubs (`always_long`, seeded `coin_flip` matched to the candidate's exposure and holding
+  period) against the bars; `hypo test` refuses until the gate says OK. Bars a coin can clear are a defect.
+- Multi-item work (fetchers, dataset builds, sweeps) ends with a status table before any "done": per item `ok`,
+  `plan_mismatch`, `failed` or `needs_sample`, with the exact next request. New sources start from one real saved
+  response as the fixture, never a hand-written sample (`docs/wiki/Contributing.md`, "Gated work").
 - Issues use the templates in `.github/ISSUE_TEMPLATE/` (hypothesis, strategy, bug, data source); CI runs pytest.
 
 Python API for ad-hoc work: `from mlab.data import get_prices`, `from mlab import ta, ta_catalog,

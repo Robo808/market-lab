@@ -8,7 +8,7 @@ description: Test a systematic trading idea properly - pick or add a strategy fr
 0. **Literature first.** Before building, find the published, tested version of the idea (papers, practitioner
    write-ups, existing indices such as GPR/EPU) and start from its method and results; say what you reused. Single-
    company news tone has failed three pre-registered tests here (issue #55): don't re-run it without a new mechanism.
-1. **Library first.** `bash mlab algo list` (21 strategies + vol_target / regime_filter overlays). If the idea is new,
+1. **Library first.** `bash mlab algo list` (21 strategies, 2 null stubs, vol_target / regime_filter overlays). If the idea is new,
    add a function to `src/mlab/quant/strategies.py`, register it in `REGISTRY`, and add it to the no-look-ahead
    test (`tests/test_quant.py` picks up every single-instrument strategy automatically).
 2. **Explore cheaply, but count it.** `bash mlab algo backtest <strategy> <symbols...> --spread-bps <cost>` and
@@ -16,12 +16,15 @@ description: Test a systematic trading idea properly - pick or add a strategy fr
 3. **Pre-register before the real test.** Branch `hypo/<yyyymmdd>-<slug>`, then
    `bash mlab hypo new <slug> --claim "..." --strategy X --symbols A B --spec '{"pass": {...}, "costs": {...}, "trials": N}'`.
    Fill in Mechanism, commit the file, push. Open a `[H]` issue from the template.
-4. **Grade once.** `bash mlab hypo test research/hypotheses/H-....md`. Never edit bars, period, costs or universe after
+4. **Gate the bars.** `bash mlab hypo gate research/hypotheses/H-....md` runs `always_long` and seeded
+   `coin_flip` stubs (matched exposure and holding period) against your bars. REFUSED means a coin clears them:
+   delete the file (never graded, not a trial) and register tighter bars. OK: commit, then test.
+5. **Grade once.** `bash mlab hypo test research/hypotheses/H-....md`. Never edit bars, period, costs or universe after
    that; a new test is a new file. The spec hash enforces it.
-5. **Merge or kill.** PASS and FAIL files both merge to main (failures feed the deflated Sharpe trial count).
+6. **Merge or kill.** PASS and FAIL files both merge to main (failures feed the deflated Sharpe trial count).
    PASS goes to paper: `bash mlab algo paper <strategy> <symbols...> --book <name>` once per bar; check with
    `bash mlab algo paper-status`. 3 months / 20 trades in paper before it backs a trade card.
-6. **Report like the desk.** Lead with the verdict and the out-of-sample number, then PSR/DSR, permutation p,
+7. **Report like the desk.** Lead with the verdict and the out-of-sample number, then PSR/DSR, permutation p,
    max drawdown, cost drag, data source and dates. A strategy that loses to buy-and-hold on a risk-adjusted basis
    is "no edge", say so.
 

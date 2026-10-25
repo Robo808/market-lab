@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 
 import pandas as pd
 
@@ -87,9 +88,17 @@ def cmd_hypo(a):
             spec["symbols"] = a.symbols
         spec.setdefault("trials", max(1, hypothesis.trial_count() + 1))
         p = hypothesis.new(a.slug, a.claim or a.slug, spec, branch=a.branch)
-        print(f"registered {p}\nEdit Mechanism and the spec now, commit, THEN run: bash mlab hypo test {p}")
+        print(f"registered {p}\nFill in Mechanism, then run: bash mlab hypo gate {p}\n"
+              f"Gate OK: commit, then bash mlab hypo test {p}. Gate REFUSED: delete it and register tighter bars.")
+    elif a.action == "gate":
+        res = hypothesis.gate(a.slug, n_perm=min(a.n_perm, 200))
+        show(res["stubs"], a.json, title=f"Gate: {res['verdict']}")
+        print(f"\ngate appended to {res['path']}")
+        if res["verdict"] != "OK":
+            sys.exit(2)
     elif a.action == "test":
-        res = hypothesis.test(a.slug, force=a.force, n_perm=a.n_perm, n_boot=a.n_perm)
+        res = hypothesis.test(a.slug, force=a.force, n_perm=a.n_perm, n_boot=a.n_perm,
+                              skip_gate=a.skip_gate)
         show(res["checks"], a.json, title=f"Verdict: {res['verdict']}")
         print(f"\nresults appended to {res['path']}")
     elif a.action == "list":
@@ -114,9 +123,10 @@ def register(add):
     q.add_argument("--split", default="train", help="train | validation | test | train+validation (with --dataset)")
     q.add_argument("--allow-test", action="store_true", help="unlock the held-out test split (logged)")
 
-    q = add("hypo", cmd_hypo, "pre-registered hypotheses: new SLUG --claim .. | test FILE | list")
-    q.add_argument("action", choices=["new", "test", "list"]); q.add_argument("slug", nargs="?", help="slug (new) or file (test)")
+    q = add("hypo", cmd_hypo, "pre-registered hypotheses: new SLUG --claim .. | gate FILE | test FILE | list")
+    q.add_argument("action", choices=["new", "gate", "test", "list"]); q.add_argument("slug", nargs="?", help="slug (new) or file (test)")
     q.add_argument("--claim"); q.add_argument("--strategy"); q.add_argument("--symbols", nargs="*")
     q.add_argument("--spec", help="JSON overrides for the spec block"); q.add_argument("--branch", action="store_true",
                                                                                      help="also create the hypo/ git branch")
     q.add_argument("--force", action="store_true"); q.add_argument("--n-perm", type=int, default=500)
+    q.add_argument("--skip-gate", action="store_true", help="grade without a passed null-stub gate (recorded)")
