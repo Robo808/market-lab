@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Market Lab: market data, technical analysis, due diligence and IG (read-only) toolkit for Claude Code"
 requires-python = ">=3.11"
 dependencies = [
-  "pandas>=3.0.6",
+  "pandas>=3.1.0",
   "numpy>=2.4.6",
   "pyarrow>=26.0.0",
   "requests>=2.34.2",
@@ -27,7 +27,7 @@ dev = ["pytest>=9.1.1"]
 mlab = "mlab.cli:main"
 
 [build-system]
-requires = ["setuptools>=84.0.0"]
+requires = ["setuptools>=84.2.1"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
