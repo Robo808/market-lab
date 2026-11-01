@@ -30,8 +30,10 @@ Read `$MLAB_DATA_DIR/LESSONS.md` first: it carries the desk's standing correctio
      event is the trade; then size to the gap. Cancel or halve resting entries ahead of the event.
    - Entries: keep a confirmation trigger on counter-trend and breakout ideas. On conviction 3+ quality longs in a
      multi-timeframe uptrend, split the entry: half about 0.5 ATR below last, half at the deep limit.
-   - Trend-pullback longs need the index regime on side: NDX for US tech, SOX for chips, BTC for alts, above its
-     20-day low and 50-day average; otherwise wait or halve. Oversold-quality cards at support are exempt.
+   - Index regime gate: NDX for US tech, SOX for chips, BTC for crypto, above its 20-day low and 50-day average.
+     Trend-pullback longs need it on side at entry; otherwise wait or halve. Every resting long in those markets,
+     whatever its setup tag, is re-checked at each close: on a fail the limit is pulled and re-armed only on a close
+     back above both. Cards that are the event itself run at half size instead.
    - Size on risk, capped at 1% of the account; on instruments that gap, budget 1.3R of loss. Move the stop only after
      T1 fills, and to breakeven at the earliest.
    - Tag the setup on every card (oversold-quality, breakout, trend-pullback, event, macro FX). A card is paper until
