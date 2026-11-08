@@ -5,6 +5,9 @@ description: Log, update and review trades in the workspace journal (journal/tra
 # Trade journal
 
 - New idea: `./mlab card ... --journal` (status idea) or `--status open` when he's in.
+- Before journaling a card: sum the risk of every open and resting card (`./mlab journal list`). If the new card takes
+  the book above 4% of the account, it waits or replaces a weaker card. A card on a name already in the journal as
+  open or resting supersedes the old one: mark the old card `--status passed --note "replaced by <ID>"`.
 - Filled: `./mlab journal update ID --status open --fill <price> --size <£/pt> --note "<why>"`
 - Closed: `./mlab journal update ID --status closed --exit <price> --note "<what happened>"` (R multiple computed)
 - Skipped: `./mlab journal update ID --status passed --note "<why>"`

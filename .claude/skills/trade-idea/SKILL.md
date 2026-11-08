@@ -36,6 +36,10 @@ Read `$MLAB_DATA_DIR/LESSONS.md` first: it carries the desk's standing correctio
      back above both. Cards that are the event itself run at half size instead.
    - Size on risk, capped at 1% of the account; on instruments that gap, budget 1.3R of loss. Move the stop only after
      T1 fills, and to breakeven at the earliest.
+   - Book-level risk: total open risk across all live and resting cards stays at or under 4% of the account; a card
+     that would breach it waits or replaces a weaker one. A new card on a name already held replaces the old card,
+     never adds to it. When the regime gate fails on NDX, SOX and BTC at once, new risk goes only to hedges and
+     shorts, and event cards enter on the day of the print, not days ahead.
    - Tag the setup on every card (oversold-quality, breakout, trend-pullback, event, macro FX). A card is paper until
      the owner places it; read the journal back after every `--journal` write (`./mlab journal list`).
 6. **Output shape:** call in one line, the timeframes and inputs the read used, the 3-6 numbers that drive it (each with source + UTC time), the lens read in a
