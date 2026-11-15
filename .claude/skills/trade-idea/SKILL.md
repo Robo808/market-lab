@@ -40,7 +40,9 @@ Read `$MLAB_DATA_DIR/LESSONS.md` first: it carries the desk's standing correctio
      that would breach it waits or replaces a weaker one. A new card on a name already held replaces the old card,
      never adds to it. When the regime gate fails on NDX, SOX and BTC at once, new risk goes only to hedges and
      shorts, and event cards enter on the day of the print, not days ahead.
-   - Tag the setup on every card (oversold-quality, breakout, trend-pullback, event, macro FX). A card is paper until
+   - Tag the setup on every card (oversold-quality, breakout, trend-pullback, event, macro FX, hedge). The hedge tag
+     goes only on puts, put spreads and shorts sized against the book's long exposure. Gold, gold ETCs and index longs
+     are directional longs: they go through the regime gate and count toward the 4% book cap. A card is paper until
      the owner places it; read the journal back after every `--journal` write (`./mlab journal list`).
 6. **Output shape:** call in one line, the timeframes and inputs the read used, the 3-6 numbers that drive it (each with source + UTC time), the lens read in a
    short paragraph, the trade card, then what to watch. No disclaimers.
