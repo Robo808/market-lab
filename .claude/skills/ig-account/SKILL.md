@@ -17,3 +17,6 @@ Rules:
 - Price history is allowance-limited (10k points/week): use `./mlab price ig:EPIC` (cache-first, missing tail only).
   `ig prices` prints the remaining allowance.
 - Position review: for each position, `./mlab firing <underlying>` + distance to stop/target in ATR, then hold / trail / cut.
+  Then the book: total open risk (positions plus working orders, each to its stop) as % of the account, against the
+  4% cap; flag any name held twice and any working order in semis, Nasdaq names or crypto while the index regime gate
+  fails.
