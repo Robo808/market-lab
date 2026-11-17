@@ -91,6 +91,25 @@ Symbols use Yahoo conventions (`AAPL`, `^GSPC`, `^FTSE`, `EURUSD=X`, `GC=F`, `VO
 `snapshot`, `sentiment`, `prices`, `stream`, `activity`, `transactions`. Options: `--env DEMO|LIVE`, `--interval`,
 `--start`, `--tail`, `--refresh`, `--seconds` (stream), `--days` (history). See [[Getting Started]] for credentials.
 
+### Scheduled buys on accounts the API cannot reach (`dca`)
+
+IG's public API serves spread bet and CFD accounts only; share dealing, ISA and SIPP accounts answer
+`public-api.failure.stockbroking-not-supported`. IG's share dealing agreement (clause 10(12), with 10(6) and 10(9))
+also requires IG's prior written consent before automated software or a custom interface is used, so browser
+automation of the web platform is out. `mlab dca` automates the decision instead: a plan of buy tranches, checked
+against daily prices, that says what is due today. The order is placed by hand on the platform; `mlab` places none.
+
+| Command | Does | Example |
+|---|---|---|
+| `dca init NAME` | Saves a plan; each `--tranche` is `AMOUNT[@LIMIT][:YYYY-MM-DD]` | `mlab dca init world --symbol SPY --tranche 500:2027-01-04 --tranche 500@480:2027-03-01` |
+| `dca status NAME` | Per tranche: `limit_touched` (daily low reached the limit since the plan start), `due`, `overdue`, `waiting`; `--json` for scheduled jobs; `--today` to replay a date | `mlab dca status world` |
+| `dca mark NAME ID` | Records `--filled --price --date`, `--cancelled`, or resets to pending | `mlab dca mark world t2 --filled --price 480 --date 2027-02-10` |
+| `dca list` | Lists saved plans | `mlab dca list` |
+
+A tranche with both a limit and a date rests until the date, then becomes a market buy and the limit is cancelled.
+Due dates on weekends roll to Monday; add exchange holidays with `--holiday`. Plans live in
+`$MLAB_DCA_DIR` (default `$MLAB_DATA_DIR/plans/dca`), never in the repo.
+
 ## Quant
 
 | Command | Does | Example |
