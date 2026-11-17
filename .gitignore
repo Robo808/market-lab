@@ -16,6 +16,7 @@ journal/*
 notebooks/
 .claude/settings.local.json
 paper/
+plans/
 data/
 !data/.gitkeep
 
