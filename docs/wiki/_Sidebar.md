@@ -13,6 +13,7 @@
 - [[Validation and Overfitting]]
 - [[Risk and Sizing]]
 - [[Paper Trading]]
+- [[Forward Testing]]
 
 **Reference**
 
