@@ -196,7 +196,8 @@ def test_crosscheck_compares_without_storing(ds, monkeypatch):
         return pd.DataFrame({"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.0, "volume": 10.0}, index=idx)
     ds.build("us-stocks-daily", members=["AMZN"], fetch=fake, log=lambda *a: None)
     theirs = pd.DataFrame({"open": 100.0, "high": 101.0, "low": 99.0, "close": 100.1, "volume": 20.0},
-                          index=idx[-5:] + pd.Timedelta(hours=4))  # Massive daily bars stamp midnight New York
+                          index=pd.DatetimeIndex([pd.Timestamp(d.date(), tz="America/New_York") for d in idx[-5:]])
+                          .tz_convert("UTC"))  # Massive daily bars stamp midnight New York (EST or EDT)
     monkeypatch.setattr(massive, "history", lambda *a, **k: theirs)
     before = sorted(p.name for p in ds.DATASETS_DIR.rglob("*"))
     r = ds.crosscheck("us-stocks-daily", days=5, log=lambda *a: None).iloc[0]
@@ -227,7 +228,6 @@ def test_duka_hourly_stages_complete_months(ds, monkeypatch):
 
 
 def test_uncertainty_fetcher_reads_published_layouts(monkeypatch):
-    import io
     from mlab import datasets as ds
     csv = b"day,month,year,daily_policy_index\n1,1,1985,103.8\n2,1,1985,296.4\n"
 

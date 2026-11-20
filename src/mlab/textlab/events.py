@@ -25,7 +25,7 @@ def _adj(df: pd.DataFrame) -> pd.DataFrame:
 def abnormal(px: pd.DataFrame, mkt: pd.DataFrame, beta_window: int = 250, sigma_window: int = 60) -> pd.DataFrame:
     """Daily AR with beta and sigma from data up to t-1. Returns frame with r, rm, beta, ar, sigma, z."""
     a, m = _adj(px), _adj(mkt)
-    j = a.join(m, rsuffix="_m", how="inner")
+    j = a.join(m, suffixes=("", "_m"), how="inner")
     r, rm = j["close"].pct_change(), j["close_m"].pct_change()
     minp = beta_window // 2
     beta = (r.rolling(beta_window, min_periods=minp).cov(rm) / rm.rolling(beta_window, min_periods=minp).var()).shift(1)

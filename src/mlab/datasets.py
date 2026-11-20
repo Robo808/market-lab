@@ -829,7 +829,7 @@ def crosscheck(ref: str, symbols: list[str] | None = None, days: int = 5, log=pr
             ours = ours.set_axis(ours.index.normalize())
             theirs = theirs.set_axis(theirs.index.tz_convert("America/New_York").normalize().tz_localize(None)
                                      .tz_localize("UTC"))
-        j = ours[["close", "volume"]].join(theirs[["close", "volume"]], how="inner", rsuffix="_m")
+        j = ours[["close", "volume"]].join(theirs[["close", "volume"]], how="inner", suffixes=("", "_m"))
         bp = (j["close"] / j["close_m"] - 1).abs() * 1e4
         vr = (j["volume"] / j["volume_m"]).replace([np.inf, -np.inf], np.nan)
         rows.append({"symbol": sym, "from": str(dates[0].date()), "to": str(dates[-1].date()),
