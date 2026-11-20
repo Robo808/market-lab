@@ -586,7 +586,7 @@ def align_frames(rx: pd.DataFrame, text: pd.DataFrame) -> pd.DataFrame:
     """Join reaction rows (column 'quarter') with per-quarter text metrics (index = quarter label)."""
     left = rx.set_index("quarter") if "quarter" in rx else rx
     t = text if any(c.endswith("_chg") for c in text.columns) else add_changes(text)
-    out = left.join(t, how="left", rsuffix="_txt").sort_index()
+    out = left.join(t, how="left", suffixes=("", "_txt")).sort_index()
     out.index.name = "quarter"
     return out
 
