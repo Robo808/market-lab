@@ -66,8 +66,8 @@ def vol_snapshot(chain: pd.DataFrame, spot: float, closes: pd.Series | None) -> 
         near = sk.iloc[(sk["dte"] - 30).abs().argsort()[:1]]
         out.update({"rr25": float(near["rr25"].iloc[0]), "bf25": float(near["bf25"].iloc[0]),
                     "skew_dte": int(near["dte"].iloc[0])})
-    except Exception:
-        pass
+    except Exception as e:  # skew needs both wings quoted; the snapshot is still useful without it
+        out["skew_error"] = f"{type(e).__name__}"
     t = term.dropna(subset=["atm_iv"])
     if len(t) >= 2:
         out["term_slope"] = float(t["atm_iv"].iloc[-1] - t["atm_iv"].iloc[0])
@@ -246,7 +246,6 @@ def step_option(cell: dict, st: dict | None, chain: pd.DataFrame, spot: float, r
             ret_day = pnl_day / pos["capital"]
             st["pnl_cum"] += pnl_day
             st["pos"] = None
-            pos = None
         else:
             ret_day = pnl_day / pos["capital"]
             st["pnl_cum"] += pnl_day

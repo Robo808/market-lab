@@ -1,7 +1,6 @@
 """Forward lab: write-once store, registry freezing, honest fills, catch-up equivalence, option marks, scoring."""
 import gzip
 import json
-import os
 
 import numpy as np
 import pandas as pd
@@ -263,7 +262,6 @@ def test_ledger_snapshots_dedupe_chain_and_detect_corruption(fwd_dir, monkeypatc
     assert len(hist) == 2 and ledger.show(hist[0]["sha"]) == b"v1"
     assert ledger.verify()["status"] == "ok"
     obj = next((fwd_dir / "ledger" / "objects").rglob("*.gz"))
-    os.chmod(obj, 0o644)
     obj.write_bytes(gzip.compress(b"tampered"))
     assert ledger.verify()["status"] == "BROKEN"
 

@@ -187,8 +187,8 @@ def run(force_options: bool = False, only: str | None = None, skip_options: bool
                 if vs.get("atm_iv30"):
                     try:
                         opt.record_atm_iv(und, vs["atm_iv30"], spot, now)
-                    except Exception:
-                        pass
+                    except Exception as e:  # IV history is a by-product; never fail the run on it
+                        vs["iv_history_error"] = f"{type(e).__name__}"
                 near = ch[(ch["moneyness"].between(0.75, 1.25)) & (ch["dte"] <= 100)]
                 chains.append(near.assign(underlying=und, spot=spot, run_id=run_id)[
                     ["underlying", "spot", "expiry", "dte", "type", "strike", "bid", "ask", "mid", "last", "volume",

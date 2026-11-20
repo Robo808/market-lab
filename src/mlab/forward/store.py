@@ -162,7 +162,7 @@ class RunLock:
             if self.path.read_text().split()[0] == self.run_id:
                 self.path.unlink()
         except FileNotFoundError:
-            pass
+            return False  # lock already gone (taken over as stale): nothing to release
         return False
 
 
